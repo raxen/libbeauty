@@ -23,5 +23,12 @@ include 'header.php'
 <H4>5. Another tool being planned. 
 </H4>
 <BLOCKQUOTE>It would be nice to be able to do the same revenge emulator tracing of device drivers. One expects this to work in a similar way that (4) does.</BLOCKQUOTE>
+<H4>6. How to use objdump to disassemble a .DLL file, but on the linux platform. 
+</H4>
+<BLOCKQUOTE>objdump comes from the binutils package. By default, it is only built to support the file formats that can be executed on the native platform. I.e. For linux, that is ELF format. To get it to also support window PE format etc. it needs to have extra ./configure options passed to it.<br>
+./configure --enable-targets=all<br>
+For gentoo, edit /etc/portage/package.use and add the line:<br>
+sys-devel/binutils multitarget<br>
+</BLOCKQUOTE>
 </body>
 </html>
