@@ -139,6 +139,25 @@ int execute_instruction(instruction_t *instruction)
 		store_table[instruction->dstA.store],
 		instruction->dstA.index);
 	}
+	switch (instruction->opcode) {
+	case NOP:
+		printf("NOP\n");
+		break;
+	case MOV: 
+		printf("MOV\n");
+		break;
+	case ADD: 
+		printf("ADD\n");
+		break;
+	case ADC: 
+		printf("ADC\n");
+		break;
+	case SUB: 
+		printf("SUB\n");
+		break;
+	default:
+		break;
+	}	
 	return 1;
 }
 
