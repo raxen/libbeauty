@@ -5,7 +5,7 @@
 	<TITLE> Revenge - DOCUMENTATION </TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.1.0  (Linux)">
 	<META NAME="CREATED" CONTENT="20031114;22284600">
-	<META NAME="CHANGED" CONTENT="20031115;17120300">
+	<META NAME="CHANGED" CONTENT="20031115;23280800">
 	<STYLE>
 	<!--
 		@page { size: 8.5in 11in }
@@ -100,7 +100,7 @@ combination of PUSH/POP and JUMP.</H4>
 10) Instruction expansion.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">Take example: -</DD><DD STYLE="margin-bottom: 0.2in">
-	MOV SI, 10    &lt;- Instruction number 1.</DD><DD STYLE="margin-bottom: 0.2in">
+	MOV SI, 10 &lt;- Instruction number 1.</DD><DD STYLE="margin-bottom: 0.2in">
 	MOV AX, [SI] &lt;- Instruction number 2</DD><DD STYLE="margin-bottom: 0.2in">
 	At start, Record SI is empty. Record AX is empty.</DD><DD STYLE="margin-bottom: 0.2in">
 	After instruction 1, Record SI contains a history entry &ldquo;Write
@@ -198,7 +198,71 @@ and memory aligned representation in C? In case we want to compile
 the generated C source code on a big-endian system that also requires
 the accesses to memory to be aligned. 
 </H4>
-<P><BR><BR>
-</P>
+<H2>3. Plan of action</H2>
+<H4>1) Create a lib that will do the i386 disassembly.</H4>
+<DL>
+	<DD STYLE="margin-bottom: 0.2in">Disassemble(uint8_t *buffer,
+	decoded_instruction_t *result)</DD><DD STYLE="margin-bottom: 0.2in">
+	The buffer will be just a pointer to a string of bytes that need to
+	be disassembled. The result will contain the disassembled
+	instruction together with how many bytes it needed so that the
+	calling routine can correctly set the buffer pointer when it needs
+	to disassemble the next instruction.</DD><DD STYLE="margin-bottom: 0.2in">
+	The decoded_instruction_t structure will probably contain:</DD><DD STYLE="margin-bottom: 0.2in">
+	a) one variable for the decoded op code. E.g. ADD, SUB, CALL. 
+	</DD><DD STYLE="margin-bottom: 0.2in">
+	b) one variable for the first source register/memory expression. (As
+	i386 expressions can be quite complicated, we might have to split
+	this up a bit.)</DD><DD STYLE="margin-bottom: 0.2in">
+	c) one variable for the second source register/memory expression</DD><DD STYLE="margin-bottom: 0.2in">
+	d) one variable for the destination register/memory expression.</DD><DD STYLE="margin-bottom: 0.2in">
+	e) one variable detailing which flags have to be set in order for
+	this instruction to actually do anything.</DD><DD STYLE="margin-bottom: 0.2in">
+	f) one variable detailing which flags should get effected by this
+	instruction.</DD><DD STYLE="margin-bottom: 0.2in">
+	g) one variable detail any special variant action needing to be
+	performed.</DD><DD STYLE="margin-bottom: 0.2in">
+	These 7 points should be able to handle most CPU's instructions out
+	there. Obviously, for the i386, (b) and (d) are always the same
+	thing, but on ARM processors they can be different.</DD><DD STYLE="margin-bottom: 0.2in">
+	The general idea here, is to make the disassembly happen in such a
+	way, that the ADD instruction on an i386 cpu will be disassembled to
+	the same ADD instruction on the ARM cpu, thus letting the emulator
+	understand different CPUs without too much trouble.</DD><DD STYLE="margin-bottom: 0.2in">
+	Futures: Handle different CPUs.</DD></DL>
+<H4>
+2) Create a lib that will handle all the database details. 
+</H4>
+<DL>
+	<DD>This will handle storage of the memory/instruction records and
+	history tables.</DD></DL>
+<H4>
+3) Create a lib that will handle all the cpu emulation. 
+</H4>
+<DL>
+	<DD>This will take the output from (1) and create all the database
+	entries using (2) and actually process the CPU instructions.</DD></DL>
+<H4>
+4) Create a lib that will handle the loading of the program.</H4>
+<DL>
+	<DD>This will handle reading of the executable file and loading of
+	it's contents into the correct database tables. Initially handling
+	linux elf executables, then follow that with a.out and then others,
+	for example win32 PE.</DD></DL>
+<H4>
+5) Create a lib that will handle platform specific actions. 
+</H4>
+<DL>
+	<DD>This will handle things like emulation of the printf function,
+	so that the application being emulated can actually send out to the
+	screen and receive input from the user.</DD></DL>
+<H4>
+6) Create a GUI that will probably talk to the emulator over a TCP/IP
+connection.</H4>
+<DL>
+	<DD>This will provide interaction for the developer who is
+	controlling revenge.</DD><DD>
+	<BR>
+	</DD></DL>
 </BODY>
 </HTML>
