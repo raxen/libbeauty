@@ -5,7 +5,7 @@
 	<TITLE> Revenge - DOCUMENTATION </TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.1.0  (Linux)">
 	<META NAME="CREATED" CONTENT="20031114;22284600">
-	<META NAME="CHANGED" CONTENT="20031116;17392700">
+	<META NAME="CHANGED" CONTENT="20031116;23014600">
 	<STYLE>
 	<!--
 		@page { size: 8.5in 11in }
@@ -124,16 +124,16 @@ combination of PUSH/POP and JUMP.</H4>
 	understand.</DD><DD STYLE="margin-bottom: 0.2in">
 	e.g. Original C source code: -</DD><DD STYLE="margin-bottom: 0.2in">
 	main(..) {</DD><DD STYLE="margin-bottom: 0.2in">
-	  a=10;</DD><DD STYLE="margin-bottom: 0.2in">
-	  b=30</DD><DD STYLE="margin-bottom: 0.2in">
-	  printf(&ldquo;value=%d\n&rdquo;,a);</DD><DD STYLE="margin-bottom: 0.2in">
-	  a=20;</DD><DD STYLE="margin-bottom: 0.2in">
-	  printf(&ldquo;value=%d\n&rdquo;,a);</DD><DD STYLE="margin-bottom: 0.2in">
-	  printf(&ldquo;value=%d\n&rdquo;,b);</DD><DD STYLE="margin-bottom: 0.2in">
+	a=10;</DD><DD STYLE="margin-bottom: 0.2in">
+	b=30</DD><DD STYLE="margin-bottom: 0.2in">
+	printf(&ldquo;value=%d\n&rdquo;,a);</DD><DD STYLE="margin-bottom: 0.2in">
+	a=20;</DD><DD STYLE="margin-bottom: 0.2in">
+	printf(&ldquo;value=%d\n&rdquo;,a);</DD><DD STYLE="margin-bottom: 0.2in">
+	printf(&ldquo;value=%d\n&rdquo;,b);</DD><DD STYLE="margin-bottom: 0.2in">
 	}</DD><DD STYLE="margin-bottom: 0.2in">
 	Would probably result in the following output after revenge: -</DD><DD STYLE="margin-bottom: 0.2in">
 	void print_a_value(int param) {</DD><DD STYLE="margin-bottom: 0.2in">
-	  printf(&ldquo;value=%d\n&rdquo;,param);</DD><DD STYLE="margin-bottom: 0.2in">
+	printf(&ldquo;value=%d\n&rdquo;,param);</DD><DD STYLE="margin-bottom: 0.2in">
 	}</DD><DD STYLE="margin-bottom: 0.2in">
 	main(..) {</DD><DD STYLE="margin-bottom: 0.2in">
 	print_a_value(10);</DD><DD STYLE="margin-bottom: 0.2in">
@@ -281,6 +281,16 @@ the accesses to memory to be aligned.
 	way, that the ADD instruction on an i386 cpu will be disassembled to
 	the same ADD instruction on the ARM cpu, thus letting the emulator
 	understand different CPUs without too much trouble.</DD><DD STYLE="margin-bottom: 0.2in">
+	To simplify CPU emulation, it might be beneficial to disassemble a
+	single CPU instruction into a list of instructions for the emulator.
+	Similar to taking a CISC instruction and turning it into a RISC
+	instruction.</DD><DD STYLE="margin-bottom: 0.2in">
+	E.g. MOV AX, [SI*2+DX+10] can be written as 5 simpler instructions:
+	-</DD><DD STYLE="margin-bottom: 0.2in">
+	MOV tmp, SI;  MUL tmp, 2;  ADD tmp, DX;  ADD tmp, 10;  MOV AX,[tmp];</DD><DD STYLE="margin-bottom: 0.2in">
+	This would greatly simplify the emulator at the expense of a more
+	complicated disassembler, but disassemblers are easier to write than
+	emulators so this is probably a good idea.</DD><DD STYLE="margin-bottom: 0.2in">
 	Futures: Handle different CPUs.</DD></DL>
 <H4>
 2) Create a lib that will handle all the database details. 
@@ -319,8 +329,8 @@ connection.</H4>
 	<BR><BR>
 	</DD><DD STYLE="margin-bottom: 0.2in">
 	<BR><BR>
-	</DD><DD>
-	<FONT SIZE=3><FONT FACE="arial">Copyright (c) 2003 James
+	</DD><DD STYLE="margin-bottom: 0.2in">
+	<FONT FACE="arial"><FONT SIZE=3>Copyright (c) 2003 James
 	Courtier-Dutton. All Rights Reserved.</FONT></FONT></DD></DL>
 </BODY>
 </HTML>
