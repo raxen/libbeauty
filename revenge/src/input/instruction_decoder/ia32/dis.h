@@ -44,6 +44,7 @@ typedef struct instruction_s instruction_t;
 
 struct instruction_s {
 	int opcode;
+	int flags;  /* Set to 1 if this instruction should effect flags. */
 	operand_t srcA;
 	operand_t srcB;
 	operand_t dstA;

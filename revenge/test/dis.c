@@ -39,6 +39,49 @@
 instructions_t instructions;
 uint8_t *inst=NULL;
 struct rev_eng *handle;
+char *dis_flags_table[] = { " ", "f" };
+
+int print_inst(instructions_t *instructions)
+{
+	instruction_t *instruction;
+	int n;
+	printf("instruction_number=%d\n",instructions->instruction_number);
+	if (instructions->instruction_number == 0) {
+		printf("Unhandled instruction. Exiting\n");
+		return 1;
+	}
+	for (n=0;n<instructions->instruction_number;n++) {
+		instruction = &instructions->instruction[n];	
+		printf("Instruction %d:%s%s",
+			n,
+			opcode_table[instruction->opcode],
+			dis_flags_table[instruction->flags]);
+		if (instruction->srcA.indirect) {
+			printf(" %s%s[%s0x%x],",
+				size_table[instruction->srcA.size],
+				indirect_table[instruction->srcA.indirect],
+				store_table[instruction->srcA.store],
+				instruction->srcA.value);
+		} else {
+			printf(" %s%s0x%x,",
+			size_table[instruction->srcA.size],
+			store_table[instruction->srcA.store],
+			instruction->srcA.value);
+		}
+		if (instruction->dstA.indirect) {
+			printf(" %s%s[%s0x%x]\n",
+				size_table[instruction->dstA.size],
+				indirect_table[instruction->dstA.indirect],
+				store_table[instruction->dstA.store],
+				instruction->dstA.value);
+		} else {
+			printf(" %s%s0x%x\n",
+			size_table[instruction->dstA.size],
+			store_table[instruction->dstA.store],
+			instruction->dstA.value);
+		}
+	}
+}
 
 int main(int argc, char *argv[])
 {
@@ -75,41 +118,7 @@ int main(int argc, char *argv[])
 			printf(" 0x%02x",inst[n+offset]);
 		}
 		printf("\n");
-		printf("instruction_number=%d\n",instructions.instruction_number);
-		if (instructions.instruction_number == 0) {
-			printf("Unhandled instruction. Exiting\n");
-			return 1;
-		}
-		for (n=0;n<instructions.instruction_number;n++) {
-			instruction = &instructions.instruction[n];	
-			printf("Instruction %d:%s",
-				n,
-				opcode_table[instruction->opcode]);
-			if (instruction->srcA.indirect) {
-				printf(" %s%s[%s0x%x],",
-					size_table[instruction->srcA.size],
-					indirect_table[instruction->srcA.indirect],
-					store_table[instruction->srcA.store],
-					instruction->srcA.value);
-			} else {
-				printf(" %s%s0x%x,",
-				size_table[instruction->srcA.size],
-				store_table[instruction->srcA.store],
-				instruction->srcA.value);
-			}
-			if (instruction->dstA.indirect) {
-				printf(" %s%s[%s0x%x]\n",
-					size_table[instruction->dstA.size],
-					indirect_table[instruction->dstA.indirect],
-					store_table[instruction->dstA.store],
-					instruction->dstA.value);
-			} else {
-				printf(" %s%s0x%x\n",
-				size_table[instruction->dstA.size],
-				store_table[instruction->dstA.store],
-				instruction->dstA.value);
-			}
-		}
+		print_inst(&instructions);
 	}
 
 	printf("test1\n");

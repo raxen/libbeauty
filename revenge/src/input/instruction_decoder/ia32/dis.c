@@ -82,6 +82,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 /* Fill in half of instruction */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = NOP;
+		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = reg_table[reg_mem].offset;
@@ -99,6 +100,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			/* Handle scaled index */
 			instruction = &instructions->instruction[instructions->instruction_number];	
 			instruction->opcode = MOV;
+			instruction->flags = 0;
 			instruction->srcA.store = 1;
 			instruction->srcA.indirect = 0;
 			instruction->srcA.value = reg_table[index].offset;
@@ -111,6 +113,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			if (mul > 0) {
 				instruction = &instructions->instruction[instructions->instruction_number];	
 				instruction->opcode = MUL;
+				instruction->flags = 0;
 				instruction->srcA.store = 0;
 				instruction->srcA.indirect = 0;
 				instruction->srcA.value = 1 << mul;
@@ -124,8 +127,14 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 		}
 		if (base == 5) {
 			/* Handle base==5 */
-			instruction = &instructions->instruction[instructions->instruction_number];	
-			instruction->opcode = (instructions->instruction_number > 0) ? ADD : MOV;
+			instruction = &instructions->instruction[instructions->instruction_number];
+			if (instructions->instruction_number > 0) {
+				instruction->opcode = ADD;
+				instruction->flags = 0;
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
 			if (mod==0) {
 				instruction->srcA.store = 0;
 				instruction->srcA.indirect = 0;
@@ -145,7 +154,13 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			instructions->instruction_number++;
 		} else {
 			instruction = &instructions->instruction[instructions->instruction_number];	
-			instruction->opcode = (instructions->instruction_number > 0) ? ADD : MOV;
+			if (instructions->instruction_number > 0) {
+				instruction->opcode = ADD;
+				instruction->flags = 0;
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
 			instruction->srcA.store = 1;
 			instruction->srcA.indirect = 0;
 			instruction->srcA.value = reg_table[index].offset;
@@ -158,7 +173,13 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 		}
 	} else if ((reg_mem == 5) && (mod == 0)) {
 		instruction = &instructions->instruction[instructions->instruction_number];	
-		instruction->opcode = (instructions->instruction_number > 0) ? ADD : MOV;
+		if (instructions->instruction_number > 0) {
+			instruction->opcode = ADD;
+			instruction->flags = 0;
+		} else {
+			instruction->opcode = MOV;
+			instruction->flags = 0;
+		}
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
@@ -171,7 +192,13 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 		instructions->instruction_number++;
 	} else {
 		instruction = &instructions->instruction[instructions->instruction_number];	
-		instruction->opcode = (instructions->instruction_number > 0) ? ADD : MOV;
+		if (instructions->instruction_number > 0) {
+			instruction->opcode = ADD;
+			instruction->flags = 0;
+		} else {
+			instruction->opcode = MOV;
+			instruction->flags = 0;
+		}
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = reg_table[reg_mem].offset;
@@ -184,7 +211,13 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 	}
 	if (mod > 0) {
 		instruction = &instructions->instruction[instructions->instruction_number];	
-		instruction->opcode = (instructions->instruction_number > 0) ? ADD : MOV;
+		if (instructions->instruction_number > 0) {
+			instruction->opcode = ADD;
+			instruction->flags = 0; /* Do not effect flags, just calculated indirect memory location */
+		} else {
+			instruction->opcode = MOV;
+			instruction->flags = 0;
+		}
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
 		if (mod == 1) {
@@ -212,6 +245,7 @@ void dis_Ex_Gx(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
   half = rmb(instructions, inst, reg);
   instruction = &instructions->instruction[instructions->instruction_number];	
   instruction->opcode = opcode;
+  instruction->flags = 1;
   instruction->srcA.store = 1;
   instruction->srcA.indirect = 0;
   instruction->srcA.value = reg_table[*reg].offset;
@@ -236,6 +270,7 @@ void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
   half = rmb(instructions, inst, reg);
   instruction = &instructions->instruction[instructions->instruction_number];	
   instruction->opcode = opcode;
+  instruction->flags = 1;
   instruction->dstA.store = 1;
   instruction->dstA.indirect = 0;
   instruction->dstA.value = reg_table[*reg].offset;
@@ -259,6 +294,8 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	instruction_t *instruction;
 	printf("inst[0]=0x%x\n",inst[0]);
 	instructions->instruction[instructions->instruction_number].opcode = NOP; /* Un-supported OPCODE */
+	instructions->instruction[instructions->instruction_number].flags = 0; /* No flags effected */
+	
 	switch(inst[instructions->bytes_used++]) {
 	case 0x00:												/* ADD Eb,Gb */
 		dis_Ex_Gx(ADD, instructions, inst, &reg, 1);
@@ -414,6 +451,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
                 /* PUSH -> SP=SP-4 (-2 for word); [SP]=reg; */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = SUB;
+		instruction->flags = 0; /* Do not effect flags */
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = 4;
@@ -426,6 +464,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = MOV;
+		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = reg_table[inst[0] & 0x7].offset;
@@ -448,6 +487,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
                 /* POP -> ES=[SP]; SP=SP+4 (+2 for word); */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = MOV;
+		instruction->flags = 0;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
 		instruction->dstA.value = reg_table[inst[0] & 0x7].offset;
@@ -460,6 +500,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = ADD;
+		instruction->flags = 0;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = 4;
@@ -518,6 +559,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		half = rmb(instructions, inst, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = immed_table[reg];
+		instruction->flags = 1;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
@@ -526,6 +568,10 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		if (!half) {
 			instruction->dstA.store = 1;
 			instruction->dstA.indirect = 1;
+			if ((instructions->instruction[0].srcA.value >= 0x14) || 
+			    (instructions->instruction[0].srcA.value <= 0x18) ) {
+			  instruction->dstA.indirect = 2; /* SP and BP use STACK memory and not DATA memory. */
+			}
 			instruction->dstA.value = REG_TMP1;
 			instruction->dstA.size = 4;
 		}
@@ -556,6 +602,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		half = rmb(instructions, inst, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = MOV;
+		instruction->flags = 0;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
 		instruction->dstA.value = reg_table[reg].offset;
@@ -639,6 +686,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		half = rmb(instructions, inst, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = shift2_table[reg];
+		instruction->flags = 1;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
@@ -647,6 +695,10 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		if (!half) {
 			instruction->dstA.store = 1;
 			instruction->dstA.indirect = 1;
+			if ((instructions->instruction[0].srcA.value >= 0x14) || 
+			    (instructions->instruction[0].srcA.value <= 0x18) ) {
+			  instruction->dstA.indirect = 2; /* SP and BP use STACK memory and not DATA memory. */
+			}
 			instruction->dstA.value = REG_TMP1;
 			instruction->dstA.size = 4;
 		}
@@ -657,9 +709,10 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
                 /* POP -> IP=[SP]; SP=SP+4; */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = MOV;
+		instruction->flags = 0;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_IP;
+		instruction->dstA.value = REG_TMP1;
 		instruction->dstA.size = 4;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 2;
@@ -669,6 +722,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = ADD;
+		instruction->flags = 0;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = 4;
@@ -678,6 +732,20 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->dstA.value = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
+
+		instruction = &instructions->instruction[instructions->instruction_number];	
+		instruction->opcode = MOV;
+		instruction->flags = 0;
+		instruction->dstA.store = 1;
+		instruction->dstA.indirect = 0;
+		instruction->dstA.value = REG_IP;
+		instruction->dstA.size = 4;
+		instruction->srcA.store = 1;
+		instruction->srcA.indirect = 0;
+		instruction->srcA.value = REG_TMP1;
+		instruction->srcA.size = 4;
+		instructions->instruction_number++;
+
 		break;
 	case 0xc4:												/* LES */
 	case 0xc5:												/* LDS */
@@ -732,6 +800,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
                 /* PUSH -> SP=SP-4 (-2 for word); [SP]=IP; */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = SUB;
+		instruction->flags = 0;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = 4;
@@ -744,12 +813,13 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = MOV;
+		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = REG_IP;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
-		instruction->dstA.indirect = 1;
+		instruction->dstA.indirect = 2;
 		instruction->dstA.value = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
@@ -757,6 +827,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xe9:												/* JMP Jw */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = JMP;
+		instruction->flags = 0;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
@@ -774,6 +845,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xed:												/* IN eAX,DX */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = IN;
+		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 1;
 		instruction->srcA.value = REG_DX;
@@ -788,6 +860,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xef:												/* OUT DX,eAX */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = OUT;
+		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
 		instruction->srcA.value = REG_AX;
@@ -829,6 +902,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		switch(reg) {
 		case 0:
 			instruction->opcode = ADD;
+			instruction->flags = 1;
 			instruction->srcA.store = 0;
 			instruction->srcA.indirect = 0;
 			instruction->srcA.value = 1;
@@ -845,6 +919,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			break;
 		case 1:
 			instruction->opcode = SUB;
+			instruction->flags = 1;
 			instruction->srcA.store = 0;
 			instruction->srcA.indirect = 0;
 			instruction->srcA.value = 1;
@@ -859,6 +934,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->dstA.size = 4;
 			instructions->instruction_number++;
 		default:
+			instructions->instruction_number=0; /* Tag unimplemented instructions. */
 			break;
 		}
 	}
