@@ -13,7 +13,7 @@ include 'header.php'
 </H4>
 <BLOCKQUOTE>The first planned piece of software is going to be called
 &quot;revenge&quot;. It is only in planning at the moment. See the
-<A HREF="docs/revenge.html">User Guide</A> for the plans so far.</BLOCKQUOTE>
+<A HREF="revenge.php">User Guide</A> for the plans so far.</BLOCKQUOTE>
 <BLOCKQUOTE><BR><BR>
 </BLOCKQUOTE>
 </body>
