@@ -14,7 +14,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ *
+ * 11-9-2004 Initial work.
+ *   Copyright (C) 2004 James Courtier-Dutton James@superbug.co.uk
  */
+
 /* Intel ia32 instruction format: -
  Instruction-Prefixes (Up to four prefixes of 1-byte each. [optional] )
  Opcode (1-, 2-, or 3-byte opcode)
