@@ -53,7 +53,7 @@ I1 = [S1]  (r0x28 is now I1, because the IP from the calling process was stored 
 Instruction 1:ADD  di0x4, dr0x14<br>
 S1 = S1 + 4<br>
 Instruction 2:MOV  dr0x28, dr0x24<br>
-IP = I8  (A JUMP instruction, but as I1 came from the stack, it is a RET)<br>
+IP = I1  (A JUMP instruction, but as I1 came from the stack, it is a RET)<br>
 <p>
 Now extract the new lines:<br>
 S1 = S1 - 4<br>
@@ -74,7 +74,7 @@ S7 = [S1]<br>
 S1 = S1 + 4<br>
 I1 = [S1]  (r0x28 is now I1, because the IP from the calling process was stored at this position on the stack.)<br>
 S1 = S1 + 4<br>
-IP = I8  (A JUMP instruction, but as I1 came from the stack, it is a RET)<br>
+IP = I1  (A JUMP instruction, but as I1 came from the stack, it is a RET)<br>
 
 <p>
 So, this function seems to have just one PARAM1, and returns R1 (In the eAX register)
@@ -105,7 +105,7 @@ int test ( int value )<br>
 <p>
 Now we just need to automate this revenge CPU step.
 
-<P> This page was last updated on 13th September 2004
+<P> This page was last updated on 27th February 2005
 </P>
 </table>
 </table>
