@@ -447,6 +447,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x54:												/* PUSH SP */
 	case 0x55:												/* PUSH BP */
 	case 0x56:												/* PUSH SI */
+		break;
 	case 0x57:												/* PUSH DI */
                 /* PUSH -> SP=SP-4 (-2 for word); [SP]=reg; */
 		instruction = &instructions->instruction[instructions->instruction_number];	
@@ -682,6 +683,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xbe:												/* MOV SI,Iv */
 	case 0xbf:												/* MOV DI,Iv */
 	case 0xc0:												/* GRP2 Eb,Ib */
+		break;
 	case 0xc1:												/* GRP2 Ev,Ib */
 		half = rmb(instructions, inst, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
@@ -705,6 +707,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instructions->instruction_number++;
 		break;
 	case 0xc2:												/* RETN Iv */
+		break;
 	case 0xc3:												/* RETN */
                 /* POP -> IP=[SP]; SP=SP+4; */
 		instruction = &instructions->instruction[instructions->instruction_number];	
@@ -842,6 +845,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xea:												/* JMP Ap */
 	case 0xeb:												/* JMP Jb */
 	case 0xec:												/* IN AL,DX */
+		break;
 	case 0xed:												/* IN eAX,DX */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = IN;
@@ -857,6 +861,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instructions->instruction_number++;
 		break;
 	case 0xee:												/* OUT DX,AL */
+		break;
 	case 0xef:												/* OUT DX,eAX */
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = OUT;
@@ -895,6 +900,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xfd:												/* STD */
 		break;
 	case 0xfe:												/* GRP4 Eb */
+		break;
 	case 0xff:												/* GRP5 Ev */
 		half = rmb(instructions, inst, &reg);
 		printf("half=0x%x, reg=0x%x\n",half, reg);

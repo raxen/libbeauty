@@ -164,6 +164,8 @@ struct rev_eng *bf_test_open_file(const char *fn)
 	struct rev_eng *ret;
 	long tmp;
 	bfd *b;
+	char **matching;
+	int result;
 
         printf("Open entered\n");
 	/* Open the file with libbfd */
@@ -173,6 +175,35 @@ struct rev_eng *bf_test_open_file(const char *fn)
 				fn, bfd_err());
 		return NULL;
 	}
+	result = bfd_check_format_matches (b, bfd_object, &matching);
+	printf("check format result=%d\n",result);
+
+	if (bfd_get_error () == bfd_error_file_ambiguously_recognized)
+	{
+		printf("Couldn't determine format of %s:%s\n",
+				fn, bfd_err());
+		bfd_close(b);
+		return NULL;
+	}
+/*
+		nonfatal (bfd_get_filename (abfd));
+		list_matching_formats (matching);
+		free (matching);
+		return;
+	}
+
+  if (bfd_get_error () != bfd_error_file_not_recognized)
+    {
+      nonfatal (bfd_get_filename (abfd));
+      return;
+    }
+
+  if (bfd_check_format_matches (abfd, bfd_core, &matching))
+    {
+      dump_bfd (abfd);
+      return;
+    }
+*/
 
 	/* Check it's an object file and not a core dump, or
 	 * archive file or whatever else...

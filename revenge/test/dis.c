@@ -48,7 +48,7 @@ int print_inst(instructions_t *instructions)
 	printf("instruction_number=%d\n",instructions->instruction_number);
 	if (instructions->instruction_number == 0) {
 		printf("Unhandled instruction. Exiting\n");
-		return 1;
+		return 0;
 	}
 	for (n=0;n<instructions->instruction_number;n++) {
 		instruction = &instructions->instruction[n];	
@@ -81,6 +81,7 @@ int print_inst(instructions_t *instructions)
 			instruction->dstA.value);
 		}
 	}
+	return 1;
 }
 
 int main(int argc, char *argv[])
@@ -91,6 +92,10 @@ int main(int argc, char *argv[])
 	const char *file="test.obj";
 	size_t inst_size=0;
 	handle = bf_test_open_file(file);
+	if (!handle) {
+		printf("Failed to find or recognise file\n");
+		return 1;
+	}
 	inst_size = bf_get_code_size(handle);
 	inst = malloc(inst_size);	
 	bf_copy_code_section(handle, inst, inst_size);
@@ -118,7 +123,9 @@ int main(int argc, char *argv[])
 			printf(" 0x%02x",inst[n+offset]);
 		}
 		printf("\n");
-		print_inst(&instructions);
+		if (!print_inst(&instructions)) {
+			return 1;
+		}
 	}
 
 	printf("test1\n");
