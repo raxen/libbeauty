@@ -172,8 +172,8 @@ int main(int argc, char *argv[])
 	}
 	printf("\n");
 	instructions.bytes_used=0;
-	//for(offset=0;offset<inst_size;offset+=instructions.bytes_used) {
-	for(offset=0;offset<1;offset+=instructions.bytes_used) {
+	for(offset=0;offset<inst_size;offset+=instructions.bytes_used) {
+	//for(offset=0;offset<1;offset+=instructions.bytes_used) {
 		instructions.instruction_number=0;
 		instructions.bytes_used=0;
 	        disassemble(&instructions, inst+offset);
@@ -187,8 +187,8 @@ int main(int argc, char *argv[])
 			printf("Unhandled instruction. Exiting\n");
 			return 0;
 		}
-		//for (n=0;n<instructions.instruction_number;n++) {
-		for (n=0;n<1;n++) {
+		for (n=0;n<instructions.instruction_number;n++) {
+		//for (n=0;n<1;n++) {
 			instruction = &instructions.instruction[n];	
 			if (!print_inst(instruction, n)) {
 				return 1;

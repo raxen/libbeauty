@@ -99,9 +99,10 @@ static void print_sections(struct rev_eng* ret)
         }
       printf ("%s%s", comma, ls);
 
-      if (section->comdat != NULL)
-        printf (" (COMDAT %s %ld)", section->comdat->name,
-                section->comdat->symbol);
+/*      if (section->comdat != NULL)
+ *       printf (" (COMDAT %s %ld)", section->comdat->name,
+ *               section->comdat->symbol);
+ */
 
       comma = ", ";
     }
@@ -119,7 +120,7 @@ static void print_code_section(struct rev_eng* ret)
   bfd_byte          *data = NULL;
   bfd_size_type      datasize = 0;
 
-  datasize = bfd_get_section_size_before_reloc(section);
+  datasize = bfd_get_section_size(section);
   if (datasize == 0)
     return;
   data = malloc(datasize);
@@ -139,7 +140,7 @@ int64_t bf_get_code_size(struct rev_eng* ret)
   bfd_size_type      datasize = 0;
   int64_t            code_size = 0;
 
-  datasize = bfd_get_section_size_before_reloc(section);
+  datasize = bfd_get_section_size(section);
   code_size = datasize;
   return code_size;
 }
