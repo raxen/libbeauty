@@ -5,7 +5,7 @@
 	<TITLE> Revenge - DOCUMENTATION </TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.1.0  (Linux)">
 	<META NAME="CREATED" CONTENT="20031114;22284600">
-	<META NAME="CHANGED" CONTENT="20031115;16544600">
+	<META NAME="CHANGED" CONTENT="20031115;17091000">
 	<STYLE>
 	<!--
 		@page { size: 8.5in 11in }
@@ -191,5 +191,14 @@ to &ldquo;printf(...)&rdquo; from the emulated program and translate
 them into native system calls.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">Suggestions welcome from anyone!</DD></DL>
+<H4 STYLE="margin-top: 0in">
+3) The i386 instructions will all use the little-endian memory format
+and not need to be memory aligned. How does one create a endian free
+and memory aligned representation in C? In case we want to compile
+the generated C source code on a big-endian system that also requires
+the accesses to memory to be aligned. 
+</H4>
+<P><BR><BR>
+</P>
 </BODY>
 </HTML>
