@@ -1,0 +1,36 @@
+body {
+	background-color: #003399;
+	color: silver;
+	font-size: 10pt;
+	font-family: Arial, Helvetica, Helv, sans-serif;
+} 
+
+a:link { 
+	color: silver 
+} 
+
+a:visited { 
+	color: silver 
+}
+
+a:active { 
+	color: silver 
+}
+
+h1 { 
+	color: white; 
+	font-variant: normal; 
+	font-weight: bold; 
+	font-style: normal; 
+	font-family: Arial, Helvetica, Helv, sans-serif;  
+	font-size: 12pt; 
+} 
+
+p {
+	margin-left : 10pt;
+} 
+
+.small {
+	font-size: 8pt;
+} 
+

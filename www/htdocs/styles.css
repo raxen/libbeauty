@@ -1,0 +1,70 @@
+body {
+background-color: #ffffff; 
+font-size: 10pt; 
+font-family: Arial, Helvetica, Helv, sans-serif;  
+} 
+
+a:link { color: #003399 } 
+a:visited { color: navy }
+a:active { color: #FF0000 }
+
+h1 { 
+color: #000080; 
+font-variant: normal; 
+font-weight:bold; 
+font-style: normal; 
+font-family: Arial, Helvetica, Helv, sans-serif;  
+font-size: 18pt; 
+} 
+
+h2 { 
+font-weight: bold; 
+font-size: 14.0pt; 
+font-family: Arial, Helvetica, Helv, sans-serif;   
+} 
+
+h3 { 
+font-weight:bold; 
+font-size: 12.0pt; 
+color: #000080; 
+font-family: Arial, Helvetica, Helv, sans-serif;  
+} 
+
+h4 { 
+font-family: Arial, Helvetica, Helv, sans-serif; 
+font-weight: bold; 
+font-size: 10.0pt;
+color: #000080; 
+} 
+
+p { 
+font-size: 10pt; 
+font-family: Arial, Helvetica, Helv, sans-serif;  
+} 
+
+li { 
+font-size: 10pt; 
+font-family: Arial, Helvetica, Helv, sans-serif; 
+} 
+
+code { 
+font-family: Courier New, Courier, mono-space, serif;
+font-size: 10pt 
+} 
+
+td { 
+font-family: Arial, Helvetica, Helv, sans-serif; 
+font-size: 10pt;
+vertical-align: top;
+}
+
+th { 
+font-family: Arial, Helvetica, Helv, sans-serif; 
+font-size: 10pt;
+}
+
+input { 
+font-size: 10pt; 
+font-family: Arial, Helvetica, Helv, sans-serif;  
+} 
+

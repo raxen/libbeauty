@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=iso-8859-1">
+	<TITLE> Revenge - DOCUMENTATION </TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.1.0  (Linux)">
+	<META NAME="CREATED" CONTENT="20031114;22284600">
+	<META NAME="CHANGED" CONTENT="20031115;532200">
+	<STYLE>
+	<!--
+		@page { size: 8.5in 11in }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-GB" DIR="LTR">
+<H1>Revenge Emulator Documentation</H1>
+<H1>1. Aims.</H1>
+<H4>1) The first planned piece of software is going to be called
+&quot;revenge&quot;.</H4>
+<H4>2) It will emulate i386 32-bit protected mode for user space
+applications.</H4>
+<DL>
+	<DD>Later Pentium4/AMD etc. will be added.</DD><DD>
+	We might even add PPC/Sparc/MIPS support.We will only support 32bit
+	Protected mode in user space.</DD><DD>
+	We will not support Real or Old mode but someone might want to add
+	support for that and we will let them.</DD><DD>
+	If an application uses a call gate (ring3 -&gt; other ring call), we
+	will prevent it from accessing ring0, and instead fully emulate what
+	the call would have achieved.</DD><DD>
+	Later we might support some ring0 emulations in order to reverse
+	engineer device drivers.</DD></DL>
+<H4>
+3) Different processor threads will be emulated as if running on
+their own CPU with options to share memory or not.</H4>
+<DL>
+	<DD>The first version will not support threads.</DD></DL>
+<H4>
+4) Initially it will support a.out executable format, with elf added
+later, followed by other formats that are supported in other
+environments apart from <SPAN LANG="en-GB">Linux</SPAN></H4>
+<H4>5) The first application to be worked on will be a simple &ldquo;Hello
+World&rdquo; binary.</H4>
+<H4>6) As each assembler instruction is executed, it will be logged.</H4>
+<DL>
+	<DD>If an instruction accessed memory, the memory location and value
+	used will be logged.</DD></DL>
+<H4>
+7) When a memory location is accessed, it will be logged.</H4>
+<DL>
+	<DD>The details logged will be details regarding whether it was
+	accessed as a instruction or data, how many times it has been
+	accessed, and which instructions accessed it.</DD></DL>
+<H4>
+8) All calls, jump, ret's will be executed as if they are a
+combination of PUSH/POP and JUMP.</H4>
+<DL>
+	<DD>Later, after the program flow has been logged, groups of
+	instructions can then be grouped into functions. One reason for this
+	is that a &ldquo;ret&rdquo; instruction can be turned into a &ldquo;jump&rdquo;
+	just by preceding it with some PUSH instructions.</DD></DL>
+<H4>
+9) A C program will be produced, that if compiled, should function in
+exactly the same way as the original binary.</H4>
+<P STYLE="margin-bottom: 0in"> Although it will compile as C, it will
+probably be very difficult to understand, as it will have no symbols,
+and the functional structure might be wrong.</P>
+<H4>10) The next task will be using the logs together with the
+generated C program and find ways to automate the manipulation of it
+so that it is easier to read and understand.</H4>
+<H4>11) Recovery of the parameter types passed to a function.</H4>
+<H4>12) Recovery of variable types.</H4>
+<H4>13) Recovery of returned types.</H4>
+<H4>14) Determine which variables are local, global, or
+runtime(malloc'ed) created.</H4>
+<DL>
+	<DD>For example. If a CPU register is modified inside a function.
+	After returning from the function, if that register is read, that
+	register was a global or return value. If that register is just
+	overwritten, that register was a local variable inside that
+	function.</DD></DL>
+<H4>
+15) Determine which variables need to be initialised before calling a
+function.</H4>
+<H4>16) Determine what range of values a variable can take.</H4>
+<DL>
+	<DD>Useful for analysing sizes of lookup tables.</DD></DL>
+<P STYLE="margin-bottom: 0in">
+<BR>
+</P>
+<H4>17) Determine which variables are modified or created by a
+function.</H4>
+<H4>18) Using the logged counts of the amount of times a particular
+function is called.</H4>
+<DL>
+	<DD>Efforts will be made to understand most used functions first.</DD></DL>
+<H4>
+19) Allow human interaction to add comments, function and variable
+names.</H4>
+<H4>20) The GUI controlling front end will be a separate application
+from the actual emulator, allowing for remote emulator control and
+interactivity.</H4>
+<H4>21) Every application is likely to depend on external libs. The
+emulator will be able to run on the entire program including any
+external libs, but logging and analysis can be restricted to a
+particular lib the program uses or even just a particular function
+inside a lib.</H4>
+<H4>22) Some shim code might be needed to buffer access the
+application has to outside libs.</H4>
+<DL>
+	<DD>For example, if the application being examined uses a lib that
+	does not need to be reverse engineered, we might only need to log
+	parameters passed and results returned from the lib as we will
+	already know exactly what each function does.</DD></DL>
+<H4>
+23) Be able to save the entire emulated application state, so that
+one can come back later and continue. As one will know which memory
+locations have been used, and which have not, one can save on the
+amount of information needed to be saved in order to save the state.</H4>
+<H2>2. Expected problems to overcome.</H2>
+<H4>1) The i386 instruction set is huge.</H4>
+<DL>
+	<DD>We will start by only supporting the i386 instructions needed
+	for &ldquo;Hello World!&rdquo;.</DD></DL>
+<H4>
+2) We have no real idea if emulation will actually help us any more
+than the current reverse engineering methods out there until we try
+it!</H4>
+<H4><BR><BR>
+</H4>
+</BODY>
+</HTML>
