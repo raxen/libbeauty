@@ -1,0 +1,2 @@
+Make POP/PUSH use stack segment.
+Implement more ia32 instructions.
