@@ -59,7 +59,7 @@ Now extract the new lines:<br>
 S1 = S1 - 4<br>
 
 [S1] = S2  (BP or r0x18 is renamed to S2)<br>
-S3 = S1 (BP has been initialised with a new value, so BP is no S3)<br>
+S3 = S1 (BP has been initialised with a new value, so BP is now S3)<br>
 S4 = S3 (r0x28 is a TMP register, implemented to make generation of RTL code easier)<br>
 S4 = S4 + 8<br>
 [S4] = [S4] + 1  (As S4 &gt; S0, S4 = S0 + 4, This is param1)<br>
