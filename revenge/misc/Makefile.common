@@ -1,0 +1,7 @@
+#install-data-hook:
+#	@list='$(modules_LTLIBRARIES)'; for p in $$list; do \
+#		rm -f $(modulesdir)/$$p ; \
+#	done
+
+debug:
+	@$(MAKE) CXXFLAGS="$(DEBUG_CXXFLAGS)"
