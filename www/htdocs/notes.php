@@ -12,7 +12,7 @@ During execution, registers like SP, BP etc. will be changed to S1,S2,S3... so w
 Registers eAX, eBX etc. will be changed to R1, R2 etc. (FIXME: What to do with 32bit register access, and 16 or 8 bit register accesses.)
 <p>
 We store the inital SP value in S0, and S1.
-The calling programs IP is at position S0 on the stack, so any values from below S0 are local variables, and any values from above S0 are function parameters.
+The calling programs IP is at position S0 on the stack, so any values from below S0 are local variables, and any values from above S0 are function parameters. Each time a CALL is made. i.e. the IP is put onto the stack, S0 is stored with it as metadata, and a new S0 is initiated. This will therefore create a new S0 for each stack frame. This will sort out any recursive function call problems and enable correct identification of parameters and local variables.
 <p>
 Example program in RTL format (As output by revenge). The "Instruction X:" are output by revenge, the extra "S1 = S1 - 4" etc. are manually added for now to help explain things, but they could very easily be automatically added by revenge CPU.<br>
 r0x14 is SP, r0x18 is BP.<br>
