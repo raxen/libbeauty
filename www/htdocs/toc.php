@@ -31,6 +31,9 @@
 <tr><td class="docentry">
 <a href="revenge.php" >UserGuide</a>
 </td></tr>
+<tr><td class="docentry">
+<a href="tasks.php" >Tasks</a>
+</td></tr>
 
 </table>
 <p></p>
