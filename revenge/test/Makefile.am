@@ -11,6 +11,6 @@ bin_PROGRAMS = dis
 dis_SOURCES = \
 	dis.c
 
-dis_LDADD = -l/usr/local/lib/revenge/libia32_decoder
+dis_LDADD = /usr/local/lib/revenge/libia32_decoder.so
 
 dis_LDFLAGS = @MODULE_LDFLAGS@

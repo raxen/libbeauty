@@ -15,4 +15,5 @@ include_HEADERS = \
 libia32_decoder_la_SOURCES = \
 	opcodes.c dis.c prefix_0f.c
 
-libia32_decoder_la_LDFLAGS = @MODULE_LDFLAGS@
+libia32_decoder_la_LDFLAGS = \
+	 -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)

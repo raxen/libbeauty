@@ -1,6 +1,30 @@
 AC_INIT
 AM_INIT_AUTOMAKE("revenge",0.1.0)
 AC_PREREQ(2.53)
+
+dnl The libtool version numbers (LT_*); Don't even think about faking this!
+dnl
+dnl immediately before every release do:
+dnl ===================================
+dnl if (the interface is totally unchanged from previous release)
+dnl    LT_REVISION ++;
+dnl else { /* interfaces have been added, removed or changed */
+dnl    LT_REVISION = 0;
+dnl    LT_CURRENT ++;
+dnl    if (any interfaces have been _added_ since last release)
+dnl       AGE ++;
+dnl    if (any interfaces have been _removed_ or _incompatibly changed_)
+dnl       AGE = 0;
+dnl }
+
+LT_CURRENT=1
+LT_REVISION=0
+LT_AGE=0
+
+AC_SUBST(LT_CURRENT)
+AC_SUBST(LT_REVISION)
+AC_SUBST(LT_AGE)
+
 dnl ------------------------------------
 dnl Configure setup
 dnl ------------------------------------
