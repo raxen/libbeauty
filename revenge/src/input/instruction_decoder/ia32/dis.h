@@ -28,7 +28,7 @@
 
 #include <stdio.h>
 #include <inttypes.h>
-#include "opcodes.hpp"
+#include "opcodes.h"
 
 
 typedef struct operand_s operand_t;

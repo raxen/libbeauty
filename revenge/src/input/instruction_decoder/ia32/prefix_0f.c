@@ -1,4 +1,4 @@
-#include "dis.hpp"
+#include "dis.h"
 
 int prefix_0f(instructions_t *instructions, uint8_t *bytes_base) {
 	int half;

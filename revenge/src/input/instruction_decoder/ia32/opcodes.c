@@ -26,7 +26,7 @@
  Naming convention taked from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
 
-#include "dis.hpp"
+#include "dis.h"
 
 char * opcode_table[] = {
 	"NOP",
