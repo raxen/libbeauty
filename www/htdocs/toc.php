@@ -12,6 +12,9 @@
 <a href="faq.php">FAQ</a>
 </td></tr>
 <tr><td class="docentry">
+<a href="links.php">Links</a>
+</td></tr>
+<tr><td class="docentry">
 <a href="http://developer.berlios.de/projects/revenge/" target="_blank">Revenge Project page</a>
 </td></tr>
 <tr><td class="docentry">
