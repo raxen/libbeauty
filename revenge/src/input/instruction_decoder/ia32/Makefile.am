@@ -7,10 +7,10 @@ modulesdir = $(pkglibdir)/instruction_decoder
 bin_PROGRAMS = dis
 
 noinst_HEADERS = \
-	dis.hpp \
-	opcodes.hpp
+	dis.h \
+	opcodes.h
 
 dis_SOURCES = \
-	opcodes.cpp dis.cpp prefix_0f.cpp
+	opcodes.c dis.c prefix_0f.c
 
 dis_LDFLAGS = @MODULE_LDFLAGS@
