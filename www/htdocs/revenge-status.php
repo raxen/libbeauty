@@ -11,7 +11,9 @@ include 'header.php'
 </P>
 <P> The next step is writing the memory module. The BFD will load the program into memory in much the same way that the linux kernel loads a program into memory so that the CPU can execute it. Any extra details that might happen to be in the binary headers (e.g. debug info), will be loaded into a separate table, so that other modules can use them as they see fit. The BFD and memory module will not execute any program code.
 </P>
-<P> Now work on the CPU Emulator can start. This will take the program bytes from the memory module, and determine which bytes are data and which are instructions, build program flow graphs, determine function parameters and gather meta information.
+<P> Now work on the CPU Emulator can start. This will take the program bytes from the memory module, covert them to RTL, determine which bytes are data and which are instructions, build program flow graphs, determine function parameters and gather meta information.
+</P>
+<P> Extra processing will then take place, resulting in the final step of creating a C source code representation of the binary program.
 </P>
 <P> This page was last updated on 12th September 2004
 </P>
