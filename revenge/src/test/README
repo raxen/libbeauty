@@ -1,0 +1,3 @@
+test.c contains a very simple function.
+It will be used as the first example .o file that we can convert back to .c
+
