@@ -5,7 +5,7 @@
 	<TITLE> Revenge - DOCUMENTATION </TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.1.0  (Linux)">
 	<META NAME="CREATED" CONTENT="20031114;22284600">
-	<META NAME="CHANGED" CONTENT="20031116;23014600">
+	<META NAME="CHANGED" CONTENT="20031117;54600">
 	<STYLE>
 	<!--
 		@page { size: 8.5in 11in }
@@ -52,17 +52,16 @@ recording and analysis.</H4>
 	<DD STYLE="margin-bottom: 0.2in">The SP register marks the top of
 	the stack (top as in a pile of books type stack. One puts a book on
 	the top, the first to come off will be the one on the top.) Anything
-	above SP on the stack represents thin air, so if we give a
-	particular memory location a label, and that memory location is part
-	of the stack. If an item is removed from the stack, the memory
-	locations label would then be marked invalid, and the next time a
-	item is placed back on the stack and accesses the same memory
-	location, it will therefore be given a new label. This will probably
-	result in giving us nice unique names for local variables so that
-	they do not get confused with local variables from other functions.
-	Then, after the functions have been analysed, they will be renamed
-	so that the human observer can then determine their scope easily.
-	E.g. local_variable_1, local_variable_2 etc.</DD></DL>
+	above SP on the stack represents thin air. We give a particular
+	memory location, that is part of the stack, a label. When an item is
+	removed from the stack, the memory location's label would be marked
+	as expired. When an item is placed back on to the stack and accesses
+	the expired memory location, it will be given a new label. This will
+	give us nice unique names for local variables so that they do not
+	get confused with local variables from other functions. After the
+	functions have been analysed, they will be renamed so that the human
+	observer can then determine their scope easily. E.g.
+	local_variable_1, local_variable_2 etc.</DD></DL>
 <H4>
 8) As each assembler instruction is executed, it will be recorded.</H4>
 <DL>
@@ -153,7 +152,7 @@ combination of PUSH/POP and JUMP.</H4>
 	When expanding instruction 2, we look at the Record SI. It will tell
 	us to look at instruction 1. We see that SI was written with a
 	constant &ldquo;10&rdquo; and did not arise from any other variable.
-	If it did arise from any other variable (determined by exampling the
+	If it did arise from any other variable (determined by examining the
 	instruction that wrote to it), we would re-curse backwards to that
 	record and gain more expanded information, which will eventually
 	result with a record that was initiated with a constant value, and
@@ -287,7 +286,7 @@ the accesses to memory to be aligned.
 	instruction.</DD><DD STYLE="margin-bottom: 0.2in">
 	E.g. MOV AX, [SI*2+DX+10] can be written as 5 simpler instructions:
 	-</DD><DD STYLE="margin-bottom: 0.2in">
-	MOV tmp, SI;  MUL tmp, 2;  ADD tmp, DX;  ADD tmp, 10;  MOV AX,[tmp];</DD><DD STYLE="margin-bottom: 0.2in">
+	MOV tmp, SI; MUL tmp, 2; ADD tmp, DX; ADD tmp, 10; MOV AX,[tmp];</DD><DD STYLE="margin-bottom: 0.2in">
 	This would greatly simplify the emulator at the expense of a more
 	complicated disassembler, but disassemblers are easier to write than
 	emulators so this is probably a good idea.</DD><DD STYLE="margin-bottom: 0.2in">
