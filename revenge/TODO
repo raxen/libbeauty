@@ -1,2 +1,4 @@
+Start implementing instruction executions for the simple test.obj case.
+
 Make POP/PUSH use stack segment.
 Implement more ia32 instructions.
