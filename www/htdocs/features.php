@@ -1,13 +1,8 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
-  <head>
-    <title>
-      Revenge - Feature List
-    </title>
-    <link rel="StyleSheet" type="text/css" href="styles.css">
-  </head>
-  <body>
-    <h2>
+<?php
+include 'header.php'
+?>
+
+<h2>
       Revenge Features
     </h2>
     <h3>
@@ -35,6 +30,4 @@
         <b>Support for everything</b> 
       </blockquote>
     </blockquote>
-  </body>
-</html>
 

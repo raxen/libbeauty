@@ -1,0 +1,80 @@
+body { background: white }
+span.nowrap { white-space: nowrap }
+th.version {
+  background: #7777aa;
+  color: #ffffff;
+  vertical-align: top;
+  text-align: left;
+}
+th.doctable {
+  background: #7777aa;
+  color: #ffffff;
+}
+td.doctable {
+  background: #7777aa;
+  color: #ffffff;
+  font-weight: bold;
+}
+th.docbox {
+  background: #7777aa;
+  color: #ffffff;
+  margin-left: auto;
+  margin-right: auto;
+  border: solid 1px #000000;
+}
+td.docbox {
+  text-align: center;
+  font-weight: bold;
+  border: solid 1px #000000;
+}
+th.docboxleft {
+  background: #7777aa;
+  color: #ffffff;
+  text-align: left;
+  border: solid 1px #000000;
+  padding: 4px;
+}
+td.docentry {
+  border: 1px solid #000000;
+  padding: 4px;
+}
+td.navbar {
+  width: 125px;
+  background: #777aa;
+  vertical-align: top;
+  text-align: center;
+}
+td.hangspace {
+  width: 24px;
+}
+.bargraph {
+  background: #ddddee;
+  border: 1px solid #7777aa;
+}
+.reason {
+  background: #ddddee;
+  color: #000000;
+  text-align: center;
+  border: solid 1px;
+  width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+table.doclist {
+  border-collapse: collapse;
+  border: 1px solid #000000;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0px;
+}
+.center { text-align: center }
+img { border: 0 }
+A:link { text-decoration: none }
+A:visited { text-decoration: none }
+A:hover { text-decoration: underline }
+table.centered { margin-left: auto; margin-right: auto; }
+.box {
+  margin-left: auto;
+  margin-right: auto;
+  border: solid 1px #000000;
+}

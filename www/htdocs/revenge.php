@@ -1,18 +1,7 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<HTML>
-<HEAD>
-	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=iso-8859-1">
-	<TITLE> Revenge - DOCUMENTATION </TITLE>
-	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.1.0  (Linux)">
-	<META NAME="CREATED" CONTENT="20031114;22284600">
-	<META NAME="CHANGED" CONTENT="20031117;54600">
-	<STYLE>
-	<!--
-		@page { size: 8.5in 11in }
-	-->
-	</STYLE>
-</HEAD>
-<BODY LANG="en-GB" DIR="LTR">
+<?php
+include 'header.php'
+?>
+
 <H1>Revenge Emulator Documentation</H1>
 <H1>1. Aims.</H1>
 <H4>1) The first planned piece of software is going to be called

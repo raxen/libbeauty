@@ -1,20 +1,8 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<HTML>
-<HEAD>
-	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=iso-8859-1">
-	<TITLE> Revenge - Overview </TITLE>
-	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.1.0  (Linux)">
-	<META NAME="CREATED" CONTENT="20031115;17262200">
-	<META NAME="CHANGED" CONTENT="20031115;18174300">
-	<STYLE>
-	<!--
-		P { font-family: "Arial", "Helvetica", "Helv", sans-serif; font-size: 10pt }
-		H2 { font-family: "Arial", "Helvetica", "Helv", sans-serif; font-size: 14pt }
-		A:link { color: #003399 }
-	-->
-	</STYLE>
-</HEAD>
-<BODY LANG="en-GB" LINK="#003399" BGCOLOR="#ffffff" DIR="LTR">
+<?php
+include 'header.php'
+?>
+
+<table width="90%" class="centered">
 <H2>Revenge 
 </H2>
 <P>This site is dedicated to reverse endineering and decompiling. Anyone interested in things like a decompiler will find useful information here. For some more details, please look at the <A HREF="faq.html">FAQ</A>
@@ -27,5 +15,10 @@ interest is the <A HREF="http://www.itee.uq.edu.au/~cristina/dcc/decompilation_t
 Thesis</A>. (<A HREF="reference/decompilation_thesis.ps.gz">A local
 copy also here</A>) 
 </P>
+</table>
+</table>
+<?php
+include 'copyright.php' 
+?>
 </BODY>
-</HTML>
+</html>

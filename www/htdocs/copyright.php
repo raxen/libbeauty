@@ -1,7 +1,3 @@
-<html>
-<body bgcolor="Black" text="white">
 <center>
 <font size="1" face="arial">Copyright (c) 2003 James Courtier-Dutton. All Rights Reserved.</font>
 </center>
-</body>
-</html>
