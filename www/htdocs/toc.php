@@ -26,6 +26,9 @@
 <a href="revenge-status.php" >Revenge Status</a>
 </td></tr>
 <tr><td class="docentry">
+<a href="notes.php" >Revenge Notes</a>
+</td></tr>
+<tr><td class="docentry">
 <a href="revenge.php" >UserGuide</a>
 </td></tr>
 
