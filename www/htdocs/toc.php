@@ -5,9 +5,11 @@
 <tr><td class="docentry">
 <a href="index.php">Home</a>
 </td></tr>
+<!--
 <tr><td class="docentry">
 <a href="features.php">Features</a>
 </td></tr>
+-->
 <tr><td class="docentry">
 <a href="faq.php">FAQ</a>
 </td></tr>
