@@ -5,7 +5,7 @@
 	<TITLE> Revenge - DOCUMENTATION </TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.1.0  (Linux)">
 	<META NAME="CREATED" CONTENT="20031114;22284600">
-	<META NAME="CHANGED" CONTENT="20031115;23280800">
+	<META NAME="CHANGED" CONTENT="20031116;17333100">
 	<STYLE>
 	<!--
 		@page { size: 8.5in 11in }
@@ -42,8 +42,29 @@ and then followed by other formats that are supported in other
 environments apart from Linux</H4>
 <H4>5) The first application to be worked on will be a simple &ldquo;Hello
 World&rdquo; binary.</H4>
-<H4>6) As each assembler instruction is executed, it will be
-recorded.</H4>
+<H4>6) CPU registers will just look like another type of memory, and
+will be treated as though they are memory locations for the purposes
+of recording and analysis</H4>
+<H4>7) The Stack will just look like another type of memory, and will
+be treated as though they are memory locations for the purposes of
+recording and analysis.</H4>
+<DL>
+	<DD STYLE="margin-bottom: 0.2in">The SP register marks the top of
+	the stack (top as in a pile of books type stack. One puts a book on
+	the top, the first to come off will be the one on the top.) Anything
+	above SP on the stack represents thin air, so if we give a
+	particular memory location a label, and that memory location is part
+	of the stack. If an item is removed from the stack, the memory
+	locations label would then be marked invalid, and the next time a
+	item is placed back on the stack and accesses the same memory
+	location, it will therefore be given a new label. This will probably
+	result in giving us nice unique names for local variables so that
+	they do not get confused with local variables from other functions.
+	Then, after the functions have been analysed, they will be renamed
+	so that the human observer can then determine their scope easily.
+	E.g. local_variable_1, local_variable_2 etc.</DD></DL>
+<H4>
+8) As each assembler instruction is executed, it will be recorded.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">Each instruction executed will be
 	given an index. This index will start at 1, and increase with each
@@ -56,7 +77,7 @@ recorded.</H4>
 	also the function name and instruction number within the function
 	that we think the instruction belongs.</DD></DL>
 <H4>
-7) When a memory location is accessed, it will be recorded.</H4>
+9) When a memory location is accessed, it will be recorded.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">All memory locations will be given
 	a record. These records will make up a number of tables with one
@@ -71,7 +92,7 @@ recorded.</H4>
 	As an instruction, as a memory location, if the access is a read or
 	write.</DD></DL>
 <H4>
-8) All calls, jump, ret's will be executed as if they are a
+10) All calls, jump, ret's will be executed as if they are a
 combination of PUSH/POP and JUMP.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">Later, after the program flow has
@@ -83,7 +104,7 @@ combination of PUSH/POP and JUMP.</H4>
 	points of a function. 
 	</DD></DL>
 <H4 STYLE="margin-top: 0in">
-9) Function generation.</H4>
+11) Function generation.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">The generated functions will be
 	based round how registers and memory are accessed. For example. If
@@ -95,9 +116,32 @@ combination of PUSH/POP and JUMP.</H4>
 	separated. For example, AX=10, and BX=20, but AX is never used in
 	calculations regarding BX, and visa versa, then all the instructions
 	using AX can be put in one function, and all the instructions using
-	BX can be put in a different function.</DD></DL>
+	BX can be put in a different function. As a result, function
+	generation might not actually match up with call-ret instructions in
+	the code. The outputted functions will represent a particular
+	operation happening, rather than being flow based. As a result, I
+	would expect the resulting functions to be easier for a human to
+	understand.</DD><DD STYLE="margin-bottom: 0.2in">
+	e.g. Original C source code: -</DD><DD STYLE="margin-bottom: 0.2in">
+	main(..) {</DD><DD STYLE="margin-bottom: 0.2in">
+	  a=10;</DD><DD STYLE="margin-bottom: 0.2in">
+	  b=30</DD><DD STYLE="margin-bottom: 0.2in">
+	  printf(&ldquo;value=%d\n&rdquo;,a);</DD><DD STYLE="margin-bottom: 0.2in">
+	  a=20;</DD><DD STYLE="margin-bottom: 0.2in">
+	  printf(&ldquo;value=%d\n&rdquo;,a);</DD><DD STYLE="margin-bottom: 0.2in">
+	  printf(&ldquo;value=%d\n&rdquo;,b);</DD><DD STYLE="margin-bottom: 0.2in">
+	}</DD><DD STYLE="margin-bottom: 0.2in">
+	Would probably result in the following output after revenge: -</DD><DD STYLE="margin-bottom: 0.2in">
+	void print_a_value(int param) {</DD><DD STYLE="margin-bottom: 0.2in">
+	  printf(&ldquo;value=%d\n&rdquo;,param);</DD><DD STYLE="margin-bottom: 0.2in">
+	}</DD><DD STYLE="margin-bottom: 0.2in">
+	main(..) {</DD><DD STYLE="margin-bottom: 0.2in">
+	print_a_value(10);</DD><DD STYLE="margin-bottom: 0.2in">
+	print_a_value(20);</DD><DD STYLE="margin-bottom: 0.2in">
+	print_a_value(30);</DD><DD STYLE="margin-bottom: 0.2in">
+	}</DD></DL>
 <H4>
-10) Instruction expansion.</H4>
+12) Instruction expansion.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">Take example: -</DD><DD STYLE="margin-bottom: 0.2in">
 	MOV SI, 10 &lt;- Instruction number 1.</DD><DD STYLE="margin-bottom: 0.2in">
@@ -119,18 +163,18 @@ combination of PUSH/POP and JUMP.</H4>
 	when written to a file, the instruction record only stores the
 	original instruction, so that future instructions can be expanded.</DD></DL>
 <H4>
-11) A C program will be produced, that if compiled, should function
+13) A C program will be produced, that if compiled, should function
 in exactly the same way as the original binary.</H4>
 <P STYLE="margin-bottom: 0in">Although it will compile as C, it will
 probably be very difficult to understand, as it will have no symbols,
 and the functional structure might be wrong.</P>
-<H4>12) The next task will be using the records together with the
+<H4>14) The next task will be using the records together with the
 generated C program and find ways to automate the manipulation of it
 so that it is easier to read and understand.</H4>
-<H4>13) Recovery of the parameter types passed to a function.</H4>
-<H4>14) Recovery of variable types.</H4>
-<H4>15) Recovery of returned types.</H4>
-<H4>16) Determine which variables are local, global, or
+<H4>15) Recovery of the parameter types passed to a function.</H4>
+<H4>16) Recovery of variable types.</H4>
+<H4>17) Recovery of returned types.</H4>
+<H4>18) Determine which variables are local, global, or
 runtime(malloc'ed) created.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">For example. AX=10, if it then used
@@ -139,31 +183,31 @@ runtime(malloc'ed) created.</H4>
 	required, and we can therefore establish that AX is a local variable
 	between the AX=10 and DX=DX+AX instructions.</DD></DL>
 <H4>
-17) Determine which variables need to be initialised before calling a
+19) Determine which variables need to be initialised before calling a
 function.</H4>
-<H4>18) Determine what range of values a variable can take.</H4>
+<H4>20) Determine what range of values a variable can take.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">Useful for analysing sizes of
 	lookup tables.</DD></DL>
 <H4>
-19) Determine which variables are modified or created by a function.</H4>
-<H4>20) Using the logged counts of the amount of times a particular
+21) Determine which variables are modified or created by a function.</H4>
+<H4>22) Using the recorded counts of the amount of times a particular
 function is called.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">Efforts will be made to understand
 	most used functions first.</DD></DL>
 <H4>
-21) Allow human interaction to add comments, function and variable
+23) Allow human interaction to add comments, function and variable
 names.</H4>
-<H4>22) The GUI controlling front end will be a separate application
+<H4>24) The GUI controlling front end will be a separate application
 from the actual emulator, allowing for remote emulator control and
 interactivity.</H4>
-<H4>23) Every application is likely to depend on external libs. The
+<H4>25) Every application is likely to depend on external libs. The
 emulator will be able to run on the entire program including any
 external libs, but logging and analysis can be restricted to a
 particular lib the program uses or even just a particular function
 inside a lib.</H4>
-<H4>24) Some shim code might be needed to buffer access the
+<H4>26) Some shim code might be needed to buffer access the
 application has to outside libs.</H4>
 <DL>
 	<DD STYLE="margin-bottom: 0.2in">For example, if the application
@@ -172,7 +216,7 @@ application has to outside libs.</H4>
 	returned from the lib as we will already know exactly what each
 	function does.</DD></DL>
 <H4>
-25) Be able to save the entire emulated application state, so that
+27) Be able to save the entire emulated application state, so that
 one can come back later and continue. As one will know which memory
 locations have been used, and which have not, one can save on the
 amount of information needed to be saved in order to save the state.</H4>
@@ -190,7 +234,15 @@ of parameters and variable parameter types. E.g. How to catch calls
 to &ldquo;printf(...)&rdquo; from the emulated program and translate
 them into native system calls.</H4>
 <DL>
-	<DD STYLE="margin-bottom: 0.2in">Suggestions welcome from anyone!</DD></DL>
+	<DD STYLE="margin-bottom: 0.2in">Suggestions welcome from anyone!</DD><DD STYLE="margin-bottom: 0.2in">
+	My first thought is to take the format string from the first
+	parameter, and break it up into more simple printf statements that
+	require only a second parameter. E.g. Printf(&ldquo;First value=%d,
+	second value=%d\n&rdquo;,value1, value2); would be converted to two
+	printf's like printf(&ldquo;First value=%d&rdquo;, value1);
+	printf(&ldquo;,second value=%d\n&rdquo;, value2); Thus more simple
+	printf's can with a fixed number of parameters can easily be
+	emulated.</DD></DL>
 <H4 STYLE="margin-top: 0in">
 4) The i386 instructions will all use the little-endian memory format
 and not need to be memory aligned. How does one create a endian free
@@ -234,35 +286,37 @@ the accesses to memory to be aligned.
 2) Create a lib that will handle all the database details. 
 </H4>
 <DL>
-	<DD>This will handle storage of the memory/instruction records and
-	history tables.</DD></DL>
+	<DD STYLE="margin-bottom: 0.2in">This will handle storage of the
+	memory/instruction records and history tables.</DD></DL>
 <H4>
 3) Create a lib that will handle all the cpu emulation. 
 </H4>
 <DL>
-	<DD>This will take the output from (1) and create all the database
-	entries using (2) and actually process the CPU instructions.</DD></DL>
+	<DD STYLE="margin-bottom: 0.2in">This will take the output from (1)
+	and create all the database entries using (2) and actually process
+	the CPU instructions.</DD></DL>
 <H4>
 4) Create a lib that will handle the loading of the program.</H4>
 <DL>
-	<DD>This will handle reading of the executable file and loading of
-	it's contents into the correct database tables. Initially handling
-	linux elf executables, then follow that with a.out and then others,
-	for example win32 PE.</DD></DL>
+	<DD STYLE="margin-bottom: 0.2in">This will handle reading of the
+	executable file and loading of it's contents into the correct
+	database tables. Initially handling linux elf executables, then
+	follow that with a.out and then others, for example win32 PE.</DD></DL>
 <H4>
 5) Create a lib that will handle platform specific actions. 
 </H4>
 <DL>
-	<DD>This will handle things like emulation of the printf function,
-	so that the application being emulated can actually send out to the
-	screen and receive input from the user.</DD></DL>
+	<DD STYLE="margin-bottom: 0.2in">This will handle things like
+	emulation of the printf function, so that the application being
+	emulated can actually send out to the screen and receive input from
+	the user.</DD></DL>
 <H4>
 6) Create a GUI that will probably talk to the emulator over a TCP/IP
 connection.</H4>
 <DL>
 	<DD>This will provide interaction for the developer who is
-	controlling revenge.</DD><DD>
-	<BR>
+	controlling revenge.</DD><DD STYLE="margin-bottom: 0.2in">
+	<BR><BR>
 	</DD></DL>
 </BODY>
 </HTML>
