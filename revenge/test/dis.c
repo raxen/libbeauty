@@ -96,8 +96,8 @@ int main(int argc, char *argv[])
 	bf_test_close_file(handle);
 //	return 0;
 
-	printf("sizeof inst=%d\n",sizeof(inst));
-	for (n=0;n<sizeof(inst);n++) {
+	printf("sizeof inst=%d\n",inst_size);
+	for (n=0;n<inst_size;n++) {
 		printf(" 0x%02x",inst[n]);
 	}
 	printf("\n");
