@@ -23,6 +23,9 @@
 <a href="http://developer.berlios.de/projects/revenge/" target="_blank">Revenge Project page</a>
 </td></tr>
 <tr><td class="docentry">
+<a href="http://openfacts.berlios.de/index-en.phtml?title=revenge" target="_blank">Revenge Wiki</a>
+</td></tr>
+<tr><td class="docentry">
 <a href="revenge-status.php" >Revenge Status</a>
 </td></tr>
 <tr><td class="docentry">
