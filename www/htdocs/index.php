@@ -15,6 +15,9 @@ interest is the <A HREF="http://www.itee.uq.edu.au/~cristina/dcc/decompilation_t
 Thesis</A>. (<A HREF="reference/decompilation_thesis.ps.gz">A local
 copy also here</A>) 
 </P>
+<P>
+<A HREF="reference/ELF_Format.pdf">The ELF file format specification</A>
+</P>
 </table>
 </table>
 <?php

@@ -23,6 +23,9 @@
 <a href="http://developer.berlios.de/projects/revenge/" target="_blank">Revenge Project page</a>
 </td></tr>
 <tr><td class="docentry">
+<a href="revenge-status.php" >Revenge Status</a>
+</td></tr>
+<tr><td class="docentry">
 <a href="revenge.php" >UserGuide</a>
 </td></tr>
 
