@@ -4,7 +4,7 @@
     <title>
     Revenge: Research into Reverse engineering and decompiling.
     </title>
-    <link rel="stylesheet" type="text/css" href="revenge.css">
+    <link rel="stylesheet" type="text/css" href="./revenge.css">
   </head>
 <body>
 
