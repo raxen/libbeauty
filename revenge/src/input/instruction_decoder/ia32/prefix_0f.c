@@ -81,7 +81,7 @@ int prefix_0f(instructions_t *instructions, uint8_t *bytes_base) {
 		if (!half) {
 			instruction->srcA.store = 1;
 			instruction->srcA.indirect = 1;
-			instruction->srcA.value = REG_TMP;
+			instruction->srcA.value = REG_TMP1;
 		}
 		instruction->srcA.size = 1;
 		instructions->instruction_number++;
@@ -97,7 +97,7 @@ int prefix_0f(instructions_t *instructions, uint8_t *bytes_base) {
 		if (!half) {
 			instruction->srcA.store = 1;
 			instruction->srcA.indirect = 1;
-			instruction->srcA.value = REG_TMP;
+			instruction->srcA.value = REG_TMP1;
 		}
 		instruction->srcA.size = 2;
 		instructions->instruction_number++;

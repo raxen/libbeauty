@@ -59,7 +59,8 @@ extern char * opcode_table[];
 #define REG_SI 0x1c
 #define REG_DI 0x20
 #define REG_IP 0x24
-#define REG_TMP 0x28
+#define REG_TMP1 0x28
+#define REG_TMP2 0x2c
 
 typedef struct reg_s reg_t;
 
@@ -76,6 +77,7 @@ extern int shift2_table[];
 
 extern char *store_table[];
 extern char *size_table[];
+extern char *indirect_table[];
 
 /*
 ia32 registers will have their own memory space in the emulator.
@@ -92,7 +94,9 @@ eSP = 0x14,4
 eBP = 0x18,4
 eSI = 0x1c,4
 eDI = 0x20,4
-TMP = 0x24,4 (Used to convert an ia32 instruction into multiple RTL instructions.)
+eIP = 0x24,4
+TMP1 = 0x28,4 (Used to convert an ia32 instruction into multiple RTL instructions.)
+TMP2 = 0x2c,4 (Used to convert an ia32 instruction into multiple RTL instructions.)
 
 AX = 0x04,2
 CX = 0x08,2

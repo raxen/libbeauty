@@ -61,7 +61,8 @@ char * opcode_table[] = {
 #define REG_SI 0x1c
 #define REG_DI 0x20
 #define REG_IP 0x24
-#define REG_TMP 0x28
+#define REG_TMP1 0x28
+#define REG_TMP2 0x2c
 
 
 reg_t reg_table[] = {
@@ -98,6 +99,7 @@ int shift2_table[] = {
 
 char *store_table[] = { "i", "r", "m", "s" };
 char *size_table[] = { " ", "b", "w", " ", "d" };
+char *indirect_table[] = { "", "m", "s", "p" };
 
 
 /*
@@ -115,7 +117,9 @@ eSP = 0x14,4
 eBP = 0x18,4
 eSI = 0x1c,4
 eDI = 0x20,4
-TMP = 0x24,4 (Used to convert an ia32 instruction into multiple RTL instructions.)
+eIP = 0x24,4
+TMP1 = 0x28,4 (Used to convert an ia32 instruction into multiple RTL instructions.)
+TMP2 = 0x2c,4 (Used to convert an ia32 instruction into multiple RTL instructions.)
 
 AX = 0x04,2
 CX = 0x08,2

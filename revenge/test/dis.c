@@ -86,8 +86,9 @@ int main(int argc, char *argv[])
 				n,
 				opcode_table[instruction->opcode]);
 			if (instruction->srcA.indirect) {
-				printf(" %s[%s0x%x],",
+				printf(" %s%s[%s0x%x],",
 					size_table[instruction->srcA.size],
+					indirect_table[instruction->srcA.indirect],
 					store_table[instruction->srcA.store],
 					instruction->srcA.value);
 			} else {
@@ -97,8 +98,9 @@ int main(int argc, char *argv[])
 				instruction->srcA.value);
 			}
 			if (instruction->dstA.indirect) {
-				printf(" %s[%s0x%x]\n",
+				printf(" %s%s[%s0x%x]\n",
 					size_table[instruction->dstA.size],
+					indirect_table[instruction->dstA.indirect],
 					store_table[instruction->dstA.store],
 					instruction->dstA.value);
 			} else {
