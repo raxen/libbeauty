@@ -1,0 +1,16 @@
+include $(top_srcdir)/misc/Makefile.common
+
+AM_CFLAGS = -I$(top_srcdir)/test
+
+bin_PROGRAMS = dis
+
+#noinst_HEADERS = \
+#	dis.h \
+#	opcodes.h
+
+dis_SOURCES = \
+	dis.c
+
+dis_LDADD = -llibia32_decoder
+
+dis_LDFLAGS = @MODULE_LDFLAGS@
