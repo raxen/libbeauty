@@ -27,7 +27,7 @@
 #include <ctype.h>
 #include <errno.h>
 
-#include "bfl.h"
+#include <revenge/bfl.h>
 
 int main() {
   const char *file="test.obj";

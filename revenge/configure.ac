@@ -100,7 +100,7 @@ misc/Makefile
 src/Makefile
 src/input/Makefile
 src/input/binary_file_decoder/Makefile
-src/input/binary_file_decoder/elf/Makefile
+src/input/binary_file_decoder/libbfd/Makefile
 src/input/instruction_decoder/Makefile
 src/input/instruction_decoder/ia32/Makefile
 test/Makefile

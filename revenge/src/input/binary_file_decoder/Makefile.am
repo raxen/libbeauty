@@ -1,6 +1,6 @@
 include $(top_srcdir)/misc/Makefile.common
 
-#SUBDIRS = elf
+SUBDIRS = libbfd
 
 #noinst_LTLIBRARIES = libBinary_File_Decoder.la
 

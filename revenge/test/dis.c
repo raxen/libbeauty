@@ -34,8 +34,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <revenge/dis.h>
-
-#include <bfl.h>
+#include <revenge/bfl.h>
 
 instructions_t instructions;
 #if 0
