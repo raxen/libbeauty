@@ -8,5 +8,6 @@ include 'header.php'
     <p><a href="http://www.program-transformation.org/twiki/bin/view/Transform/DecompilationPossible" target="_blank">Is Decompilation Possible? References to the halting problem.</a></p>
     <p><a href="http://boomerang.sourceforge.net/" target="_blank">Boomerang: Someone else's efforts at decompiling.</a></p>
     <p><a href="http://www.uncc.info/" target="_blank">UNCC: A C decompiler.</a></p>
+    <p><a href="http://upx.sourceforge.net/" target="_blank">UPX: Unpacker for win32 .exe and .dll files.</a></p>
 
 
