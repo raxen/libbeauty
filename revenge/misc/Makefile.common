@@ -3,5 +3,7 @@
 #		rm -f $(modulesdir)/$$p ; \
 #	done
 
+libdir = $(MOD_PATH)
+
 debug:
 	@$(MAKE) CXXFLAGS="$(DEBUG_CXXFLAGS)"

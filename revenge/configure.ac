@@ -51,9 +51,9 @@ fi
 dnl ------------------------------------
 dnl    Module install path
 dnl ------------------------------------
-AC_ARG_WITH(modules-path,[  --with-modules-path     where libreverse modules are installed],modules_path="$withval",modules_path="$libdir/libreverse")
+AC_ARG_WITH(modules-path,[  --with-modules-path     where librevenge modules are installed],modules_path="$withval",modules_path="$libdir/revenge")
 ac_modules_path=`eval echo "$modules_path"`
-AC_DEFINE_UNQUOTED(MOD_PATH,"$ac_modules_path",[Define the path of the libreverse modules])
+AC_DEFINE_UNQUOTED(MOD_PATH,"$ac_modules_path",[Define the path of the librevenge modules])
 MOD_PATH="$ac_modules_path"
 AC_SUBST(MOD_PATH)
 
@@ -69,6 +69,7 @@ src/input/binary_file_decoder/Makefile
 src/input/binary_file_decoder/elf/Makefile
 src/input/instruction_decoder/Makefile
 src/input/instruction_decoder/ia32/Makefile
+test/Makefile
 ])
 AC_OUTPUT
 
