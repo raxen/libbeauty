@@ -9,9 +9,10 @@ bin_PROGRAMS = dis bf
 #	opcodes.h
 
 dis_SOURCES = \
+	bfl.c \
 	dis.c
 
-dis_LDADD = /usr/local/lib/revenge/libia32_decoder.so
+dis_LDADD = -lbfd /usr/local/lib/revenge/libia32_decoder.so
 
 dis_LDFLAGS = @MODULE_LDFLAGS@
 

@@ -31,9 +31,14 @@
  Naming convention taked from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
 
+#include <inttypes.h>
+#include <stdlib.h>
 #include <revenge/dis.h>
 
+#include <bfl.h>
+
 instructions_t instructions;
+#if 0
 uint8_t inst[]={0x57,
 	0x56,
 	0x53,
@@ -66,19 +71,38 @@ uint8_t inst[]={0x57,
 	0x5f,
 	0xc3
 };
+#endif
+uint8_t *inst=NULL;
+struct rev_eng *handle;
 
-int main(int argc, char *argv[]) {
-//8b 74 24 28
+int main(int argc, char *argv[])
+{
 	int n=0;
 	int offset=0;
 	instruction_t *instruction;
+	const char *file="test.obj";
+	size_t inst_size=0;
+	handle = bf_test_open_file(file);
+	inst_size = bf_get_code_size(handle);
+	inst = malloc(inst_size);	
+	bf_copy_code_section(handle, inst, inst_size);
+	printf("dis:Data at %p, size=%li\n",inst, inst_size);
+	for(n=0;n<inst_size;n++) {
+	  printf("0x%x ",inst[n]);
+	}
+	printf("\n");
+
+	printf("handle=%p\n",handle);
+	bf_test_close_file(handle);
+//	return 0;
+
 	printf("sizeof inst=%d\n",sizeof(inst));
 	for (n=0;n<sizeof(inst);n++) {
 		printf(" 0x%02x",inst[n]);
 	}
 	printf("\n");
 	instructions.bytes_used=0;
-	for(offset=0;offset<sizeof(inst);offset+=instructions.bytes_used) {
+	for(offset=0;offset<inst_size;offset+=instructions.bytes_used) {
 		instructions.instruction_number=0;
 		instructions.bytes_used=0;
 	        disassemble(&instructions, inst+offset);
@@ -88,6 +112,10 @@ int main(int argc, char *argv[]) {
 		}
 		printf("\n");
 		printf("instruction_number=%d\n",instructions.instruction_number);
+		if (instructions.instruction_number == 0) {
+			printf("Unhandled instruction. Exiting\n");
+			return 1;
+		}
 		for (n=0;n<instructions.instruction_number;n++) {
 			instruction = &instructions.instruction[n];	
 			printf("Instruction %d:%s",

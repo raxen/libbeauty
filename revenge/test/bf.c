@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <bfd.h>
 #include <errno.h>
 
 #include "bfl.h"

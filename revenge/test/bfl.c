@@ -24,8 +24,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <bfd.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include "bfl.h"
 
@@ -128,9 +128,31 @@ static void print_code_section(struct rev_eng* ret)
     printf("0x%x ",data[n]);
   }
   printf("\n");
+  free(data);
+  data = NULL;
+}
+int64_t bf_get_code_size(struct rev_eng* ret)
+{
+  asection          *section = ret->section[0];
+  int                n;
+  bfd_byte          *data = NULL;
+  bfd_size_type      datasize = 0;
+  int64_t            code_size = 0;
+
+  datasize = bfd_get_section_size_before_reloc(section);
+  code_size = datasize;
+  return code_size;
 }
 
+int bf_copy_code_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size)
+{
+  asection          *section = ret->section[0];
+  bfd_size_type      datasize = data_size;
 
+  bfd_get_section_contents(ret->bfd, section, data, 0, datasize);
+  printf("Data at %p\n",data);
+  return 1;
+}
 
 const char *bfd_err(void)
 {
@@ -186,7 +208,9 @@ struct rev_eng *bf_test_open_file(const char *fn)
         }
 	bfd_map_over_sections(ret->bfd, insert_section, ret);
 	print_sections(ret);
+/*
 	print_code_section(ret);
+*/
         printf("Setup ok\n");
 
 	return ret;
@@ -195,6 +219,8 @@ struct rev_eng *bf_test_open_file(const char *fn)
 void bf_test_close_file(struct rev_eng *r)
 {
 	if (!r) return;
+	if ( r->section )
+		free(r->section);
 	if ( r->symtab )
 		free(r->symtab);
 	if ( r->dynsymtab )

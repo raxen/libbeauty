@@ -23,6 +23,9 @@
 #ifndef __BFL__
 #define __BFL__
 
+#include <bfd.h>
+#include <inttypes.h>
+
 const char *bfd_err(void);
 
 struct rev_eng {
@@ -39,5 +42,7 @@ struct rev_eng {
 
 struct rev_eng *bf_test_open_file(const char *fn);
 void bf_test_close_file(struct rev_eng *r);
+int64_t bf_get_code_size(struct rev_eng* ret);
+int bf_copy_code_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size);
 
 #endif /* __BFL__ */
