@@ -58,6 +58,16 @@ MOD_PATH="$ac_modules_path"
 AC_SUBST(MOD_PATH)
 
 dnl ------------------------------------
+dnl    include install path
+dnl ------------------------------------
+AC_ARG_WITH(include-path,[  --with-include-path     where librevenge include files are installed],include_path="$withval",include_path="$includedir/revenge")
+ac_include_path=`eval echo "$include_path"`
+AC_DEFINE_UNQUOTED(INCLUDE_PATH,"$ac_include_path",[Define the path of the librevenge include files])
+INCLUDE_PATH="$ac_include_path"
+AC_SUBST(INCLUDE_PATH)
+
+dnl ------------------------------------
+dnl ------------------------------------
 dnl        Makefiles
 dnl ------------------------------------
 AC_CONFIG_FILES([

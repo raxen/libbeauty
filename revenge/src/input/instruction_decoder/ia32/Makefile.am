@@ -1,14 +1,16 @@
 include $(top_srcdir)/misc/Makefile.common
 
-AM_CPPFLAGS = -I$(top_srcdir)/src/input
+#AM_CPPFLAGS = -I$(top_srcdir)/src/input
 
-modulesdir = $(pkglibdir)/instruction_decoder
+#modulesdir = $(pkglibdir)/instruction_decoder
 lib_LTLIBRARIES = libia32_decoder.la
 #bin_PROGRAMS = dis
 
-noinst_HEADERS = \
-	dis.h \
-	opcodes.h
+include_HEADERS = \
+	dis.h opcodes.h
+
+#noinst_HEADERS = \
+#	opcodes.h
 
 libia32_decoder_la_SOURCES = \
 	opcodes.c dis.c prefix_0f.c

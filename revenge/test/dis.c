@@ -26,7 +26,7 @@
  Naming convention taked from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
 
-#include "dis.h"
+#include <revenge/dis.h>
 
 instructions_t instructions;
 uint8_t inst[]={0x57,

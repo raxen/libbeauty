@@ -4,6 +4,7 @@
 #	done
 
 libdir = $(MOD_PATH)
+includedir = $(INCLUDE_PATH)
 
 debug:
 	@$(MAKE) CXXFLAGS="$(DEBUG_CXXFLAGS)"
