@@ -41,45 +41,103 @@ uint8_t *inst=NULL;
 struct rev_eng *handle;
 char *dis_flags_table[] = { " ", "f" };
 
-int print_inst(instructions_t *instructions)
+/* Memory and Registers are 8bit values. */
+typedef struct memory_s memory_t;
+struct memory_s {
+        uint8_t value;
+        int type;	/* Last accessed type:
+			 * For memory:  0 = Not accessed yet 1 = Data, 2 = Stack, 3 = Instruction, 4 = Instruction pointer(EIP).
+        		 * For register:0 = Not accessed yet, 1 = Normal register, 2 = Stack register, 3 = Instruction register.
+			 * For stack: 0 = Not accessed yet 1 = Data, 2 = Stack_pointer, 3 = Instruction(should never happen), 4 = Instruction pointer(EIP).
+			 */
+	int multi_byte_access_start; /* Negative value pointing to multibyte access start location. */
+	int multi_byte_access_size;  /* Number of bytes accessed in one go */
+	uint32_t last_accessed_from_instruction_at_memory_location;
+	uint32_t last_accessed_from_instruction_log_at_location;
+} ;
+
+memory_t memory_ram[100];
+memory_t memory_reg[100];
+memory_t memory_stack[100];
+
+int print_inst(instruction_t *instruction, int instruction_number)
 {
-	instruction_t *instruction;
-	int n;
-	printf("instruction_number=%d\n",instructions->instruction_number);
-	if (instructions->instruction_number == 0) {
-		printf("Unhandled instruction. Exiting\n");
-		return 0;
-	}
-	for (n=0;n<instructions->instruction_number;n++) {
-		instruction = &instructions->instruction[n];	
-		printf("Instruction %d:%s%s",
-			n,
-			opcode_table[instruction->opcode],
-			dis_flags_table[instruction->flags]);
-		if (instruction->srcA.indirect) {
-			printf(" %s%s[%s0x%x],",
-				size_table[instruction->srcA.size],
-				indirect_table[instruction->srcA.indirect],
-				store_table[instruction->srcA.store],
-				instruction->srcA.value);
-		} else {
-			printf(" %s%s0x%x,",
+	printf("Instruction %d:%s%s",
+		instruction_number,
+		opcode_table[instruction->opcode],
+		dis_flags_table[instruction->flags]);
+	if (instruction->srcA.indirect) {
+		printf(" %s%s[%s0x%x],",
 			size_table[instruction->srcA.size],
+			indirect_table[instruction->srcA.indirect],
 			store_table[instruction->srcA.store],
-			instruction->srcA.value);
-		}
-		if (instruction->dstA.indirect) {
-			printf(" %s%s[%s0x%x]\n",
-				size_table[instruction->dstA.size],
-				indirect_table[instruction->dstA.indirect],
-				store_table[instruction->dstA.store],
-				instruction->dstA.value);
-		} else {
-			printf(" %s%s0x%x\n",
+			instruction->srcA.index);
+	} else {
+		printf(" %s%s0x%x,",
+		size_table[instruction->srcA.size],
+		store_table[instruction->srcA.store],
+		instruction->srcA.index);
+	}
+	if (instruction->dstA.indirect) {
+		printf(" %s%s[%s0x%x]\n",
 			size_table[instruction->dstA.size],
+			indirect_table[instruction->dstA.indirect],
 			store_table[instruction->dstA.store],
-			instruction->dstA.value);
-		}
+			instruction->dstA.index);
+	} else {
+		printf(" %s%s0x%x\n",
+		size_table[instruction->dstA.size],
+		store_table[instruction->dstA.store],
+		instruction->dstA.index);
+	}
+	return 1;
+}
+
+int get_value_from_index(operand_t *operand, uint64_t *index) {
+	if (operand->indirect) {
+		printf(" %s%s[%s0x%x],",
+			size_table[operand->size],
+			indirect_table[operand->indirect],
+			store_table[operand->store],
+			operand->index);
+	} else {
+		printf(" %s%s0x%x,",
+		size_table[operand->size],
+		store_table[operand->store],
+		operand->index);
+	}
+	return 1;
+}
+
+int execute_instruction(instruction_t *instruction)
+{
+	printf("Execute Instruction 0x%x:%s%s",
+		instruction->opcode,
+		opcode_table[instruction->opcode],
+		dis_flags_table[instruction->flags]);
+	if (instruction->srcA.indirect) {
+		printf(" %s%s[%s0x%x],",
+			size_table[instruction->srcA.size],
+			indirect_table[instruction->srcA.indirect],
+			store_table[instruction->srcA.store],
+			instruction->srcA.index);
+	} else {
+		printf(" %s%s0x%x,",
+		size_table[instruction->srcA.size],
+		store_table[instruction->srcA.store],
+		instruction->srcA.index);
+	}
+	if (instruction->dstA.indirect) {
+		printf(" %s%s[%s0x%x]\n",
+			size_table[instruction->dstA.size],
+			indirect_table[instruction->dstA.indirect],
+			store_table[instruction->dstA.store],
+			instruction->dstA.index);
+	} else {
+		printf(" %s%s0x%x\n",
+		size_table[instruction->dstA.size],
+		store_table[instruction->dstA.store],
+		instruction->dstA.index);
 	}
 	return 1;
 }
@@ -114,7 +172,8 @@ int main(int argc, char *argv[])
 	}
 	printf("\n");
 	instructions.bytes_used=0;
-	for(offset=0;offset<inst_size;offset+=instructions.bytes_used) {
+	//for(offset=0;offset<inst_size;offset+=instructions.bytes_used) {
+	for(offset=0;offset<1;offset+=instructions.bytes_used) {
 		instructions.instruction_number=0;
 		instructions.bytes_used=0;
 	        disassemble(&instructions, inst+offset);
@@ -123,8 +182,21 @@ int main(int argc, char *argv[])
 			printf(" 0x%02x",inst[n+offset]);
 		}
 		printf("\n");
-		if (!print_inst(&instructions)) {
-			return 1;
+		printf("instruction_number=%d\n",instructions.instruction_number);
+		if (instructions.instruction_number == 0) {
+			printf("Unhandled instruction. Exiting\n");
+			return 0;
+		}
+		//for (n=0;n<instructions.instruction_number;n++) {
+		for (n=0;n<1;n++) {
+			instruction = &instructions.instruction[n];	
+			if (!print_inst(instruction, n)) {
+				return 1;
+			}
+			if (!execute_instruction(instruction)) {
+				printf("execute_intruction failed\n");
+				return 1;
+			}
 		}
 	}
 

@@ -35,6 +35,7 @@ typedef struct operand_s operand_t;
 struct operand_s {
 	int store; /* 0 = value, 1 = reg, 2 = data_memory, 3 = stack_memory */
 	int indirect; /* 0 = direct or immeadiate value. ( e.g. MOV AX,BX), 1 = indirect or from_memory value. (e.g. MOV AX,[BX]) */
+	uint32_t index; // value depends on store
 	uint32_t value; // value depends on store
 	int size; // number of bytes in value.
 } ;

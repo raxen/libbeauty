@@ -76,12 +76,12 @@ int prefix_0f(instructions_t *instructions, uint8_t *bytes_base) {
 		instruction->opcode = MOV;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = reg_table[reg].offset;
+		instruction->dstA.index = reg_table[reg].offset;
 		instruction->dstA.size = 4;
 		if (!half) {
 			instruction->srcA.store = 1;
 			instruction->srcA.indirect = 1;
-			instruction->srcA.value = REG_TMP1;
+			instruction->srcA.index = REG_TMP1;
 		}
 		instruction->srcA.size = 1;
 		instructions->instruction_number++;
@@ -92,12 +92,12 @@ int prefix_0f(instructions_t *instructions, uint8_t *bytes_base) {
 		instruction->opcode = MOV;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = reg_table[reg].offset;
+		instruction->dstA.index = reg_table[reg].offset;
 		instruction->dstA.size = 4;
 		if (!half) {
 			instruction->srcA.store = 1;
 			instruction->srcA.indirect = 1;
-			instruction->srcA.value = REG_TMP1;
+			instruction->srcA.index = REG_TMP1;
 		}
 		instruction->srcA.size = 2;
 		instructions->instruction_number++;

@@ -85,11 +85,11 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = reg_table[reg_mem].offset;
+		instruction->srcA.index = reg_table[reg_mem].offset;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = reg_table[reg_mem].offset;
+		instruction->dstA.index = reg_table[reg_mem].offset;
 		instruction->dstA.size = 4;
 		return 1;
 	}
@@ -103,11 +103,11 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			instruction->flags = 0;
 			instruction->srcA.store = 1;
 			instruction->srcA.indirect = 0;
-			instruction->srcA.value = reg_table[index].offset;
+			instruction->srcA.index = reg_table[index].offset;
 			instruction->srcA.size = reg_table[index].size;
 			instruction->dstA.store = 1;
 			instruction->dstA.indirect = 0;
-			instruction->dstA.value = REG_TMP1;
+			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.size = 4;
 			instructions->instruction_number++;
 			if (mul > 0) {
@@ -116,11 +116,11 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 				instruction->flags = 0;
 				instruction->srcA.store = 0;
 				instruction->srcA.indirect = 0;
-				instruction->srcA.value = 1 << mul;
+				instruction->srcA.index = 1 << mul;
 				instruction->srcA.size = 4;
 				instruction->dstA.store = 1;
 				instruction->dstA.indirect = 0;
-				instruction->dstA.value = REG_TMP1;
+				instruction->dstA.index = REG_TMP1;
 				instruction->dstA.size = 4;
 				instructions->instruction_number++;
 			}
@@ -138,18 +138,18 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			if (mod==0) {
 				instruction->srcA.store = 0;
 				instruction->srcA.indirect = 0;
-				instruction->srcA.value = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
+				instruction->srcA.index = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
 				instructions->bytes_used+=4;
 				instruction->srcA.size = 4;
 			} else {
 				instruction->srcA.store = 1;
 				instruction->srcA.indirect = 0;
-				instruction->srcA.value = REG_BP;
+				instruction->srcA.index = REG_BP;
 				instruction->srcA.size = 4;
 			}
 			instruction->dstA.store = 1;
 			instruction->dstA.indirect = 0;
-			instruction->dstA.value = REG_TMP1;
+			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.size = 4;
 			instructions->instruction_number++;
 		} else {
@@ -163,11 +163,11 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			}
 			instruction->srcA.store = 1;
 			instruction->srcA.indirect = 0;
-			instruction->srcA.value = reg_table[index].offset;
+			instruction->srcA.index = reg_table[index].offset;
 			instruction->srcA.size = reg_table[index].size;
 			instruction->dstA.store = 1;
 			instruction->dstA.indirect = 0;
-			instruction->dstA.value = REG_TMP1;
+			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.size = 4;
 			instructions->instruction_number++;
 		}
@@ -182,12 +182,12 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 		}
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
 		instructions->bytes_used+=4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_TMP1;
+		instruction->dstA.index = REG_TMP1;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 	} else {
@@ -201,11 +201,11 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 		}
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = reg_table[reg_mem].offset;
+		instruction->srcA.index = reg_table[reg_mem].offset;
 		instruction->srcA.size = reg_table[reg_mem].size;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_TMP1;
+		instruction->dstA.index = REG_TMP1;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 	}
@@ -222,16 +222,16 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 		instruction->srcA.indirect = 0;
 		if (mod == 1) {
 			instruction->srcA.size = 1;
-			instruction->srcA.value = getbyte(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
+			instruction->srcA.index = getbyte(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
 			instructions->bytes_used++;
 		} else { /* mod == 2 */
 			instruction->srcA.size = 4;
-			instruction->srcA.value = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
+			instruction->srcA.index = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
 			instructions->bytes_used+=4;
 		}
 	instruction->dstA.store = 1;
 	instruction->dstA.indirect = 0;
-	instruction->dstA.value = REG_TMP1;
+	instruction->dstA.index = REG_TMP1;
 	instruction->dstA.size = 4;
 	instructions->instruction_number++;
 	}
@@ -248,16 +248,16 @@ void dis_Ex_Gx(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
   instruction->flags = 1;
   instruction->srcA.store = 1;
   instruction->srcA.indirect = 0;
-  instruction->srcA.value = reg_table[*reg].offset;
+  instruction->srcA.index = reg_table[*reg].offset;
   instruction->srcA.size = size;
   if (!half) {
     instruction->dstA.store = 1;
     instruction->dstA.indirect = 1;
-    if ((instructions->instruction[0].srcA.value >= 0x14) || 
-        (instructions->instruction[0].srcA.value <= 0x18) ) {
+    if ((instructions->instruction[0].srcA.index >= 0x14) || 
+        (instructions->instruction[0].srcA.index <= 0x18) ) {
       instruction->dstA.indirect = 2; /* SP and BP use STACK memory and not DATA memory. */
     }
-    instruction->dstA.value = REG_TMP1;
+    instruction->dstA.index = REG_TMP1;
     instruction->dstA.size = size;
   }
   instructions->instruction_number++;
@@ -273,16 +273,16 @@ void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
   instruction->flags = 1;
   instruction->dstA.store = 1;
   instruction->dstA.indirect = 0;
-  instruction->dstA.value = reg_table[*reg].offset;
+  instruction->dstA.index = reg_table[*reg].offset;
   instruction->dstA.size = size;
   if (!half) {
     instruction->srcA.store = 1;
     instruction->srcA.indirect = 1;
-    if ((instructions->instruction[0].srcA.value >= 0x14) || 
-        (instructions->instruction[0].srcA.value <= 0x18) ) {
+    if ((instructions->instruction[0].srcA.index >= 0x14) || 
+        (instructions->instruction[0].srcA.index <= 0x18) ) {
       instruction->srcA.indirect = 2; /* SP and BP use STACK memory and not DATA memory. */
     }
-    instruction->srcA.value = REG_TMP1;
+    instruction->srcA.index = REG_TMP1;
     instruction->srcA.size = size;
   }
   instructions->instruction_number++;
@@ -439,7 +439,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x4e:												/* DEC SI */
 	case 0x4f:												/* DEC DI */
 		break;
-/* PUSH reg */
+/* PUSH reg. 0x50-0x57 is handled by same code. */
 	case 0x50:												/* PUSH eAX */
 	case 0x51:												/* PUSH CX */
 	case 0x52:												/* PUSH DX */
@@ -447,7 +447,6 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x54:												/* PUSH SP */
 	case 0x55:												/* PUSH BP */
 	case 0x56:												/* PUSH SI */
-		break;
 	case 0x57:												/* PUSH DI */
                 /* PUSH -> SP=SP-4 (-2 for word); [SP]=reg; */
 		instruction = &instructions->instruction[instructions->instruction_number];	
@@ -455,11 +454,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0; /* Do not effect flags */
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = 4;
+		instruction->srcA.index = 4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_SP;
+		instruction->dstA.index = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 
@@ -468,11 +467,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = reg_table[inst[0] & 0x7].offset;
+		instruction->srcA.index = reg_table[inst[0] & 0x7].offset;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 2;
-		instruction->dstA.value = REG_SP;
+		instruction->dstA.index = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 		break;
@@ -491,11 +490,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = reg_table[inst[0] & 0x7].offset;
+		instruction->dstA.index = reg_table[inst[0] & 0x7].offset;
 		instruction->dstA.size = 4;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 2;
-		instruction->srcA.value = REG_SP;
+		instruction->srcA.index = REG_SP;
 		instruction->srcA.size = 4;
 		instructions->instruction_number++;
 
@@ -504,11 +503,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = 4;
+		instruction->srcA.index = 4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_SP;
+		instruction->dstA.index = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 		break;
@@ -563,17 +562,17 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 1;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
 		instructions->bytes_used++;
 		instruction->srcA.size = 4;
 		if (!half) {
 			instruction->dstA.store = 1;
 			instruction->dstA.indirect = 1;
-			if ((instructions->instruction[0].srcA.value >= 0x14) || 
-			    (instructions->instruction[0].srcA.value <= 0x18) ) {
+			if ((instructions->instruction[0].srcA.index >= 0x14) || 
+			    (instructions->instruction[0].srcA.index <= 0x18) ) {
 			  instruction->dstA.indirect = 2; /* SP and BP use STACK memory and not DATA memory. */
 			}
-			instruction->dstA.value = REG_TMP1;
+			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.size = 4;
 		}
 		instructions->instruction_number++;
@@ -606,12 +605,12 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = reg_table[reg].offset;
+		instruction->dstA.index = reg_table[reg].offset;
 		instruction->dstA.size = 4;
 		if (!half) {
 			instruction->srcA.store = 1;
 			instruction->srcA.indirect = 0;
-			instruction->srcA.value = REG_TMP1;
+			instruction->srcA.index = REG_TMP1;
 			instruction->srcA.size = 4;
 		}
 		instructions->instruction_number++;
@@ -691,17 +690,17 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 1;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
 		instructions->bytes_used++;
 		instruction->srcA.size = 4;
 		if (!half) {
 			instruction->dstA.store = 1;
 			instruction->dstA.indirect = 1;
-			if ((instructions->instruction[0].srcA.value >= 0x14) || 
-			    (instructions->instruction[0].srcA.value <= 0x18) ) {
+			if ((instructions->instruction[0].srcA.index >= 0x14) || 
+			    (instructions->instruction[0].srcA.index <= 0x18) ) {
 			  instruction->dstA.indirect = 2; /* SP and BP use STACK memory and not DATA memory. */
 			}
-			instruction->dstA.value = REG_TMP1;
+			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.size = 4;
 		}
 		instructions->instruction_number++;
@@ -715,11 +714,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_TMP1;
+		instruction->dstA.index = REG_TMP1;
 		instruction->dstA.size = 4;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 2;
-		instruction->srcA.value = REG_SP;
+		instruction->srcA.index = REG_SP;
 		instruction->srcA.size = 4;
 		instructions->instruction_number++;
 
@@ -728,11 +727,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = 4;
+		instruction->srcA.index = 4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_SP;
+		instruction->dstA.index = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 
@@ -741,11 +740,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_IP;
+		instruction->dstA.index = REG_IP;
 		instruction->dstA.size = 4;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = REG_TMP1;
+		instruction->srcA.index = REG_TMP1;
 		instruction->srcA.size = 4;
 		instructions->instruction_number++;
 
@@ -806,11 +805,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = 4;
+		instruction->srcA.index = 4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_SP;
+		instruction->dstA.index = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 
@@ -819,11 +818,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = REG_IP;
+		instruction->srcA.index = REG_IP;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 2;
-		instruction->dstA.value = REG_SP;
+		instruction->dstA.index = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 		/* Fall through to JMP */	
@@ -833,12 +832,12 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = 0;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
 		instructions->bytes_used+=4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 1;
-		instruction->dstA.value = REG_IP;
+		instruction->dstA.index = REG_IP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 		break;
@@ -852,11 +851,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 1;
-		instruction->srcA.value = REG_DX;
+		instruction->srcA.index = REG_DX;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.value = REG_AX;
+		instruction->dstA.index = REG_AX;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 		break;
@@ -868,11 +867,11 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = 1;
 		instruction->srcA.indirect = 0;
-		instruction->srcA.value = REG_AX;
+		instruction->srcA.index = REG_AX;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = 1;
 		instruction->dstA.indirect = 1;
-		instruction->dstA.value = REG_DX;
+		instruction->dstA.index = REG_DX;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
 		break;
@@ -911,15 +910,15 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->flags = 1;
 			instruction->srcA.store = 0;
 			instruction->srcA.indirect = 0;
-			instruction->srcA.value = 1;
+			instruction->srcA.index = 1;
 			instruction->srcA.size = 4;
 			instruction->dstA.store = 1;
 			instruction->dstA.indirect = 1;
-			if ((instructions->instruction[0].srcA.value >= 0x14) || 
-			    (instructions->instruction[0].srcA.value <= 0x18) ) {
+			if ((instructions->instruction[0].srcA.index >= 0x14) || 
+			    (instructions->instruction[0].srcA.index <= 0x18) ) {
 			  instruction->dstA.indirect = 2; /* SP and BP use STACK memory and not DATA memory. */
 			}
-			instruction->dstA.value = REG_TMP1;
+			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.size = 4;
 			instructions->instruction_number++;
 			break;
@@ -928,15 +927,15 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->flags = 1;
 			instruction->srcA.store = 0;
 			instruction->srcA.indirect = 0;
-			instruction->srcA.value = 1;
+			instruction->srcA.index = 1;
 			instruction->srcA.size = 4;
 			instruction->dstA.store = 1;
 			instruction->dstA.indirect = 1;
-			if ((instructions->instruction[0].srcA.value >= 0x14) || 
-			    (instructions->instruction[0].srcA.value <= 0x18) ) {
+			if ((instructions->instruction[0].srcA.index >= 0x14) || 
+			    (instructions->instruction[0].srcA.index <= 0x18) ) {
 			  instruction->dstA.indirect = 2; /* SP and BP use STACK memory and not DATA memory. */
 			}
-			instruction->dstA.value = REG_TMP1;
+			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.size = 4;
 			instructions->instruction_number++;
 		default:
