@@ -1,15 +1,15 @@
 #!/bin/sh
 #
-# Copyright (C) 2000-2003 the xine project
+# Copyright (C) 2000-2005 the revenge project
 #
-# This file is part of xine, a unix video player.
+# This file is part of revenge, a unix video player.
 # 
-# xine is free software; you can redistribute it and/or modify
+# revenge is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 # 
-# xine is distributed in the hope that it will be useful,
+# revenge is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -24,10 +24,11 @@
 #
 # run this to generate all the initial makefiles, etc.
 
-PROG=xine-lib
+PROG=revenge-lib
 
 # Minimum value required to build
 WANT_AUTOMAKE_1_6=1 export WANT_AUTOMAKE_1_6
+WANT_AUTOMAKE=1.6 export WANT_AUTOMAKE
 AUTOMAKE_MIN=1.6.0
 AUTOCONF_MIN=2.53
 LIBTOOL_MIN=1.4.0
