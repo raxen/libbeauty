@@ -1,0 +1,16 @@
+To see current status do:
+In the tree root, do:
+
+./configure
+make
+make install
+
+That will build and install the libs in /usr/local/lib/revenge
+then:
+
+cd test
+make
+
+This will build the test programs dis and bf.
+
+run "./dis" to see the current working state. 
