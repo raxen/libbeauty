@@ -11,13 +11,13 @@ bin_PROGRAMS = dis bf
 dis_SOURCES = \
 	dis.c
 
-dis_LDADD = /usr/local/lib/revenge/libinput_bfd.so /usr/local/lib/revenge/libia32_decoder.so
+dis_LDADD = -L$(libdir) -linput_bfd -lia32_decoder 
 
 dis_LDFLAGS = @MODULE_LDFLAGS@
 
 bf_SOURCES = \
 	bf.c
 
-bf_LDADD = /usr/local/lib/revenge/libinput_bfd.so
+bf_LDADD = -L$(libdir) -linput_bfd
 
 bf_LDFLAGS = @MODULE_LDFLAGS@

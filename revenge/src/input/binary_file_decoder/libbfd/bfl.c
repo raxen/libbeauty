@@ -56,56 +56,44 @@ static void print_sections(struct rev_eng* ret)
 #define PF(x, y) \
   if (section->flags & x) { printf ("%s%s", comma, y); comma = ", "; }
 
-  PF (SEC_HAS_CONTENTS, "CONTENTS");
   PF (SEC_ALLOC, "ALLOC");
-  PF (SEC_CONSTRUCTOR, "CONSTRUCTOR");
   PF (SEC_LOAD, "LOAD");
   PF (SEC_RELOC, "RELOC");
   PF (SEC_READONLY, "READONLY");
   PF (SEC_CODE, "CODE");
   PF (SEC_DATA, "DATA");
   PF (SEC_ROM, "ROM");
-  PF (SEC_DEBUGGING, "DEBUGGING");
+  PF (SEC_CONSTRUCTOR, "CONSTRUCTOR");
+  PF (SEC_HAS_CONTENTS, "CONTENTS");
   PF (SEC_NEVER_LOAD, "NEVER_LOAD");
+  PF (SEC_THREAD_LOCAL, "THREAD_LOCAL");
+  PF (SEC_HAS_GOT_REF, "GOT_REF");
+  PF (SEC_IS_COMMON, "IS_COMMON");
+  PF (SEC_DEBUGGING, "DEBUGGING");
+  PF (SEC_IN_MEMORY, "IN_MEMORY");
   PF (SEC_EXCLUDE, "EXCLUDE");
   PF (SEC_SORT_ENTRIES, "SORT_ENTRIES");
-  PF (SEC_BLOCK, "BLOCK");
-  PF (SEC_CLINK, "CLINK");
+  PF (SEC_LINK_ONCE, "LINK_ONCE");
+  PF (SEC_LINK_DUPLICATES, "LINK_DUPLICATES");
+  PF (SEC_LINK_DUPLICATES_ONE_ONLY, "LINK_DUPLICATES_ONE_ONLY");
+  PF (SEC_LINK_DUPLICATES_SAME_SIZE, "LINK_DUPLICATES_SAME_SIZE");
+  PF (SEC_LINKER_CREATED, "LINKER_CREATED");
+  PF (SEC_KEEP, "KEEP");
   PF (SEC_SMALL_DATA, "SMALL_DATA");
-  PF (SEC_SHARED, "SHARED");
-  PF (SEC_ARCH_BIT_0, "ARCH_BIT_0");
-  PF (SEC_THREAD_LOCAL, "THREAD_LOCAL");
-
-  if ((section->flags & SEC_LINK_ONCE) != 0)
-    {
-      const char *ls;
-
-      switch (section->flags & SEC_LINK_DUPLICATES)
-        {
-        default:
-          abort ();
-        case SEC_LINK_DUPLICATES_DISCARD:
-          ls = "LINK_ONCE_DISCARD";
-          break;
-        case SEC_LINK_DUPLICATES_ONE_ONLY:
-          ls = "LINK_ONCE_ONE_ONLY";
-          break;
-        case SEC_LINK_DUPLICATES_SAME_SIZE:
-          ls = "LINK_ONCE_SAME_SIZE";
-          break;
-        case SEC_LINK_DUPLICATES_SAME_CONTENTS:
-          ls = "LINK_ONCE_SAME_CONTENTS";
-          break;
-        }
-      printf ("%s%s", comma, ls);
+  PF (SEC_MERGE, "MERGE");
+  PF (SEC_STRINGS, "STRINGS");
+  PF (SEC_GROUP, "GROUP");
+  PF (SEC_COFF_SHARED_LIBRARY, "COFF_SHARED_LIBRARY");
+  PF (SEC_COFF_SHARED, "COFF_SHARED");
+  PF (SEC_TIC54X_BLOCK, "TIC54X_BLOCK");
+  PF (SEC_TIC54X_CLINK, "TIC54X_CLINK");
 
 /*      if (section->comdat != NULL)
  *       printf (" (COMDAT %s %ld)", section->comdat->name,
  *               section->comdat->symbol);
  */
 
-      comma = ", ";
-    }
+  comma = ", ";
 
   printf ("\n");
 #undef PF
