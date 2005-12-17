@@ -1,7 +1,6 @@
 int test ( int value );
 
 int test ( int value ) {
-  value++;
-  return value;
+  return value+0x123;
 }
 

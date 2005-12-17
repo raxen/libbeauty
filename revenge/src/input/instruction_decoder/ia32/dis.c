@@ -311,8 +311,20 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		break;
 	case 0x04:												/* ADD AL,Ib */
 		break;
-
 	case 0x05:												/* ADD eAX,Iv */
+		instruction = &instructions->instruction[instructions->instruction_number];	
+		instruction->opcode = ADD;
+		instruction->flags = 0;
+		instruction->srcA.store = 0;
+		instruction->srcA.indirect = 0;
+		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instructions->bytes_used+=4;
+		instruction->srcA.size = 4;
+		instruction->dstA.store = 1;
+		instruction->dstA.indirect = 0;
+		instruction->dstA.index = REG_AX;
+		instruction->dstA.size = 4;
+		instructions->instruction_number++;
 		break;
 	case 0x06:												/* PUSH ES */
                 /* PUSH -> SP=SP-4 (-2 for word); [SP]=ES; */
