@@ -178,36 +178,29 @@ int main(int argc, char *argv[])
 	bf_copy_code_section(handle, inst, inst_size);
 	printf("dis:Data at %p, size=%li\n",inst, inst_size);
 	for(n=0;n<inst_size;n++) {
-	  printf("0x%x ",inst[n]);
+		printf(" 0x%02x",inst[n]);
 	}
 	printf("\n");
 
 	printf("handle=%p\n",handle);
 	bf_test_close_file(handle);
 
-	printf("sizeof inst=%d\n",inst_size);
-	for (n=0;n<inst_size;n++) {
-		printf(" 0x%02x",inst[n]);
-	}
-	printf("\n");
 	instructions.bytes_used=0;
 	for(offset=0;offset<inst_size;offset+=instructions.bytes_used) {
-	//for(offset=0;offset<1;offset+=instructions.bytes_used) {
 		instructions.instruction_number=0;
 		instructions.bytes_used=0;
 	        disassemble(&instructions, inst+offset);
-		printf("bytes used=%d\n",instructions.bytes_used);
+		printf("bytes used = %d\n",instructions.bytes_used);
 		for (n=0;n<instructions.bytes_used;n++) {
 			printf(" 0x%02x",inst[n+offset]);
 		}
 		printf("\n");
-		printf("instruction_number=%d\n",instructions.instruction_number);
+		printf("Number of RTL instructions=%d\n",instructions.instruction_number);
 		if (instructions.instruction_number == 0) {
 			printf("Unhandled instruction. Exiting\n");
 			return 0;
 		}
 		for (n=0;n<instructions.instruction_number;n++) {
-		//for (n=0;n<1;n++) {
 			instruction = &instructions.instruction[n];	
 			if (!print_inst(instruction, n)) {
 				return 1;
