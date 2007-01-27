@@ -35,10 +35,12 @@
 #include <stdlib.h>
 #include <revenge/dis.h>
 #include <revenge/bfl.h>
+#include <dis-asm.h>
 
 instructions_t instructions;
 uint8_t *inst=NULL;
 struct rev_eng *handle;
+struct disassemble_info disasm_info;
 char *dis_flags_table[] = { " ", "f" };
 
 /* Memory and Registers are 8bit values. */
@@ -165,6 +167,8 @@ int main(int argc, char *argv[])
 {
 	int n=0;
 	int offset=0;
+	int octets=0;
+	disassembler_ftype disassemble_fn;
 	instruction_t *instruction;
 	const char *file="test.obj";
 	size_t inst_size=0;
@@ -183,8 +187,22 @@ int main(int argc, char *argv[])
 	printf("\n");
 
 	printf("handle=%p\n",handle);
-	bf_test_close_file(handle);
+	init_disassemble_info (&disasm_info, stdout, (fprintf_ftype) fprintf);
+	disasm_info.flavour = bfd_get_flavour (handle->bfd);
+	disasm_info.arch = bfd_get_arch (handle->bfd);
+	disasm_info.mach = bfd_get_mach (handle->bfd);
+	disasm_info.disassembler_options = NULL;
+	disasm_info.octets_per_byte = bfd_octets_per_byte (handle->bfd);
+	disasm_info.skip_zeroes = 8;
+	disasm_info.skip_zeroes_at_end = 3;
+	disasm_info.disassembler_needs_relocs = 0;
+	disasm_info.buffer_length = inst_size;
+	disasm_info.buffer = inst;
 
+	printf("disassemble_fn\n");
+	disassemble_fn = disassembler (handle->bfd);
+	printf("disassemble_fn done %p, %p\n", disassemble_fn, print_insn_i386);
+	bf_test_close_file(handle);
 	instructions.bytes_used=0;
 	for(offset=0;offset<inst_size;offset+=instructions.bytes_used) {
 		instructions.instruction_number=0;
@@ -195,6 +213,13 @@ int main(int argc, char *argv[])
 			printf(" 0x%02x",inst[n+offset]);
 		}
 		printf("\n");
+		//printf("disassemble_fn\n");
+		//disassemble_fn = disassembler (handle->bfd);
+		//printf("disassemble_fn done\n");
+		printf("disassemble: ");
+		octets = (*disassemble_fn) (offset, &disasm_info);
+		printf("  octets=%d\n",octets);
+
 		printf("Number of RTL instructions=%d\n",instructions.instruction_number);
 		if (instructions.instruction_number == 0) {
 			printf("Unhandled instruction. Exiting\n");

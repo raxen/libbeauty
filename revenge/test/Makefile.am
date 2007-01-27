@@ -11,7 +11,7 @@ bin_PROGRAMS = dis bf
 dis_SOURCES = \
 	dis.c
 
-dis_LDADD = -L$(libdir) -linput_bfd -lia32_decoder 
+dis_LDADD = -L$(libdir) -linput_bfd -lia32_decoder -lopcodes
 
 dis_LDFLAGS = @MODULE_LDFLAGS@
 
