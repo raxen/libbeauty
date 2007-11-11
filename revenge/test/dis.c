@@ -53,7 +53,6 @@ uint64_t inst_log;	/* Pointer to the current free instruction log entry. */
 /* Initially the search algorithm will be slow,
  * but if the method works, fast algorithms will be used. */
 
-typedef struct memory_s memory_t;
 struct memory_s {
 	uint64_t start_address; /* Start address of multibyte access. */
 	int length;	/* Number of bytes accessed at one time */
@@ -86,14 +85,14 @@ struct memory_s memory_ram[1000];
 struct memory_s memory_reg[100];
 struct memory_s memory_stack[100];
 
-typedef struct inst_log_entry_s inst_log_entry_t;
 struct inst_log_entry_s {
 	instruction_t instruction;	/* The instruction */
-	memory_t value1;		/* First input value */
-	memory_t value2;		/* Second input value */
-	memory_t value3;		/* Result */
+	struct memory_s value1;		/* First input value */
+	struct memory_s value2;		/* Second input value */
+	struct memory_s value3;		/* Result */
 } ;
-inst_log_entry_t inst_log_entry[100];
+
+struct inst_log_entry_s inst_log_entry[100];
 
 int print_inst(instruction_t *instruction, int instruction_number)
 {
@@ -126,6 +125,27 @@ int print_inst(instruction_t *instruction, int instruction_number)
 		size_table[instruction->dstA.size]);
 	}
 	return 1;
+}
+
+int print_instructions(void)
+{
+	int n;
+	struct instruction_s *instruction;
+	struct inst_log_entry_s *inst_log1;
+	for (n = 0; n < inst_log; n++) {
+		inst_log1 =  &inst_log_entry[n];
+		instruction =  &inst_log1->instruction;
+		if (!print_inst(instruction, n))
+			return 1;
+		printf("init:%"PRIx64", %"PRIx64" -> %"PRIx64"\n",
+			inst_log1->value1.init_value,
+			inst_log1->value2.init_value,
+			inst_log1->value3.init_value);
+		printf("offset:%"PRIx64", %"PRIx64" -> %"PRIx64"\n",
+			inst_log1->value1.offset_value,
+			inst_log1->value2.offset_value,
+			inst_log1->value3.offset_value);
+	}
 }
 
 int get_value_from_index(operand_t *operand, uint64_t *index)
@@ -221,6 +241,8 @@ int execute_instruction(instruction_t *instruction)
 {
 	struct inst_log_entry_s *inst;
 	struct memory_s *value;
+	struct memory_s *value_mem;
+	struct memory_s *value_stack;
 
 	printf("Execute Instruction 0x%x:%s%s\n",
 		instruction->opcode,
@@ -310,11 +332,59 @@ int execute_instruction(instruction_t *instruction)
 		}
 		break;
 	case 1:
-		printf("srcA-indirect\n");
 		/* m - memory */
+		printf("srcA-indirect\n");
 		break;
 	case 2:
 		/* s - stack */
+		printf("srcA-indirect\n");
+		printf("srcA-stack\n");
+		printf("index=%"PRIx64", size=%d\n",
+				instruction->srcA.index,
+				instruction->srcA.size);
+		value = search_store(memory_reg,
+				instruction->srcA.index,
+				instruction->srcA.size);
+		printf("EXE value=%p\n", value);
+		/* FIXME what to do in NULL */
+		if (!value) {
+			value = add_new_store(memory_reg,
+					instruction->srcA.index,
+					instruction->srcA.size);
+		}
+		if (!value)
+			break;
+		value_stack = search_store(memory_stack,
+				value->init_value +
+					value->offset_value,
+					instruction->srcA.size);
+		printf("EXE2 value_stack=%p\n", value_stack);
+		if (!value_stack) {
+			value_stack = add_new_store(memory_stack,
+				value->init_value +
+					value->offset_value,
+					instruction->srcA.size);
+		}
+		if (!value_stack)
+			break;
+		inst->value1.start_address = 0;
+		inst->value1.length = value_stack->length;
+		inst->value1.init_value_type = value_stack->init_value_type;
+		inst->value1.init_value = value_stack->init_value;
+		inst->value1.offset_value = value_stack->offset_value;
+		inst->value1.value_type = value_stack->value_type;
+		inst->value1.ref_memory =
+			value_stack->ref_memory;
+		inst->value1.ref_log =
+			value_stack->ref_log;
+		inst->value1.value_scope = value_stack->value_scope;
+		inst->value1.value_id = 1; /* 1 - Entry Used */
+		inst->value1.valid = 1;
+		printf("value=0x%llx+0x%llx=0x%llx\n",
+			inst->value1.init_value,
+			inst->value1.offset_value,
+			inst->value1.init_value +
+				inst->value1.offset_value);
 		break;
 	case 3:
 		/* p - ????? */
@@ -390,9 +460,11 @@ int execute_instruction(instruction_t *instruction)
 			break;
 		case 2:
 			/* m - memory */
+			printf("dstA-memory\n");
 			break;
 		case 3:
 			/* s - stack */
+			printf("dstA-stack\n");
 			break;
 		default:
 			/* Should not get here */
@@ -402,12 +474,64 @@ int execute_instruction(instruction_t *instruction)
 		break;
 	case 1:
 		/* m - memory */
+		printf("dstA-indirect\n");
+		printf("dstA-memory\n");
 		break;
 	case 2:
 		/* s - stack */
+		printf("dstA-indirect\n");
+		printf("dstA-stack\n");
+		printf("index=%"PRIx64", size=%d\n",
+				instruction->dstA.index,
+				instruction->dstA.size);
+		value = search_store(memory_reg,
+				instruction->dstA.index,
+				instruction->dstA.size);
+		printf("EXE value=%p\n", value);
+		/* FIXME what to do in NULL */
+		if (!value) {
+			value = add_new_store(memory_reg,
+					instruction->dstA.index,
+					instruction->dstA.size);
+		}
+		if (!value)
+			break;
+		value_stack = search_store(memory_stack,
+				value->init_value +
+					value->offset_value,
+					instruction->dstA.size);
+		printf("EXE2 value_stack=%p\n", value_stack);
+		if (!value_stack) {
+			value_stack = add_new_store(memory_stack,
+				value->init_value +
+					value->offset_value,
+					instruction->dstA.size);
+		}
+		if (!value_stack)
+			break;
+		inst->value2.start_address = 0;
+		inst->value2.length = value_stack->length;
+		inst->value2.init_value_type = value_stack->init_value_type;
+		inst->value2.init_value = value_stack->init_value;
+		inst->value2.offset_value = value_stack->offset_value;
+		inst->value2.value_type = value_stack->value_type;
+		inst->value2.ref_memory =
+			value_stack->ref_memory;
+		inst->value2.ref_log =
+			value_stack->ref_log;
+		inst->value2.value_scope = value_stack->value_scope;
+		inst->value2.value_id = 1; /* 1 - Entry Used */
+		inst->value2.valid = 1;
+		printf("value=0x%llx+0x%llx=0x%llx\n",
+			inst->value2.init_value,
+			inst->value2.offset_value,
+			inst->value2.init_value +
+				inst->value2.offset_value);
 		break;
 	case 3:
 		/* p - ????? */
+		printf("dstA-indirect\n");
+		printf("dstA-ppp\n");
 		break;
 	default:
 		/* Should not get here */
@@ -532,7 +656,9 @@ int execute_instruction(instruction_t *instruction)
 			value->ref_log =
 				inst->value3.ref_log;
 			value->value_scope = inst->value3.value_scope;
-			value->value_id = 1; /* 1 - Entry Used */
+			/* 1 - Ids */
+			value->value_id = 1;
+			/* 1 - Entry Used */
 			value->valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				value->init_value,
@@ -556,6 +682,55 @@ int execute_instruction(instruction_t *instruction)
 		break;
 	case 2:
 		/* s - stack */
+		printf("dstA-indirect\n");
+		printf("dstA-stack saving result\n");
+		printf("index=%"PRIx64", size=%d\n",
+				instruction->dstA.index,
+				instruction->dstA.size);
+		value = search_store(memory_reg,
+				instruction->dstA.index,
+				instruction->dstA.size);
+		printf("EXE value=%p\n", value);
+		/* FIXME what to do in NULL */
+		if (!value) {
+			value = add_new_store(memory_reg,
+					instruction->dstA.index,
+					instruction->dstA.size);
+		}
+		if (!value)
+			break;
+		value_stack = search_store(memory_stack,
+				value->init_value +
+					value->offset_value,
+					instruction->dstA.size);
+		printf("EXE2 value_stack=%p\n", value_stack);
+		if (!value_stack) {
+			value_stack = add_new_store(memory_stack,
+				value->init_value +
+					value->offset_value,
+					instruction->dstA.size);
+		}
+		if (!value_stack)
+			break;
+		/* FIXME: these should always be the same */
+		/* value_stack->length = inst->value3.length; */
+		value_stack->init_value_type = inst->value3.init_value_type;
+		value_stack->init_value = inst->value3.init_value;
+		value_stack->offset_value = inst->value3.offset_value;
+		value_stack->value_type = inst->value3.value_type;
+		value_stack->ref_memory =
+			inst->value3.ref_memory;
+		value_stack->ref_log =
+			inst->value3.ref_log;
+		value_stack->value_scope = inst->value3.value_scope;
+		/* 1 - Ids */
+		value_stack->value_id = 1;
+		/* 1 - Entry Used */
+		value_stack->valid = 1;
+		printf("value_stack=0x%llx+0x%llx=0x%llx\n",
+			value_stack->init_value,
+			value_stack->offset_value,
+			value_stack->init_value + value->offset_value);
 		break;
 	case 3:
 		/* p - ????? */
@@ -610,7 +785,7 @@ int reg_init(void)
 	/* 1 - Known */
 	memory_reg[1].init_value_type = 1;
 	/* Initial value when first accessed */
-	memory_reg[1].init_value = 0;
+	memory_reg[1].init_value = 0x20000;
 	/* No offset yet */
 	memory_reg[1].offset_value = 0;
 	/* 0 - unknown,
@@ -770,6 +945,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	printf("Instructions=%d\n", inst_log);
+	print_instructions();
 	printf("test1\n");
 	return 0;
 }
