@@ -33,11 +33,18 @@
 
 typedef struct operand_s operand_t;
 struct operand_s {
-	int store; /* 0 = value, 1 = reg, 2 = data_memory, 3 = stack_memory */
-	int indirect; /* 0 = direct or immeadiate value. ( e.g. MOV AX,BX), 1 = indirect or from_memory value. (e.g. MOV AX,[BX]) */
-	uint32_t index; // value depends on store
-	uint32_t value; // value depends on store
-	int size; // number of bytes in value.
+	/* 0 = value, 1 = reg, 2 = data_memory, 3 = stack_memory */
+	int store;
+	/* 0 = direct or immeadiate value. ( e.g. MOV AX,BX),
+	 * 1 = indirect or from_memory value. (e.g. MOV AX,[BX])
+	 */
+	int indirect;
+	/* value depends on store */
+	uint64_t index;
+	/* value depends on store */
+	uint64_t value;
+	/* number of bytes in value. */
+	int size;
 } ;
 
 /* A single RTL instruction */
@@ -45,7 +52,8 @@ typedef struct instruction_s instruction_t;
 
 struct instruction_s {
 	int opcode;
-	int flags;  /* Set to 1 if this instruction should effect flags. */
+	/* Set to 1 if this instruction should effect flags. */
+	int flags;
 	operand_t srcA;
 	operand_t srcB;
 	operand_t dstA;

@@ -56,7 +56,7 @@ uint64_t inst_log;	/* Pointer to the current free instruction log entry. */
 typedef struct memory_s memory_t;
 struct memory_s {
 	uint64_t start_address; /* Start address of multibyte access. */
-	uint64_t length;	/* Number of bits accessed at one time */
+	int length;	/* Number of bytes accessed at one time */
 	int	 init_value_type;	/* 0 - Unknown, 1 - Known */
 	uint64_t init_value;	/* Initial value when first accessed */
 	/* init_value + offset_value = absolute value to be used */
@@ -102,25 +102,25 @@ int print_inst(instruction_t *instruction, int instruction_number)
 		opcode_table[instruction->opcode],
 		dis_flags_table[instruction->flags]);
 	if (instruction->srcA.indirect) {
-		printf(" %s[%s0x%x]%s,",
+		printf(" %s[%s0x%" PRIx64 "] %s,",
 			indirect_table[instruction->srcA.indirect],
 			store_table[instruction->srcA.store],
 			instruction->srcA.index,
 			size_table[instruction->srcA.size]);
 	} else {
-		printf(" %s0x%x%s,",
+		printf(" %s0x%" PRIx64 "%s,",
 		store_table[instruction->srcA.store],
 		instruction->srcA.index,
 		size_table[instruction->srcA.size]);
 	}
 	if (instruction->dstA.indirect) {
-		printf(" %s[%s0x%x]%s\n",
+		printf(" %s[%s0x%" PRIx64 "]%s\n",
 			indirect_table[instruction->dstA.indirect],
 			store_table[instruction->dstA.store],
 			instruction->dstA.index,
 			size_table[instruction->dstA.size]);
 	} else {
-		printf(" %s0x%x%s\n",
+		printf(" %s0x%" PRIx64 "%s\n",
 		store_table[instruction->dstA.store],
 		instruction->dstA.index,
 		size_table[instruction->dstA.size]);
@@ -146,7 +146,7 @@ int get_value_from_index(operand_t *operand, uint64_t *index)
 }
 
 struct memory_s *search_store(
-	struct memory_s *memory, uint64_t index, uint64_t size)
+	struct memory_s *memory, uint64_t index, int size)
 {
 	int n = 0;
 	uint64_t start = index;
@@ -155,7 +155,7 @@ struct memory_s *search_store(
 	uint64_t memory_end;
 	struct memory_s *result = NULL;
 
-	printf("memory=%p, index=%lu, size=%lu\n", memory, index, size);
+	printf("memory=%p, index=%"PRIx64", size=%d\n", memory, index, size);
 	while (memory[n].valid == 1) {
 		printf("looping\n");
 		memory_start = memory[n].start_address;
@@ -167,6 +167,53 @@ struct memory_s *search_store(
 		}
 		n++;
 	}
+	return result;
+}
+
+struct memory_s *add_new_store(
+	struct memory_s *memory, uint64_t index, int size)
+{
+	int n = 0;
+	uint64_t start = index;
+	uint64_t end = index + size;
+	uint64_t memory_start;
+	uint64_t memory_end;
+	struct memory_s *result = NULL;
+
+	printf("memory=%p, index=%"PRIx64", size=%d\n", memory, index, size);
+	while (memory[n].valid == 1) {
+		printf("looping\n");
+		memory_start = memory[n].start_address;
+		memory_end = memory[n].start_address + memory[n].length;
+		if ((start >= memory_start) &&
+			(end <= memory_end)) {
+			result = NULL;
+			/* Store already existed, so exit */
+			goto exit_add_new_store;
+		}
+		n++;
+	}
+	result = &memory[n];
+	printf("Found empty entry %d, %p\n", n, result);
+	result->start_address = index;
+	result->length = size;
+	/* unknown */
+	result->init_value_type = 0;
+	result->init_value = 0;
+	result->offset_value = 0;
+	/* unknown */
+	result->value_type = 0;
+	/* not set yet. */
+	result->ref_memory = 0;
+	/* not set yet. */
+	result->ref_log = 0;
+	/* unknown */
+	result->value_scope = 0;
+	/* Each time a new value is assigned, this value_id increases */
+	result->value_id = 1;
+	/* 1 - Entry Used */
+	result->valid = 1;
+exit_add_new_store:
 	return result;
 }
 
@@ -193,6 +240,9 @@ int execute_instruction(instruction_t *instruction)
 		case 0:
 			/* i - immediate */
 			printf("srcA-immediate\n");
+			printf("index=%"PRIx64", size=%d\n",
+					instruction->srcA.index,
+					instruction->srcA.size);
 			inst->value1.start_address = 0;
 			inst->value1.length = instruction->srcA.size;
 			inst->value1.init_value_type = 1; /* known */
@@ -203,6 +253,7 @@ int execute_instruction(instruction_t *instruction)
 			inst->value1.ref_log = 0; /* not set yet. */
 			inst->value1.value_scope = 0; /* unknown */
 			inst->value1.value_id = 1; /* 1 - Entry Used */
+			inst->value1.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value1.init_value,
 				inst->value1.offset_value,
@@ -212,11 +263,19 @@ int execute_instruction(instruction_t *instruction)
 		case 1:
 			/* r - register */
 			printf("srcA-register\n");
+			printf("index=%"PRIx64", size=%d\n",
+					instruction->srcA.index,
+					instruction->srcA.size);
 			value = search_store(memory_reg,
 					instruction->srcA.index,
 					instruction->srcA.size);
 			printf("EXE value=%p\n", value);
 			/* FIXME what to do in NULL */
+			if (!value) {
+				value = add_new_store(memory_reg,
+						instruction->srcA.index,
+						instruction->srcA.size);
+			}
 			if (!value)
 				break;
 			inst->value1.start_address = 0;
@@ -231,6 +290,7 @@ int execute_instruction(instruction_t *instruction)
 				value->ref_log;
 			inst->value1.value_scope = value->value_scope;
 			inst->value1.value_id = 1; /* 1 - Entry Used */
+			inst->value1.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value1.init_value,
 				inst->value1.offset_value,
@@ -284,6 +344,7 @@ int execute_instruction(instruction_t *instruction)
 			inst->value2.ref_log = 0; /* not set yet. */
 			inst->value2.value_scope = 0; /* unknown */
 			inst->value2.value_id = 1; /* 1 - Entry Used */
+			inst->value2.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value2.init_value,
 				inst->value2.offset_value,
@@ -293,11 +354,19 @@ int execute_instruction(instruction_t *instruction)
 		case 1:
 			/* r - register */
 			printf("dstA-register\n");
+			printf("index=%"PRIx64", size=%d\n",
+					instruction->dstA.index,
+					instruction->dstA.size);
 			value = search_store(memory_reg,
 					instruction->dstA.index,
 					instruction->dstA.size);
 			printf("EXE value=%p\n", value);
 			/* FIXME what to do in NULL */
+			if (!value) {
+				value = add_new_store(memory_reg,
+						instruction->dstA.index,
+						instruction->dstA.size);
+			}
 			if (!value)
 				break;
 			inst->value2.start_address = 0;
@@ -312,6 +381,7 @@ int execute_instruction(instruction_t *instruction)
 				value->ref_log;
 			inst->value2.value_scope = value->value_scope;
 			inst->value2.value_id = 1; /* 1 - Entry Used */
+			inst->value2.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value2.init_value,
 				inst->value2.offset_value,
@@ -364,6 +434,7 @@ int execute_instruction(instruction_t *instruction)
 			inst->value1.ref_log;
 		inst->value3.value_scope = inst->value1.value_scope;
 		inst->value3.value_id = 1; /* 1 - Entry Used */
+		inst->value3.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value3.init_value,
 				inst->value3.offset_value,
@@ -386,6 +457,7 @@ int execute_instruction(instruction_t *instruction)
 			inst->value2.ref_log;
 		inst->value3.value_scope = inst->value2.value_scope;
 		inst->value3.value_id = 1; /* 1 - Entry Used */
+		inst->value3.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value3.init_value,
 				inst->value3.offset_value,
@@ -410,7 +482,9 @@ int execute_instruction(instruction_t *instruction)
 		inst->value3.ref_log =
 			inst->value2.ref_log;
 		inst->value3.value_scope = inst->value2.value_scope;
-		inst->value3.value_id = 1; /* 1 - Entry Used */
+		inst->value3.value_id = 1;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value3.init_value,
 				inst->value3.offset_value,
@@ -439,9 +513,16 @@ int execute_instruction(instruction_t *instruction)
 					instruction->dstA.size);
 			printf("EXE value=%p\n", value);
 			/* FIXME what to do in NULL */
+			if (!value) {
+				printf("WHY!!!!!\n");
+				value = add_new_store(memory_reg,
+						instruction->dstA.index,
+						instruction->dstA.size);
+			}
 			if (!value)
 				break;
-			value->length = inst->value3.length;
+			/* FIXME: these should always be the same */
+			/* value->length = inst->value3.length; */
 			value->init_value_type = inst->value3.init_value_type;
 			value->init_value = inst->value3.init_value;
 			value->offset_value = inst->value3.offset_value;
@@ -452,6 +533,7 @@ int execute_instruction(instruction_t *instruction)
 				inst->value3.ref_log;
 			value->value_scope = inst->value3.value_scope;
 			value->value_id = 1; /* 1 - Entry Used */
+			value->valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				value->init_value,
 				value->offset_value,
@@ -548,6 +630,34 @@ int reg_init(void)
 	memory_reg[1].value_id = 0;
 	/* valid: 0 - entry Not used yet, 1 - entry Used */
 	memory_reg[1].valid = 1;
+
+	/* eip */
+	memory_reg[2].start_address = 0x24;
+	/* 4 bytes */
+	memory_reg[2].length = 4;
+	/* 1 - Known */
+	memory_reg[2].init_value_type = 1;
+	/* Initial value when first accessed */
+	memory_reg[2].init_value = 40000000;
+	/* No offset yet */
+	memory_reg[2].offset_value = 0;
+	/* 0 - unknown,
+	 * 1 - unsigned,
+	 * 2 - signed,
+	 * 3 - pointer,
+	 * 4 - Instruction,
+	 * 5 - Instruction pointer(EIP),
+	 * 6 - Stack pointer.
+	 */
+	memory_reg[2].value_type = 5;
+	memory_reg[2].ref_memory = 0;
+	memory_reg[2].ref_log = 0;
+	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
+	memory_reg[2].value_scope = 3;
+	/* Each time a new value is assigned, this value_id increases */
+	memory_reg[2].value_id = 0;
+	/* valid: 0 - entry Not used yet, 1 - entry Used */
+	memory_reg[2].valid = 1;
 }
 
 int stack_init(void)
