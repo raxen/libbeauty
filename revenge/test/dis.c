@@ -54,10 +54,14 @@ uint64_t inst_log;	/* Pointer to the current free instruction log entry. */
  * but if the method works, fast algorithms will be used. */
 
 struct memory_s {
-	uint64_t start_address; /* Start address of multibyte access. */
-	int length;	/* Number of bytes accessed at one time */
-	int	 init_value_type;	/* 0 - Unknown, 1 - Known */
-	uint64_t init_value;	/* Initial value when first accessed */
+	/* Start address of multibyte access. */
+	uint64_t start_address;
+	/* Number of bytes accessed at one time */
+	int length;
+	/* 0 - Unknown, 1 - Known */
+	int init_value_type;
+	/* Initial value when first accessed */
+	uint64_t init_value;
 	/* init_value + offset_value = absolute value to be used */
 	uint64_t offset_value;
 	/* 0 - unknown,
@@ -267,14 +271,20 @@ int execute_instruction(instruction_t *instruction)
 					instruction->srcA.size);
 			inst->value1.start_address = 0;
 			inst->value1.length = instruction->srcA.size;
-			inst->value1.init_value_type = 1; /* known */
+			/* known */
+			inst->value1.init_value_type = 1;
 			inst->value1.init_value = instruction->srcA.index;
 			inst->value1.offset_value = 0;
-			inst->value1.value_type = 0; /* unknown */
-			inst->value1.ref_memory = 0;  /* not set yet. */
-			inst->value1.ref_log = 0; /* not set yet. */
-			inst->value1.value_scope = 0; /* unknown */
-			inst->value1.value_id = 1; /* 1 - Entry Used */
+			/* unknown */
+			inst->value1.value_type = 0;
+			/* not set yet. */
+			inst->value1.ref_memory = 0;
+			/* not set yet. */
+			inst->value1.ref_log = 0;
+			/* unknown */
+			inst->value1.value_scope = 0;
+			/* 1 - Entry Used */
+			inst->value1.value_id = 1;
 			inst->value1.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value1.init_value,
@@ -378,7 +388,9 @@ int execute_instruction(instruction_t *instruction)
 		inst->value1.ref_log =
 			value_stack->ref_log;
 		inst->value1.value_scope = value_stack->value_scope;
-		inst->value1.value_id = 1; /* 1 - Entry Used */
+		/* counter */
+		inst->value1.value_id = 1;
+		/* 1 - Entry Used */
 		inst->value1.valid = 1;
 		printf("value=0x%llx+0x%llx=0x%llx\n",
 			inst->value1.init_value,
@@ -409,11 +421,17 @@ int execute_instruction(instruction_t *instruction)
 			inst->value2.init_value_type = 1; /* known */
 			inst->value2.init_value = instruction->dstA.index;
 			inst->value2.offset_value = 0;
-			inst->value2.value_type = 0; /* unknown */
-			inst->value2.ref_memory = 0;  /* not set yet. */
-			inst->value2.ref_log = 0; /* not set yet. */
-			inst->value2.value_scope = 0; /* unknown */
-			inst->value2.value_id = 1; /* 1 - Entry Used */
+			/* unknown */
+			inst->value2.value_type = 0;
+			/* not set yet. */
+			inst->value2.ref_memory = 0;
+			/* not set yet. */
+			inst->value2.ref_log = 0;
+			/* unknown */
+			inst->value2.value_scope = 0;
+			/* Counter */
+			inst->value2.value_id = 1;
+			/* 1 - Entry Used */
 			inst->value2.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value2.init_value,
@@ -450,7 +468,9 @@ int execute_instruction(instruction_t *instruction)
 			inst->value2.ref_log =
 				value->ref_log;
 			inst->value2.value_scope = value->value_scope;
-			inst->value2.value_id = 1; /* 1 - Entry Used */
+			/* counter */
+			inst->value2.value_id = 1;
+			/* 1 - Entry Used */
 			inst->value2.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value2.init_value,
@@ -520,7 +540,9 @@ int execute_instruction(instruction_t *instruction)
 		inst->value2.ref_log =
 			value_stack->ref_log;
 		inst->value2.value_scope = value_stack->value_scope;
-		inst->value2.value_id = 1; /* 1 - Entry Used */
+		/* Counter */
+		inst->value2.value_id = 1;
+		/* 1 - Entry Used */
 		inst->value2.valid = 1;
 		printf("value=0x%llx+0x%llx=0x%llx\n",
 			inst->value2.init_value,
@@ -557,7 +579,9 @@ int execute_instruction(instruction_t *instruction)
 		inst->value3.ref_log =
 			inst->value1.ref_log;
 		inst->value3.value_scope = inst->value1.value_scope;
-		inst->value3.value_id = 1; /* 1 - Entry Used */
+		/* Counter */
+		inst->value3.value_id = 1;
+		/* 1 - Entry Used */
 		inst->value3.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value3.init_value,
@@ -580,7 +604,9 @@ int execute_instruction(instruction_t *instruction)
 		inst->value3.ref_log =
 			inst->value2.ref_log;
 		inst->value3.value_scope = inst->value2.value_scope;
-		inst->value3.value_id = 1; /* 1 - Entry Used */
+		/* Counter */
+		inst->value3.value_id = 1;
+		/* 1 - Entry Used */
 		inst->value3.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value3.init_value,
@@ -606,6 +632,7 @@ int execute_instruction(instruction_t *instruction)
 		inst->value3.ref_log =
 			inst->value2.ref_log;
 		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
 		inst->value3.value_id = 1;
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
