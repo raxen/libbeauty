@@ -64,6 +64,10 @@ struct memory_s {
 	uint64_t init_value;
 	/* init_value + offset_value = absolute value to be used */
 	uint64_t offset_value;
+	/* Indirect value */
+	uint64_t indirect_init_value;
+	/* Indirect offset */
+	uint64_t indirect_offset_value;
 	/* 0 - unknown,
 	 * 1 - unsigned,
 	 * 2 - signed,
@@ -78,7 +82,7 @@ struct memory_s {
 	/* last_accessed_from_instruction_log_at_location */
 	uint32_t ref_log;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
-	uint64_t value_scope;
+	int value_scope;
 	/* Each time a new value is assigned, this value_id increases */
 	uint64_t value_id;
 	/* valid: 0 - Entry Not used yet, 1 - Entry Used */
@@ -149,6 +153,14 @@ int print_instructions(void)
 			inst_log1->value1.offset_value,
 			inst_log1->value2.offset_value,
 			inst_log1->value3.offset_value);
+		printf("value_type:0x%x, 0x%x -> 0x%x\n",
+			inst_log1->value1.value_type,
+			inst_log1->value2.value_type,
+			inst_log1->value3.value_type);
+		printf("value_scope:0x%x, 0x%x -> 0x%x\n",
+			inst_log1->value1.value_scope,
+			inst_log1->value2.value_scope,
+			inst_log1->value3.value_scope);
 	}
 }
 
@@ -374,6 +386,20 @@ int execute_instruction(instruction_t *instruction)
 				value->init_value +
 					value->offset_value,
 					instruction->srcA.size);
+			if ((value->init_value +
+				value->offset_value) > 0x10000) {
+				printf("PARAM\n");
+				/* Param */
+				value_stack->value_scope = 1;
+				/* Param number */
+				value_stack->value_id = 1;
+			} else {
+				printf("LOCAL\n");
+				/* Local */
+				value_stack->value_scope = 2;
+				/* Local number */
+				value_stack->value_id = 1;
+			}
 		}
 		if (!value_stack)
 			break;
@@ -579,6 +605,9 @@ int execute_instruction(instruction_t *instruction)
 		inst->value3.ref_log =
 			inst->value1.ref_log;
 		inst->value3.value_scope = inst->value1.value_scope;
+		/* MOV param to local */
+		if (inst->value3.value_scope == 1)
+			inst->value3.value_scope = 2;
 		/* Counter */
 		inst->value3.value_id = 1;
 		/* 1 - Entry Used */
@@ -672,6 +701,14 @@ int execute_instruction(instruction_t *instruction)
 			}
 			if (!value)
 				break;
+			/* eip changing */
+			/* Make the constant 0x24 configurable
+			 * depending on CPU type.
+			 */
+			if (value->start_address == 0x24) {
+				printf("A JUMP or RET has occured\n");
+			}
+
 			/* FIXME: these should always be the same */
 			/* value->length = inst->value3.length; */
 			value->init_value_type = inst->value3.init_value_type;
@@ -864,16 +901,17 @@ int reg_init(void)
 
 int stack_init(void)
 {
+	int n = 0;
 	/* eip on the stack */
-	memory_stack[0].start_address = 0x10000;
+	memory_stack[n].start_address = 0x10000;
 	/* 4 bytes */
-	memory_stack[0].length = 4;
+	memory_stack[n].length = 4;
 	/* 1 - Known */
-	memory_stack[0].init_value_type = 1;
+	memory_stack[n].init_value_type = 1;
 	/* Initial value when first accessed */
-	memory_stack[0].init_value = 0x0;
+	memory_stack[n].init_value = 0x0;
 	/* No offset yet */
-	memory_stack[0].offset_value = 0;
+	memory_stack[n].offset_value = 0;
 	/* 0 - unknown,
 	 * 1 - unsigned,
 	 * 2 - signed,
@@ -882,15 +920,47 @@ int stack_init(void)
 	 * 5 - Instruction pointer(EIP),
 	 * 6 - Stack pointer.
 	 */
-	memory_stack[0].value_type = 5;
-	memory_stack[0].ref_memory = 0;
-	memory_stack[0].ref_log = 0;
+	memory_stack[n].value_type = 5;
+	memory_stack[n].ref_memory = 0;
+	memory_stack[n].ref_log = 0;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
-	memory_stack[0].value_scope = 0;
+	memory_stack[n].value_scope = 0;
 	/* Each time a new value is assigned, this value_id increases */
-	memory_stack[0].value_id = 0;
+	memory_stack[n].value_id = 0;
 	/* valid: 0 - Not used yet, 1 - Used */
-	memory_stack[0].valid = 1;
+	memory_stack[n].valid = 1;
+	n++;
+
+#if 0
+	/* Param1 */
+	memory_stack[n].start_address = 0x10004;
+	/* 4 bytes */
+	memory_stack[n].length = 4;
+	/* 1 - Known */
+	memory_stack[n].init_value_type = 1;
+	/* Initial value when first accessed */
+	memory_stack[n].init_value = 0x321;
+	/* No offset yet */
+	memory_stack[n].offset_value = 0;
+	/* 0 - unknown,
+	 * 1 - unsigned,
+	 * 2 - signed,
+	 * 3 - pointer,
+	 * 4 - Instruction,
+	 * 5 - Instruction pointer(EIP),
+	 * 6 - Stack pointer.
+	 */
+	memory_stack[n].value_type = 2;
+	memory_stack[n].ref_memory = 0;
+	memory_stack[n].ref_log = 0;
+	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
+	memory_stack[n].value_scope = 0;
+	/* Each time a new value is assigned, this value_id increases */
+	memory_stack[n].value_id = 0;
+	/* valid: 0 - Not used yet, 1 - Used */
+	memory_stack[n].valid = 1;
+	n++;
+#endif
 }
 
 int main(int argc, char *argv[])
