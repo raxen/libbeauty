@@ -14,5 +14,5 @@ SUBDIRS = ia32
 #	Instruction_Decoder_Manager.cpp
 
 
-clean:
-	rm -f *~
+#clean:
+#	rm -f *~

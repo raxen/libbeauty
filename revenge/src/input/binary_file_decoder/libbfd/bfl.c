@@ -155,6 +155,13 @@ struct rev_eng *bf_test_open_file(const char *fn)
 	bfd *b;
 	char **matching;
 	int result;
+	long result2;
+	long val;
+	long storage_needed;
+	long number_of_symbols;
+	int n;
+	long l;
+	//symbol_info sym_info;
 
         printf("Open entered\n");
 	/* Open the file with libbfd */
@@ -231,6 +238,39 @@ struct rev_eng *bf_test_open_file(const char *fn)
 /*
 	print_code_section(ret);
 */
+	storage_needed  = bfd_get_symtab_upper_bound(ret->bfd);
+	printf("symtab_upper_bound = %d\n", storage_needed);
+	ret->symtab = calloc(1, storage_needed);
+	printf("symtab = %p\n", ret->symtab);
+	number_of_symbols = bfd_canonicalize_symtab(ret->bfd, ret->symtab);
+	ret->symtab_sz = number_of_symbols;
+	printf("symtab_canon = %ld\n", number_of_symbols);
+	for (l = 0; l < number_of_symbols; l++) {
+		printf("%d\n", l);
+		printf("type:0x%02x\n", ret->symtab[l]->flags);
+		printf("name:%s\n", ret->symtab[l]->name);
+		printf("value=0x%02x\n", ret->symtab[l]->value);
+		//printf("value2=0x%02x\n",
+		//	bfd_asymbol_flavour(ret->symtab[l]));
+		//printf("value3=0x%02x\n",
+		//	bfd_asymbol_base(ret->symtab[l]));
+#if 0
+		printf("%d:0x%02x:%s=%lld\n",
+			n, sym_info.type, sym_info.name, sym_info.value);
+#endif
+		/* Print the "other" value for a symbol.  For common symbols,
+		 * we've already printed the size; now print the alignment.
+		 * For other symbols, we have no specified alignment, and
+		 * we've printed the address; now print the size.  */
+#if 0
+		if (bfd_is_com_section(ret->symtab[n]->section))
+			val = ((elf_symbol_type *) symbol)->internal_elf_sym.st_value;
+		else
+			val = ((elf_symbol_type *) symbol)->internal_elf_sym.st_size;
+		bfd_fprintf_vma(abfd, file, val);
+#endif
+
+	}
         printf("Setup ok\n");
 
 	return ret;

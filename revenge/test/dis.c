@@ -153,6 +153,14 @@ int print_instructions(void)
 			inst_log1->value1.offset_value,
 			inst_log1->value2.offset_value,
 			inst_log1->value3.offset_value);
+		printf("indirect init:%"PRIx64", %"PRIx64" -> %"PRIx64"\n",
+			inst_log1->value1.indirect_init_value,
+			inst_log1->value2.indirect_init_value,
+			inst_log1->value3.indirect_init_value);
+		printf("indirect offset:%"PRIx64", %"PRIx64" -> %"PRIx64"\n",
+			inst_log1->value1.indirect_offset_value,
+			inst_log1->value2.indirect_offset_value,
+			inst_log1->value3.indirect_offset_value);
 		printf("value_type:0x%x, 0x%x -> 0x%x\n",
 			inst_log1->value1.value_type,
 			inst_log1->value2.value_type,
@@ -408,6 +416,8 @@ int execute_instruction(instruction_t *instruction)
 		inst->value1.init_value_type = value_stack->init_value_type;
 		inst->value1.init_value = value_stack->init_value;
 		inst->value1.offset_value = value_stack->offset_value;
+		inst->value1.indirect_init_value = value->init_value;
+		inst->value1.indirect_offset_value = value->offset_value;
 		inst->value1.value_type = value_stack->value_type;
 		inst->value1.ref_memory =
 			value_stack->ref_memory;
@@ -560,6 +570,8 @@ int execute_instruction(instruction_t *instruction)
 		inst->value2.init_value_type = value_stack->init_value_type;
 		inst->value2.init_value = value_stack->init_value;
 		inst->value2.offset_value = value_stack->offset_value;
+		inst->value2.indirect_init_value = value->init_value;
+		inst->value2.indirect_offset_value = value->offset_value;
 		inst->value2.value_type = value_stack->value_type;
 		inst->value2.ref_memory =
 			value_stack->ref_memory;
@@ -600,6 +612,12 @@ int execute_instruction(instruction_t *instruction)
 		inst->value3.init_value = inst->value1.init_value;
 		inst->value3.offset_value = inst->value1.offset_value;
 		inst->value3.value_type = inst->value1.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+		}
 		inst->value3.ref_memory =
 			inst->value1.ref_memory;
 		inst->value3.ref_log =

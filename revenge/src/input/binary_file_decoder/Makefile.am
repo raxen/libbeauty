@@ -11,5 +11,5 @@ SUBDIRS = libbfd
 #	Binary_File_Manager.cpp \
 #	Byte_Converter.cpp
 
-clean:
-	-rm -f *~
+#clean:
+#	-rm -f *~
