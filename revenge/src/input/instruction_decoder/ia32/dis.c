@@ -291,6 +291,7 @@ void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
 int disassemble(instructions_t *instructions, uint8_t *inst) {
 	uint8_t reg=0;
 	int half=0;
+	int result = 0;
 	instruction_t *instruction;
 	printf("inst[0]=0x%x\n",inst[0]);
 	instructions->instruction[instructions->instruction_number].opcode = NOP; /* Un-supported OPCODE */
@@ -299,15 +300,19 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	switch(inst[instructions->bytes_used++]) {
 	case 0x00:												/* ADD Eb,Gb */
 		dis_Ex_Gx(ADD, instructions, inst, &reg, 1);
+		result = 1;
 		break;
 	case 0x01:												/* ADD Ev,Gv */
 		dis_Ex_Gx(ADD, instructions, inst, &reg, 4);
+		result = 1;
 		break;
 	case 0x02:												/* ADD Gb,Eb */
 		dis_Gx_Ex(ADD, instructions, inst, &reg, 1);
+		result = 1;
 		break;
 	case 0x03:												/* ADD Gv,Ev */
 		dis_Gx_Ex(ADD, instructions, inst, &reg, 4);
+		result = 1;
 		break;
 	case 0x04:												/* ADD AL,Ib */
 		break;
@@ -325,6 +330,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->dstA.index = REG_AX;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0x06:												/* PUSH ES */
                 /* PUSH -> SP=SP-4 (-2 for word); [SP]=ES; */
@@ -334,15 +340,19 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		break;
 	case 0x08:												/* OR Eb,Gb */
 		dis_Ex_Gx(OR, instructions, inst, &reg, 1);
+		result = 1;
 		break;
 	case 0x09:												/* OR Ev,Gv */
 		dis_Ex_Gx(OR, instructions, inst, &reg, 4);
+		result = 1;
 		break;
 	case 0x0a:												/* OR Gb,Eb */
 		dis_Gx_Ex(OR, instructions, inst, &reg, 1);
+		result = 1;
 		break;
 	case 0x0b:												/* OR Gv,Ev */
 		dis_Gx_Ex(OR, instructions, inst, &reg, 4);
+		result = 1;
 		break;
 	case 0x0c:												/* OR AL,Ib */
 		break;
@@ -486,6 +496,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->dstA.index = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
+		result = 1;
 		break;
 /* POP reg */
 	case 0x58:												/* POP eAX */
@@ -522,6 +533,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->dstA.index = REG_SP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
+		result = 1;
 		break;
 
 	case 0x60:												/* PUSHA */
@@ -588,6 +600,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->dstA.size = 4;
 		}
 		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0x84:												/* TEST Eb,Gb */
 		break;
@@ -598,15 +611,19 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		break;
 	case 0x88:												/* MOV Eb,Gb */
 		dis_Ex_Gx(MOV, instructions, inst, &reg, 1);
+		result = 1;
 		break;
 	case 0x89:												/* MOV Ev,Gv */
 		dis_Ex_Gx(MOV, instructions, inst, &reg, 4);
+		result = 1;
 		break;
 	case 0x8a:												/* MOV Gb,Eb */
 		dis_Gx_Ex(MOV, instructions, inst, &reg, 1);
+		result = 1;
 		break;
 	case 0x8b:												/* MOV Gv,Ev */
 		dis_Gx_Ex(MOV, instructions, inst, &reg, 4);
+		result = 1;
 		break;
 	case 0x8c:												/* Mov Ew,Sw */
 		break;
@@ -626,10 +643,12 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->srcA.size = 4;
 		}
 		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0x8e:												/* MOV Sw,Ew */
 	case 0x8f:												/* POP Ev */
 	case 0x90:												/* NOP */
+		result = 1;
 		break;
 	case 0x91:												/* XCHG CX,eAX */
 		break;
@@ -716,6 +735,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->dstA.size = 4;
 		}
 		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0xc2:												/* RETN Iv */
 		break;
@@ -759,7 +779,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->srcA.index = REG_TMP1;
 		instruction->srcA.size = 4;
 		instructions->instruction_number++;
-
+		result = 1;
 		break;
 	case 0xc4:												/* LES */
 	case 0xc5:												/* LDS */
@@ -852,6 +872,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->dstA.index = REG_IP;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0xea:												/* JMP Ap */
 	case 0xeb:												/* JMP Jb */
@@ -870,6 +891,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->dstA.index = REG_AX;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0xee:												/* OUT DX,AL */
 		break;
@@ -886,6 +908,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->dstA.index = REG_DX;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0xf0:												/* LOCK */
 		break;
@@ -933,6 +956,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.size = 4;
 			instructions->instruction_number++;
+			result = 1;
 			break;
 		case 1:
 			instruction->opcode = SUB;
@@ -950,11 +974,13 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.size = 4;
 			instructions->instruction_number++;
+			result = 1;
+			break;
 		default:
 			instructions->instruction_number=0; /* Tag unimplemented instructions. */
 			break;
 		}
 	}
 
-	return 0;
+	return result;
 }

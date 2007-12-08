@@ -986,6 +986,7 @@ int main(int argc, char *argv[])
 	int n = 0;
 	int offset = 0;
 	int octets = 0;
+	int result;
 	disassembler_ftype disassemble_fn;
 	instruction_t *instruction;
 	const char *file = "test.obj";
@@ -1029,7 +1030,7 @@ int main(int argc, char *argv[])
 			offset += instructions.bytes_used) {
 		instructions.instruction_number = 0;
 		instructions.bytes_used = 0;
-		disassemble(&instructions, inst+offset);
+		result = disassemble(&instructions, inst+offset);
 		printf("bytes used = %d\n", instructions.bytes_used);
 		for (n = 0; n < instructions.bytes_used; n++) {
 			printf(" 0x%02x", inst[n + offset]);
@@ -1044,9 +1045,13 @@ int main(int argc, char *argv[])
 
 		printf("Number of RTL instructions=%d\n",
 			instructions.instruction_number);
-		if (instructions.instruction_number == 0) {
+		if (result == 0) {
 			printf("Unhandled instruction. Exiting\n");
 			return 0;
+		}
+		if (instructions.instruction_number == 0) {
+			printf("NOP instruction. Get next inst\n");
+			continue;
 		}
 		for (n = 0; n < instructions.instruction_number; n++) {
 			instruction = &instructions.instruction[n];
