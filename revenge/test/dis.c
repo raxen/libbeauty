@@ -37,6 +37,9 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <revenge/dis.h>
 #include <revenge/bfl.h>
 #include <dis-asm.h>
@@ -47,6 +50,8 @@ struct rev_eng *handle;
 struct disassemble_info disasm_info;
 char *dis_flags_table[] = { " ", "f" };
 uint64_t inst_log;	/* Pointer to the current free instruction log entry. */
+char out_buf[1024];
+int local_counter = 1;
 
 /* Memory and Registers are a list of accessed stores. */
 /* A record is only valid when it has been accessed. */
@@ -94,7 +99,7 @@ struct memory_s memory_reg[100];
 struct memory_s memory_stack[100];
 
 struct inst_log_entry_s {
-	instruction_t instruction;	/* The instruction */
+	struct instruction_s instruction;	/* The instruction */
 	struct memory_s value1;		/* First input value */
 	struct memory_s value2;		/* Second input value */
 	struct memory_s value3;		/* Result */
@@ -102,14 +107,14 @@ struct inst_log_entry_s {
 
 struct inst_log_entry_s inst_log_entry[100];
 
-int print_inst(instruction_t *instruction, int instruction_number)
+int print_inst(struct instruction_s *instruction, int instruction_number)
 {
 	printf("Instruction %d:%s%s",
 		instruction_number,
 		opcode_table[instruction->opcode],
 		dis_flags_table[instruction->flags]);
 	if (instruction->srcA.indirect) {
-		printf(" %s[%s0x%" PRIx64 "] %s,",
+		printf(" %s[%s0x%" PRIx64 "]%s,",
 			indirect_table[instruction->srcA.indirect],
 			store_table[instruction->srcA.store],
 			instruction->srcA.index,
@@ -169,6 +174,10 @@ int print_instructions(void)
 			inst_log1->value1.value_scope,
 			inst_log1->value2.value_scope,
 			inst_log1->value3.value_scope);
+		printf("value_id:0x%x, 0x%x -> 0x%x\n",
+			inst_log1->value1.value_id,
+			inst_log1->value2.value_id,
+			inst_log1->value3.value_id);
 	}
 }
 
@@ -261,7 +270,7 @@ exit_add_new_store:
 	return result;
 }
 
-int execute_instruction(instruction_t *instruction)
+int execute_instruction(struct instruction_s *instruction)
 {
 	struct inst_log_entry_s *inst;
 	struct memory_s *value;
@@ -275,7 +284,7 @@ int execute_instruction(instruction_t *instruction)
 
 	inst = &inst_log_entry[inst_log];
 	inst_log++;
-	memcpy(&(inst->instruction), instruction, sizeof(instruction_t));
+	memcpy(&(inst->instruction), instruction, sizeof(struct instruction_s));
 	/* Get value of srcA */
 	/* TODO */
 	switch (instruction->srcA.indirect) {
@@ -341,7 +350,7 @@ int execute_instruction(instruction_t *instruction)
 			inst->value1.ref_log =
 				value->ref_log;
 			inst->value1.value_scope = value->value_scope;
-			inst->value1.value_id = 1; /* 1 - Entry Used */
+			inst->value1.value_id = value->value_id; /* local counter */
 			inst->value1.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
 				inst->value1.init_value,
@@ -425,7 +434,7 @@ int execute_instruction(instruction_t *instruction)
 			value_stack->ref_log;
 		inst->value1.value_scope = value_stack->value_scope;
 		/* counter */
-		inst->value1.value_id = 1;
+		inst->value1.value_id = value_stack->value_id;
 		/* 1 - Entry Used */
 		inst->value1.valid = 1;
 		printf("value=0x%llx+0x%llx=0x%llx\n",
@@ -505,7 +514,7 @@ int execute_instruction(instruction_t *instruction)
 				value->ref_log;
 			inst->value2.value_scope = value->value_scope;
 			/* counter */
-			inst->value2.value_id = 1;
+			inst->value2.value_id = value->value_id;
 			/* 1 - Entry Used */
 			inst->value2.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
@@ -579,7 +588,7 @@ int execute_instruction(instruction_t *instruction)
 			value_stack->ref_log;
 		inst->value2.value_scope = value_stack->value_scope;
 		/* Counter */
-		inst->value2.value_id = 1;
+		inst->value2.value_id = value_stack->value_id;
 		/* 1 - Entry Used */
 		inst->value2.valid = 1;
 		printf("value=0x%llx+0x%llx=0x%llx\n",
@@ -624,10 +633,14 @@ int execute_instruction(instruction_t *instruction)
 			inst->value1.ref_log;
 		inst->value3.value_scope = inst->value1.value_scope;
 		/* MOV param to local */
+		/* FIXME: What about mov local -> param */
 		if (inst->value3.value_scope == 1)
 			inst->value3.value_scope = 2;
 		/* Counter */
-		inst->value3.value_id = 1;
+		if (inst->value3.value_scope == 2) {
+			inst->value3.value_id = local_counter;
+			local_counter++;
+		}
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
@@ -652,7 +665,7 @@ int execute_instruction(instruction_t *instruction)
 			inst->value2.ref_log;
 		inst->value3.value_scope = inst->value2.value_scope;
 		/* Counter */
-		inst->value3.value_id = 1;
+		inst->value3.value_id = inst->value2.value_id;
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
@@ -660,7 +673,6 @@ int execute_instruction(instruction_t *instruction)
 				inst->value3.offset_value,
 				inst->value3.init_value +
 					inst->value3.offset_value);
-		break;
 		break;
 	case ADC:
 		printf("ADC\n");
@@ -739,7 +751,8 @@ int execute_instruction(instruction_t *instruction)
 				inst->value3.ref_log;
 			value->value_scope = inst->value3.value_scope;
 			/* 1 - Ids */
-			value->value_id = 1;
+			value->value_id = inst->value3.value_id;
+			printf("Saving to reg value_id of %d\n", value->value_id);
 			/* 1 - Entry Used */
 			value->valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
@@ -806,7 +819,7 @@ int execute_instruction(instruction_t *instruction)
 			inst->value3.ref_log;
 		value_stack->value_scope = inst->value3.value_scope;
 		/* 1 - Ids */
-		value_stack->value_id = 1;
+		value_stack->value_id = inst->value3.value_id;
 		/* 1 - Entry Used */
 		value_stack->valid = 1;
 		printf("value_stack=0x%llx+0x%llx=0x%llx\n",
@@ -987,10 +1000,16 @@ int main(int argc, char *argv[])
 	int offset = 0;
 	int octets = 0;
 	int result;
+	char *filename;
+	int fd;
+	int tmp;
 	disassembler_ftype disassemble_fn;
-	instruction_t *instruction;
 	const char *file = "test.obj";
 	size_t inst_size = 0;
+	int l;
+	struct instruction_s *instruction;
+	struct inst_log_entry_s *inst_log1;
+	struct memory_s *value;
 	ram_init();
 	reg_init();
 	stack_init();
@@ -999,6 +1018,15 @@ int main(int argc, char *argv[])
 		printf("Failed to find or recognise file\n");
 		return 1;
 	}
+
+	printf("symtab_canon2 = %ld\n", handle->symtab_sz);
+	for (l = 0; l < handle->symtab_sz; l++) {
+		printf("%d\n", l);
+		printf("type:0x%02x\n", handle->symtab[l]->flags);
+		printf("name:%s\n", handle->symtab[l]->name);
+		printf("value=0x%02x\n", handle->symtab[l]->value);
+	}
+	printf("Setup ok\n");
 	inst_size = bf_get_code_size(handle);
 	inst = malloc(inst_size);
 	bf_copy_code_section(handle, inst, inst_size);
@@ -1024,7 +1052,6 @@ int main(int argc, char *argv[])
 	printf("disassemble_fn\n");
 	disassemble_fn = disassembler(handle->bfd);
 	printf("disassemble_fn done %p, %p\n", disassemble_fn, print_insn_i386);
-	bf_test_close_file(handle);
 	instructions.bytes_used = 0;
 	for (offset = 0; offset < inst_size;
 			offset += instructions.bytes_used) {
@@ -1066,7 +1093,140 @@ int main(int argc, char *argv[])
 	}
 	printf("Instructions=%d\n", inst_log);
 	print_instructions();
-	printf("test1\n");
+	filename = "test.c";
+	fd = open(filename, O_WRONLY | O_CREAT, S_IRWXU);
+	if (fd < 0) {
+		printf("Failed to open file %s, error=%d\n", filename, fd);
+		return 0;
+	}
+	printf("fd=%d\n", fd);
+	printf("writing out to file\n");
+	/* Output function name */
+	for (l = 0; l < handle->symtab_sz; l++) {
+		if (handle->symtab[l]->flags == 0x12) {
+			printf("int %s()\n{\n", handle->symtab[l]->name);
+			tmp = snprintf(out_buf, 1024, "int %s()\n{\n", handle->symtab[l]->name);
+			write(fd, out_buf, tmp);
+		}
+		//printf("type:0x%02x\n", handle->symtab[l]->flags);
+		//printf("name:%s\n", handle->symtab[l]->name);
+		//printf("value=0x%02x\n", handle->symtab[l]->value);
+	}
+	for (n = 0; n <  inst_log; n++) {
+		int write_offset = 0;
+		inst_log1 =  &inst_log_entry[n];
+		instruction =  &inst_log1->instruction;
+		/* Test to see if we have an instruction to output */
+		if ((inst_log1->value1.value_scope == 1) ||
+			(inst_log1->value1.value_scope == 2) ||
+			(inst_log1->value2.value_scope == 1) ||
+			(inst_log1->value2.value_scope == 2) ||
+			(inst_log1->value3.value_scope == 1) ||
+			(inst_log1->value3.value_scope == 2)) {
+			if (!print_inst(instruction, n))
+				return 1;
+			switch (instruction->opcode) {
+			case MOV:
+				printf("\t");
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
+				write_offset += tmp;
+				if ((inst_log1->value3.value_scope) == 2) {
+					printf("local%04u = ", (inst_log1->value3.value_id));
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04u = ",
+						inst_log1->value3.value_id);
+					write_offset += tmp;
+				} else {
+					printf("param%04u = ", (inst_log1->value3.indirect_offset_value));
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04u = ",
+						inst_log1->value3.indirect_offset_value);
+					write_offset += tmp;
+				}
+				if ((inst_log1->value1.value_scope) == 2) {
+					printf("local%04u;\n", (inst_log1->value1.value_id));
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04u;\n",
+						inst_log1->value1.value_id);
+					write_offset += tmp;
+				} else {
+					printf("param%04u;\n", (inst_log1->value1.indirect_offset_value));
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04u;\n",
+						inst_log1->value1.indirect_offset_value);
+					write_offset += tmp;
+					printf("write_offset=%d\n", write_offset);
+				}
+				break;
+			case ADD:
+				printf("\t");
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
+				write_offset += tmp;
+				if ((inst_log1->value3.value_scope) == 2) {
+					printf("local%04u += ", (inst_log1->value3.value_id));
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04u += ",
+						inst_log1->value3.value_id);
+					write_offset += tmp;
+				} else {
+					printf("param%04u += ", (inst_log1->value3.indirect_offset_value));
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04u += ",
+						inst_log1->value3.indirect_offset_value);
+					write_offset += tmp;
+				}
+				printf("\nstore=%d\n", instruction->srcA.store);
+				switch (instruction->srcA.store) {
+				case 0:
+					printf("%x;\n", instruction->srcA.index);
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "%x;\n",
+						instruction->srcA.index);
+					write_offset += tmp;
+					break;
+				case 1:
+					if ((inst_log1->value1.value_scope) == 2) {
+						printf("local%04u;\n", (inst_log1->value1.value_id));
+						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04u;\n",
+							inst_log1->value1.value_id);
+						write_offset += tmp;
+					} else {
+						printf("param%04u;\n", (inst_log1->value1.indirect_offset_value));
+						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04u;\n",
+							inst_log1->value1.indirect_offset_value);
+						write_offset += tmp;
+						printf("write_offset=%d\n", write_offset);
+					}
+					break;
+				case 2:
+				case 3:
+				default:
+					break;
+				}
+				break;
+
+			default:
+				break;
+			}
+		}
+		if (write_offset) {
+			out_buf[write_offset] = 0;
+			printf("cmd:%d:%s\n", write_offset, out_buf);
+			write(fd, out_buf, write_offset);
+		}
+		write_offset = 0;
+		if ((inst_log1->value3.value_type == 5) &&
+			(!instruction->dstA.indirect) &&
+			(instruction->dstA.store == 1) &&
+			(instruction->dstA.index ==  REG_IP)) {
+			/* FIXME: select correct return variable */
+			/* Search for EAX */
+			value = search_store(memory_reg,
+					4, 4);
+			printf("\treturn local%04d;\n}\n", value->value_id);
+			tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\treturn local%04d;\n}\n", value->value_id);
+			write_offset += tmp;
+			write(fd, out_buf, write_offset);
+			write_offset = 0;
+		}
+		//tmp = snprintf(out_buf, 1024, "%d\n", l);
+		//write(fd, out_buf, tmp);
+	}
+	close(fd);
+	bf_test_close_file(handle);
 	return 0;
 }
 
