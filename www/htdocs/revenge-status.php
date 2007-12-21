@@ -9,13 +9,17 @@ include 'header.php'
 </P>
 <P> The current source code can be found in the SVN repository under the "trunk->revenge". <A HREF="http://developer.berlios.de/svn/?group_id=1165">See svn repository for latest test version.</A>
 </P>
-<P> The next step is writing the memory module. The BFD will load the program into memory in much the same way that the linux kernel loads a program into memory so that the CPU can execute it. Any extra details that might happen to be in the binary headers (e.g. debug info), will be loaded into a separate table, so that other modules can use them as they see fit. The BFD and memory module will not execute any program code.
+<P> The memory module has been written. The BFD will load the program into memory in much the same way that the linux kernel loads a program into memory so that the CPU can execute it. Any extra details that might happen to be in the binary headers (e.g. debug info), will be loaded into a separate table, so that other modules can use them as they see fit. The BFD and memory module will not execute any program code.
 </P>
-<P> Now work on the CPU Emulator can start. This will take the program bytes from the memory module, covert them to RTL, determine which bytes are data and which are instructions, build program flow graphs, determine function parameters and gather meta information.
+<P> The CPU Emulator has been partially implemented. This takes the program bytes from the memory module, covert them to RTL, determine which bytes are data and which are instructions, build program flow graphs, determine function parameters and gather meta information.
 </P>
-<P> Extra processing will then take place, resulting in the final step of creating a C source code representation of the binary program.
+<P> Extra processing then takes place, resulting in the final step of creating a C source code representation of the binary program.
 </P>
-<P> This page was last updated on 12th September 2004
+<P> Currently, the test programs test1.c, test2.c, test3.c and test4.c work. We can compile them, run revenge on the test4.o file and output a test.c file.
+</P>
+<P> TODO: We do not currently handle jump or conditional jump instructions. This will be implemented next.
+</P>
+<P> This page was last updated on 21th December 2007
 </P>
 </table>
 </table>
