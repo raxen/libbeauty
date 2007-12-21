@@ -104,8 +104,9 @@ int test ( int value )<br>
 </code>
 <p>
 Now we just need to automate this revenge CPU step.
+The current revenge code, rev 99, in the SVN repository can acheive the above tasks.
 
-<P> This page was last updated on 27th February 2005
+<P> This page was last updated on 21th December 2007
 </P>
 </table>
 </table>
