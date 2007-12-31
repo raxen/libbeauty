@@ -292,7 +292,7 @@ int execute_instruction(struct instruction_s *instruction)
 		/* Not indirect */
 		printf("srcA-direct\n");
 		switch (instruction->srcA.store) {
-		case 0:
+		case STORE_IMMED:
 			/* i - immediate */
 			printf("srcA-immediate\n");
 			printf("index=%"PRIx64", size=%d\n",
@@ -321,7 +321,7 @@ int execute_instruction(struct instruction_s *instruction)
 				inst->value1.init_value +
 					 inst->value1.offset_value);
 			break;
-		case 1:
+		case STORE_REG:
 			/* r - register */
 			printf("srcA-register\n");
 			printf("index=%"PRIx64", size=%d\n",
@@ -358,10 +358,10 @@ int execute_instruction(struct instruction_s *instruction)
 				inst->value1.init_value +
 					inst->value1.offset_value);
 			break;
-		case 2:
+		case STORE_MEM:
 			/* m - memory */
 			break;
-		case 3:
+		case STORE_STACK:
 			/* s - stack */
 			break;
 		default:
@@ -458,7 +458,7 @@ int execute_instruction(struct instruction_s *instruction)
 		/* Not indirect */
 		printf("dstA-direct\n");
 		switch (instruction->dstA.store) {
-		case 0:
+		case STORE_IMMED:
 			/* i - immediate */
 			printf("dstA-immediate\n");
 			inst->value2.start_address = 0;
@@ -484,7 +484,7 @@ int execute_instruction(struct instruction_s *instruction)
 				inst->value2.init_value +
 					inst->value2.offset_value);
 			break;
-		case 1:
+		case STORE_REG:
 			/* r - register */
 			printf("dstA-register\n");
 			printf("index=%"PRIx64", size=%d\n",
@@ -523,11 +523,11 @@ int execute_instruction(struct instruction_s *instruction)
 				inst->value2.init_value +
 					inst->value2.offset_value);
 			break;
-		case 2:
+		case STORE_MEM:
 			/* m - memory */
 			printf("dstA-memory\n");
 			break;
-		case 3:
+		case STORE_STACK:
 			/* s - stack */
 			printf("dstA-stack\n");
 			break;
@@ -711,11 +711,11 @@ int execute_instruction(struct instruction_s *instruction)
 		/* Not indirect */
 		printf("dstA-direct\n");
 		switch (instruction->dstA.store) {
-		case 0:
+		case STORE_IMMED:
 			/* i - immediate */
 			printf("dstA-immediate-THIS SHOULD NEVER HAPPEN!\n");
 			break;
-		case 1:
+		case STORE_REG:
 			/* r - register */
 			printf("dstA-register saving result\n");
 			value = search_store(memory_reg,
@@ -760,10 +760,10 @@ int execute_instruction(struct instruction_s *instruction)
 				value->offset_value,
 				value->init_value + value->offset_value);
 			break;
-		case 2:
+		case STORE_MEM:
 			/* m - memory */
 			break;
-		case 3:
+		case STORE_STACK:
 			/* s - stack */
 			break;
 		default:
@@ -1171,13 +1171,13 @@ int main(int argc, char *argv[])
 				}
 				printf("\nstore=%d\n", instruction->srcA.store);
 				switch (instruction->srcA.store) {
-				case 0:
+				case STORE_IMMED:
 					printf("%x;\n", instruction->srcA.index);
 					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "%x;\n",
 						instruction->srcA.index);
 					write_offset += tmp;
 					break;
-				case 1:
+				case STORE_REG:
 					if ((inst_log1->value1.value_scope) == 2) {
 						printf("local%04u;\n", (inst_log1->value1.value_id));
 						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04u;\n",
@@ -1191,8 +1191,8 @@ int main(int argc, char *argv[])
 						printf("write_offset=%d\n", write_offset);
 					}
 					break;
-				case 2:
-				case 3:
+				case STORE_MEM:
+				case STORE_STACK:
 				default:
 					break;
 				}
@@ -1210,7 +1210,7 @@ int main(int argc, char *argv[])
 		write_offset = 0;
 		if ((inst_log1->value3.value_type == 5) &&
 			(!instruction->dstA.indirect) &&
-			(instruction->dstA.store == 1) &&
+			(instruction->dstA.store == STORE_REG) &&
 			(instruction->dstA.index ==  REG_IP)) {
 			/* FIXME: select correct return variable */
 			/* Search for EAX */

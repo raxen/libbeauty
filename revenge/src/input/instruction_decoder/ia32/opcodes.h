@@ -26,6 +26,14 @@
  Naming convention taked from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
 
+/* enums for store_table */
+enum {
+	STORE_IMMED,
+	STORE_REG,
+	STORE_MEM,
+	STORE_STACK,
+};
+
 #define NOP 0
 #define MOV 1
 #define ADD 2
