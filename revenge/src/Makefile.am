@@ -1,5 +1,5 @@
 include $(top_srcdir)/misc/Makefile.common
 
-SUBDIRS = input
+SUBDIRS = input execute
 
 noinst_HEADERS = config.h
