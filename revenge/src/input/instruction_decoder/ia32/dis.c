@@ -430,17 +430,38 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x27:												/* DAA */
 		break;
 	case 0x28:												/* SUB Eb,Gb */
+		dis_Ex_Gx(SUB, instructions, inst, &reg, 1);
+		result = 1;
 		break;
 	case 0x29:												/* SUB Ev,Gv */
+		dis_Ex_Gx(SUB, instructions, inst, &reg, 4);
+		result = 1;
 		break;
 	case 0x2a:												/* SUB Gb,Eb */
+		dis_Gx_Ex(SUB, instructions, inst, &reg, 1);
+		result = 1;
 		break;
 	case 0x2b:												/* SUB Gv,Ev */
+		dis_Gx_Ex(SUB, instructions, inst, &reg, 4);
+		result = 1;
 		break;
 	case 0x2c:												/* SUB AL,Ib */
 		break;
 	case 0x2d:												/* SUB eAX,Iv */
-		break;
+		instruction = &instructions->instruction[instructions->instruction_number];	
+		instruction->opcode = SUB;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_IMMED;
+		instruction->srcA.indirect = 0;
+		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instructions->bytes_used+=4;
+		instruction->srcA.size = 4;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = 0;
+		instruction->dstA.index = REG_AX;
+		instruction->dstA.size = 4;
+		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0x2e:												/* SEG CS: */
 		break;

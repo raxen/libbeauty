@@ -514,11 +514,57 @@ int main(int argc, char *argv[])
 				case STORE_MEM:
 				case STORE_STACK:
 				default:
+					printf("Unhandled store1\n");
+					break;
+				}
+				break;
+			case SUB:
+				printf("\t");
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
+				write_offset += tmp;
+				if ((inst_log1->value3.value_scope) == 2) {
+					printf("local%04u -= ", (inst_log1->value3.value_id));
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04u -= ",
+						inst_log1->value3.value_id);
+					write_offset += tmp;
+				} else {
+					printf("param%04u -= ", (inst_log1->value3.indirect_offset_value));
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04u -= ",
+						inst_log1->value3.indirect_offset_value);
+					write_offset += tmp;
+				}
+				printf("\nstore=%d\n", instruction->srcA.store);
+				switch (instruction->srcA.store) {
+				case STORE_IMMED:
+					printf("%x;\n", instruction->srcA.index);
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "%x;\n",
+						instruction->srcA.index);
+					write_offset += tmp;
+					break;
+				case STORE_REG:
+					if ((inst_log1->value1.value_scope) == 2) {
+						printf("local%04u;\n", (inst_log1->value1.value_id));
+						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04u;\n",
+							inst_log1->value1.value_id);
+						write_offset += tmp;
+					} else {
+						printf("param%04u;\n", (inst_log1->value1.indirect_offset_value));
+						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04u;\n",
+							inst_log1->value1.indirect_offset_value);
+						write_offset += tmp;
+						printf("write_offset=%d\n", write_offset);
+					}
+					break;
+				case STORE_MEM:
+				case STORE_STACK:
+				default:
+					printf("Unhandled store1\n");
 					break;
 				}
 				break;
 
 			default:
+				printf("Unhandled output instruction1\n");
 				break;
 			}
 		}
