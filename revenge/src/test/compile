@@ -1,1 +1,5 @@
 gcc -c -g -o test1.o test1.c
+gcc -c -g -o test2.o test2.c
+gcc -c -g -o test3.o test3.c
+gcc -c -g -o test4.o test4.c
+gcc -c -g -o test5.o test5.c

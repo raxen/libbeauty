@@ -1,6 +1,8 @@
-int testa ( int value );
+/* A very simple function to test filtering out of stack variables. */
 
-int testa ( int value ) {
+int test1 ( int value );
+
+int test1 ( int value ) {
   return value+0x123;
 }
 
