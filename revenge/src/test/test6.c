@@ -1,5 +1,4 @@
-/* A very simple function to test two parameters. */
-/* Using a negation also identifies parameter ordering. */
+/* A very simple function to test constant values. */
 
 int test6(int value1 );
 
