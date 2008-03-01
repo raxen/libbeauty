@@ -4,3 +4,4 @@ gcc -c -g -o test3.o test3.c
 gcc -c -g -o test4.o test4.c
 gcc -c -g -o test5.o test5.c
 gcc -c -g -o test6.o test6.c
+gcc -c -g -o test7.o test7.c
