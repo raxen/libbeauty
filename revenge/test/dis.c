@@ -493,7 +493,7 @@ int main(int argc, char *argv[])
 				switch (instruction->srcA.store) {
 				case STORE_IMMED:
 					printf("%x;\n", instruction->srcA.index);
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "%x;\n",
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "0x%x;\n",
 						instruction->srcA.index);
 					write_offset += tmp;
 					break;
@@ -537,7 +537,7 @@ int main(int argc, char *argv[])
 				switch (instruction->srcA.store) {
 				case STORE_IMMED:
 					printf("%x;\n", instruction->srcA.index);
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "%x;\n",
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "0x%x;\n",
 						instruction->srcA.index);
 					write_offset += tmp;
 					break;
