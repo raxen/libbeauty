@@ -1,4 +1,5 @@
 /* A very simple function to test an if statement. */
+/* with a simple forward goto. */
 
 int test7(int value1 );
 
