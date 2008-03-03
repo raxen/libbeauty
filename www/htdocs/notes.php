@@ -7,9 +7,9 @@ include 'header.php'
 </H2>
 <p>Revenge CPU Emulator. &lt;- What should it do.
 
-<a href="notes1.php" >Step 1</a>
+<p><a href="notes1.php" >Step 1</a>
 
-<a href="notes2.php" >Step 2</a>
+<p><a href="notes2.php" >Step 2</a>
 
 Now we just need to automate this revenge CPU step.
 The current revenge code, rev 99, in the SVN repository can acheive the above tasks.
