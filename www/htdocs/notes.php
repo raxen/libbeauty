@@ -11,10 +11,8 @@ include 'header.php'
 
 <p><a href="notes2.php" >Step 2</a>
 <p>
-Now we just need to automate this revenge CPU step.
-The current revenge code, rev 99, in the SVN repository can acheive the above tasks.
 
-<P> This page was last updated on 21th December 2007
+<P> This page was last updated on 3rd March 2008
 </P>
 </table>
 </table>
