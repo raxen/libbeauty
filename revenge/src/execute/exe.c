@@ -45,18 +45,6 @@
 #include "exe.h"
 #include <dis-asm.h>
 
-instructions_t instructions;
-uint8_t *inst;
-struct rev_eng *handle;
-char *dis_flags_table[] = { " ", "f" };
-uint64_t inst_log;	/* Pointer to the current free instruction log entry. */
-char out_buf[1024];
-int local_counter = 1;
-
-struct memory_s memory_ram[1000];
-struct memory_s memory_reg[100];
-struct memory_s memory_stack[100];
-
 struct memory_s *search_store(
 	struct memory_s *memory, uint64_t index, int size)
 {
@@ -129,97 +117,98 @@ exit_add_new_store:
 	return result;
 }
 
-int execute_instruction(void *self, struct inst_log_entry_s *inst)
+static int get_value_RTL_instruction(
+	operand_t *source,
+	struct memory_s *destination,
+	int info_id )
 {
-	struct instruction_s *instruction;
 	struct memory_s *value;
 	struct memory_s *value_mem;
 	struct memory_s *value_stack;
-
-	instruction = &inst->instruction;
-	printf("Execute Instruction 0x%x:%s%s\n",
-		instruction->opcode,
-		opcode_table[instruction->opcode],
-		dis_flags_table[instruction->flags]);
-
-	/* Get value of srcA */
-	/* TODO */
-	switch (instruction->srcA.indirect) {
+	char *info;
+	if (info_id == 0) info = "srcA";
+	if (info_id == 1) info = "dstA";
+	printf ("get_value_RTL_instruction:%p, %p, %i\n", source, destination, info_id);
+	switch (source->indirect) {
 	case 0:
 		/* Not indirect */
-		printf("srcA-direct\n");
-		switch (instruction->srcA.store) {
+		printf("%s-direct\n", info);
+		switch (source->store) {
 		case STORE_IMMED:
 			/* i - immediate */
-			printf("srcA-immediate\n");
+			printf("%s-immediate\n", info);
 			printf("index=%"PRIx64", size=%d\n",
-					instruction->srcA.index,
-					instruction->srcA.size);
-			inst->value1.start_address = 0;
-			inst->value1.length = instruction->srcA.size;
+					source->index,
+					source->size);
+			destination->start_address = 0;
+			destination->length = source->size;
 			/* known */
-			inst->value1.init_value_type = 1;
-			inst->value1.init_value = instruction->srcA.index;
-			inst->value1.offset_value = 0;
+			destination->init_value_type = 1;
+			destination->init_value = source->index;
+			destination->offset_value = 0;
 			/* unknown */
-			inst->value1.value_type = 0;
+			destination->value_type = 0;
 			/* not set yet. */
-			inst->value1.ref_memory = 0;
+			destination->ref_memory = 0;
 			/* not set yet. */
-			inst->value1.ref_log = 0;
+			destination->ref_log = 0;
 			/* unknown */
-			inst->value1.value_scope = 0;
+			destination->value_scope = 0;
 			/* 1 - Entry Used */
-			inst->value1.value_id = 1;
-			inst->value1.valid = 1;
+			destination->value_id = 1;
+			destination->valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
-				inst->value1.init_value,
-				inst->value1.offset_value,
-				inst->value1.init_value +
-					 inst->value1.offset_value);
+				destination->init_value,
+				destination->offset_value,
+				destination->init_value +
+					 destination->offset_value);
 			break;
 		case STORE_REG:
 			/* r - register */
-			printf("srcA-register\n");
+			printf("%s-register\n", info);
 			printf("index=%"PRIx64", size=%d\n",
-					instruction->srcA.index,
-					instruction->srcA.size);
+					source->index,
+					source->size);
 			value = search_store(memory_reg,
-					instruction->srcA.index,
-					instruction->srcA.size);
+					source->index,
+					source->size);
 			printf("EXE value=%p\n", value);
 			/* FIXME what to do in NULL */
 			if (!value) {
 				value = add_new_store(memory_reg,
-						instruction->srcA.index,
-						instruction->srcA.size);
+						source->index,
+						source->size);
 			}
 			if (!value)
 				break;
-			inst->value1.start_address = 0;
-			inst->value1.length = value->length;
-			inst->value1.init_value_type = value->init_value_type;
-			inst->value1.init_value = value->init_value;
-			inst->value1.offset_value = value->offset_value;
-			inst->value1.value_type = value->value_type;
-			inst->value1.ref_memory =
+			destination->start_address = 0;
+			destination->length = value->length;
+			destination->init_value_type = value->init_value_type;
+			destination->init_value = value->init_value;
+			destination->offset_value = value->offset_value;
+			destination->value_type = value->value_type;
+			destination->ref_memory =
 				value->ref_memory;
-			inst->value1.ref_log =
+			destination->ref_log =
 				value->ref_log;
-			inst->value1.value_scope = value->value_scope;
-			inst->value1.value_id = value->value_id; /* local counter */
-			inst->value1.valid = 1;
+			destination->value_scope = value->value_scope;
+			/* local counter */
+			destination->value_id = value->value_id;
+			/* 1 - Entry Used */
+			destination->valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
-				inst->value1.init_value,
-				inst->value1.offset_value,
-				inst->value1.init_value +
-					inst->value1.offset_value);
+				destination->init_value,
+				destination->offset_value,
+				destination->init_value +
+					destination->offset_value);
 			break;
 		case STORE_MEM:
 			/* m - memory */
+			printf("%s-memory-NOT\n", info);
 			break;
 		case STORE_STACK:
 			/* s - stack */
+			printf("%s-stack-NOT\n", info);
 			break;
 		default:
 			/* Should not get here */
@@ -229,37 +218,39 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		break;
 	case 1:
 		/* m - memory */
-		printf("srcA-indirect\n");
+		printf("%s-indirect-NOT\n", info);
+		printf("%s-memory-NOT\n", info);
 		break;
 	case 2:
 		/* s - stack */
-		printf("srcA-indirect\n");
-		printf("srcA-stack\n");
+		printf("%s-indirect\n", info);
+		printf("%s-stack\n", info);
 		printf("index=%"PRIx64", size=%d\n",
-				instruction->srcA.index,
-				instruction->srcA.size);
+				source->index,
+				source->size);
 		value = search_store(memory_reg,
-				instruction->srcA.index,
-				instruction->srcA.size);
+				source->index,
+				source->size);
 		printf("EXE value=%p\n", value);
 		/* FIXME what to do in NULL */
 		if (!value) {
 			value = add_new_store(memory_reg,
-					instruction->srcA.index,
-					instruction->srcA.size);
+					source->index,
+					source->size);
 		}
 		if (!value)
 			break;
 		value_stack = search_store(memory_stack,
 				value->init_value +
 					value->offset_value,
-					instruction->srcA.size);
+					source->size);
 		printf("EXE2 value_stack=%p\n", value_stack);
 		if (!value_stack) {
 			value_stack = add_new_store(memory_stack,
 				value->init_value +
 					value->offset_value,
-					instruction->srcA.size);
+					source->size);
+			/* Only do this init on new stores */
 			if ((value->init_value +
 				value->offset_value) > 0x10000) {
 				printf("PARAM\n");
@@ -274,196 +265,72 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 				/* Local number */
 				value_stack->value_id = 1;
 			}
+/* Section ends */
 		}
 		if (!value_stack)
 			break;
-		inst->value1.start_address = 0;
-		inst->value1.length = value_stack->length;
-		inst->value1.init_value_type = value_stack->init_value_type;
-		inst->value1.init_value = value_stack->init_value;
-		inst->value1.offset_value = value_stack->offset_value;
-		inst->value1.indirect_init_value = value->init_value;
-		inst->value1.indirect_offset_value = value->offset_value;
-		inst->value1.value_type = value_stack->value_type;
-		inst->value1.ref_memory =
+		destination->start_address = 0;
+		destination->length = value_stack->length;
+		destination->init_value_type = value_stack->init_value_type;
+		destination->init_value = value_stack->init_value;
+		destination->offset_value = value_stack->offset_value;
+		destination->indirect_init_value = value->init_value;
+		destination->indirect_offset_value = value->offset_value;
+		destination->value_type = value_stack->value_type;
+		destination->ref_memory =
 			value_stack->ref_memory;
-		inst->value1.ref_log =
+		destination->ref_log =
 			value_stack->ref_log;
-		inst->value1.value_scope = value_stack->value_scope;
+		destination->value_scope = value_stack->value_scope;
 		/* counter */
-		inst->value1.value_id = value_stack->value_id;
+		destination->value_id = value_stack->value_id;
 		/* 1 - Entry Used */
-		inst->value1.valid = 1;
+		destination->valid = 1;
 		printf("value=0x%llx+0x%llx=0x%llx\n",
-			inst->value1.init_value,
-			inst->value1.offset_value,
-			inst->value1.init_value +
-				inst->value1.offset_value);
+			destination->init_value,
+			destination->offset_value,
+			destination->init_value +
+				destination->offset_value);
 		break;
 	case 3:
 		/* p - ????? */
+		printf("%s-indirect-NOT\n", info);
+		printf("%s-ppp-NOT\n", info);
 		break;
 	default:
 		/* Should not get here */
 		printf("FAILED\n");
 		return 0;
 	}
-	/* Get value of dstA */
+	return 0;
+}
+
+
+
+
+
+
+
+
+int execute_instruction(void *self, struct inst_log_entry_s *inst)
+{
+	struct instruction_s *instruction;
+	struct memory_s *value;
+	struct memory_s *value_mem;
+	struct memory_s *value_stack;
+	int ret;
+
+	instruction = &inst->instruction;
+	printf("Execute Instruction %d:%s%s\n",
+		instruction->opcode,
+		opcode_table[instruction->opcode],
+		dis_flags_table[instruction->flags]);
+
+	/* Get value of srcA */
 	/* TODO */
-	switch (instruction->dstA.indirect) {
-	case 0:
-		/* Not indirect */
-		printf("dstA-direct\n");
-		switch (instruction->dstA.store) {
-		case STORE_IMMED:
-			/* i - immediate */
-			printf("dstA-immediate\n");
-			inst->value2.start_address = 0;
-			inst->value2.length = instruction->dstA.size;
-			inst->value2.init_value_type = 1; /* known */
-			inst->value2.init_value = instruction->dstA.index;
-			inst->value2.offset_value = 0;
-			/* unknown */
-			inst->value2.value_type = 0;
-			/* not set yet. */
-			inst->value2.ref_memory = 0;
-			/* not set yet. */
-			inst->value2.ref_log = 0;
-			/* unknown */
-			inst->value2.value_scope = 0;
-			/* Counter */
-			inst->value2.value_id = 1;
-			/* 1 - Entry Used */
-			inst->value2.valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
-				inst->value2.init_value,
-				inst->value2.offset_value,
-				inst->value2.init_value +
-					inst->value2.offset_value);
-			break;
-		case STORE_REG:
-			/* r - register */
-			printf("dstA-register\n");
-			printf("index=%"PRIx64", size=%d\n",
-					instruction->dstA.index,
-					instruction->dstA.size);
-			value = search_store(memory_reg,
-					instruction->dstA.index,
-					instruction->dstA.size);
-			printf("EXE value=%p\n", value);
-			/* FIXME what to do in NULL */
-			if (!value) {
-				value = add_new_store(memory_reg,
-						instruction->dstA.index,
-						instruction->dstA.size);
-			}
-			if (!value)
-				break;
-			inst->value2.start_address = 0;
-			inst->value2.length = value->length;
-			inst->value2.init_value_type = value->init_value_type;
-			inst->value2.init_value = value->init_value;
-			inst->value2.offset_value = value->offset_value;
-			inst->value2.value_type = value->value_type;
-			inst->value2.ref_memory =
-				value->ref_memory;
-			inst->value2.ref_log =
-				value->ref_log;
-			inst->value2.value_scope = value->value_scope;
-			/* counter */
-			inst->value2.value_id = value->value_id;
-			/* 1 - Entry Used */
-			inst->value2.valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
-				inst->value2.init_value,
-				inst->value2.offset_value,
-				inst->value2.init_value +
-					inst->value2.offset_value);
-			break;
-		case STORE_MEM:
-			/* m - memory */
-			printf("dstA-memory\n");
-			break;
-		case STORE_STACK:
-			/* s - stack */
-			printf("dstA-stack\n");
-			break;
-		default:
-			/* Should not get here */
-			printf("FAILED\n");
-			return 0;
-		}
-		break;
-	case 1:
-		/* m - memory */
-		printf("dstA-indirect\n");
-		printf("dstA-memory\n");
-		break;
-	case 2:
-		/* s - stack */
-		printf("dstA-indirect\n");
-		printf("dstA-stack\n");
-		printf("index=%"PRIx64", size=%d\n",
-				instruction->dstA.index,
-				instruction->dstA.size);
-		value = search_store(memory_reg,
-				instruction->dstA.index,
-				instruction->dstA.size);
-		printf("EXE value=%p\n", value);
-		/* FIXME what to do in NULL */
-		if (!value) {
-			value = add_new_store(memory_reg,
-					instruction->dstA.index,
-					instruction->dstA.size);
-		}
-		if (!value)
-			break;
-		value_stack = search_store(memory_stack,
-				value->init_value +
-					value->offset_value,
-					instruction->dstA.size);
-		printf("EXE2 value_stack=%p\n", value_stack);
-		if (!value_stack) {
-			value_stack = add_new_store(memory_stack,
-				value->init_value +
-					value->offset_value,
-					instruction->dstA.size);
-		}
-		if (!value_stack)
-			break;
-		inst->value2.start_address = 0;
-		inst->value2.length = value_stack->length;
-		inst->value2.init_value_type = value_stack->init_value_type;
-		inst->value2.init_value = value_stack->init_value;
-		inst->value2.offset_value = value_stack->offset_value;
-		inst->value2.indirect_init_value = value->init_value;
-		inst->value2.indirect_offset_value = value->offset_value;
-		inst->value2.value_type = value_stack->value_type;
-		inst->value2.ref_memory =
-			value_stack->ref_memory;
-		inst->value2.ref_log =
-			value_stack->ref_log;
-		inst->value2.value_scope = value_stack->value_scope;
-		/* Counter */
-		inst->value2.value_id = value_stack->value_id;
-		/* 1 - Entry Used */
-		inst->value2.valid = 1;
-		printf("value=0x%llx+0x%llx=0x%llx\n",
-			inst->value2.init_value,
-			inst->value2.offset_value,
-			inst->value2.init_value +
-				inst->value2.offset_value);
-		break;
-	case 3:
-		/* p - ????? */
-		printf("dstA-indirect\n");
-		printf("dstA-ppp\n");
-		break;
-	default:
-		/* Should not get here */
-		printf("FAILED\n");
-		return 0;
-	}
+	ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+	/* Get value of dstA */
+	ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
 	/* Create result */
 	/* TODO */
 	switch (instruction->opcode) {
@@ -480,9 +347,9 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		inst->value3.value_type = inst->value1.value_type;
 		if (inst->instruction.dstA.indirect) {
 			inst->value3.indirect_init_value =
-				inst->value2.indirect_init_value;
+				inst->value1.indirect_init_value;
 			inst->value3.indirect_offset_value =
-				inst->value2.indirect_offset_value;
+				inst->value1.indirect_offset_value;
 		}
 		inst->value3.ref_memory =
 			inst->value1.ref_memory;
@@ -516,6 +383,13 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		inst->value3.offset_value =
 			inst->value2.offset_value + inst->value1.init_value;
 		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+		}
+		inst->value3.ref_memory =
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
 		inst->value3.ref_log =
@@ -619,9 +493,11 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 			break;
 		case STORE_MEM:
 			/* m - memory */
+			printf("dstA-memory saving result - NOT\n");
 			break;
 		case STORE_STACK:
 			/* s - stack */
+			printf("dstA-stack saving result - NOT\n");
 			break;
 		default:
 			/* Should not get here */

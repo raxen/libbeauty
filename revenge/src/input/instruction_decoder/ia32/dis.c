@@ -23,7 +23,7 @@
  Displacement (Address displacement of 1, 2, or 4 bytes or none)
  Immediate (Immediate data of 1, 2, or 4 bytes or none)
 
- Naming convention taked from Intel Instruction set manual, Appendix A. 25366713.pdf
+ Naming convention taken from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
 
 #include "dis.h"

@@ -38,12 +38,19 @@ struct operand_s {
 	/* 0 = direct or immeadiate value. ( e.g. MOV AX,BX),
 	 * 1 = indirect or from_memory value. (e.g. MOV AX,[BX])
 	 */
+	/* For IF instruction, the value "indirect" contains
+         * 0 = relative
+         * 1 = absolute
+         */
 	int indirect;
 	/* value depends on store */
+	/* For IF instruction, this is the memory index. */
 	uint64_t index;
 	/* value depends on store */
+	/* For IF instruction, this is within this group's RTL index. */
 	uint64_t value;
 	/* number of bytes in value. */
+	/* For IF instruction, this will be a 4 bytes. */
 	int size;
 } ;
 

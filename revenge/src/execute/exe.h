@@ -51,3 +51,19 @@ struct memory_s *search_store(
         struct memory_s *memory, uint64_t index, int size);
 struct memory_s *add_new_store(
 	struct memory_s *memory, uint64_t index, int size);
+
+extern instructions_t instructions;
+extern uint8_t *inst;
+extern struct rev_eng *handle;
+extern struct disassemble_info disasm_info;
+extern char *dis_flags_table[];
+extern uint64_t inst_log;      /* Pointer to the current free instruction log entry. */
+extern char out_buf[1024];
+extern int local_counter;
+extern void *self;
+
+extern struct memory_s memory_ram[1000];
+extern struct memory_s memory_reg[100];
+extern struct memory_s memory_stack[100];
+
+

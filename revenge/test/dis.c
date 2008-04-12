@@ -312,6 +312,7 @@ int main(int argc, char *argv[])
 {
 	int n = 0;
 	int offset = 0;
+	int instruction_offset = 0;
 	int octets = 0;
 	int result;
 	char *filename;
@@ -398,7 +399,8 @@ int main(int argc, char *argv[])
 			struct inst_log_entry_s *inst_exe;
 
 			instruction = &instructions.instruction[n];
-			if (!print_inst(instruction, n)) {
+			printf( "Printing inst1111:%d, %d, %d\n",instruction_offset, n, inst_log);
+			if (!print_inst(instruction, instruction_offset + n)) {
 				return 1;
 			}
 			inst_exe = &inst_log_entry[inst_log];
@@ -410,11 +412,12 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 		}
+		instruction_offset += instructions.instruction_number;
 	}
 	printf("Instructions=%d\n", inst_log);
 	print_instructions();
 	filename = "test.c";
-	fd = open(filename, O_WRONLY | O_CREAT, S_IRWXU);
+	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (fd < 0) {
 		printf("Failed to open file %s, error=%d\n", filename, fd);
 		return 0;
@@ -443,10 +446,17 @@ int main(int argc, char *argv[])
 			(inst_log1->value2.value_scope == 2) ||
 			(inst_log1->value3.value_scope == 1) ||
 			(inst_log1->value3.value_scope == 2)) {
-			if (!print_inst(instruction, n))
-				return 1;
 			switch (instruction->opcode) {
 			case MOV:
+				if (inst_log1->value1.value_type == 6)
+					break;
+				/* FIXME: This might need adding back in when
+				 *        complex EIP jumps happen
+				 */
+				if (inst_log1->value1.value_type == 5)
+					break;
+				if (!print_inst(instruction, n))
+					return 1;
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
@@ -475,6 +485,8 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case ADD:
+				if (!print_inst(instruction, n))
+					return 1;
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
@@ -519,6 +531,8 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case SUB:
+				if (!print_inst(instruction, n))
+					return 1;
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
