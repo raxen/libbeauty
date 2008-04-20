@@ -7,3 +7,5 @@ gcc -c -g -o test6.o test6.c
 gcc -c -g -o test7.o test7.c
 gcc -c -g -o test8.o test8.c
 gcc -c -g -o test9.o test9.c
+gcc -c -g -o test10.o test10.c
+gcc -c -g -o test11.o test11.c
