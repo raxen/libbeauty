@@ -178,6 +178,8 @@ static int get_value_RTL_instruction(
 				value = add_new_store(memory_reg,
 						source->index,
 						source->size);
+				value->value_id = local_counter;
+				local_counter++;
 			}
 			if (!value)
 				break;
@@ -237,6 +239,8 @@ static int get_value_RTL_instruction(
 			value = add_new_store(memory_reg,
 					source->index,
 					source->size);
+			value->value_id = local_counter;
+			local_counter++;
 		}
 		if (!value)
 			break;
@@ -263,7 +267,8 @@ static int get_value_RTL_instruction(
 				/* Local */
 				value_stack->value_scope = 2;
 				/* Local number */
-				value_stack->value_id = 1;
+				value_stack->value_id = local_counter;
+				local_counter++;
 			}
 /* Section ends */
 		}
@@ -284,6 +289,10 @@ static int get_value_RTL_instruction(
 		destination->value_scope = value_stack->value_scope;
 		/* counter */
 		destination->value_id = value_stack->value_id;
+		printf("%s: scope=%d, id=%d\n",
+			info,
+			destination->value_scope,
+			destination->value_id);
 		/* 1 - Entry Used */
 		destination->valid = 1;
 		printf("value=0x%llx+0x%llx=0x%llx\n",
@@ -362,8 +371,8 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 			inst->value3.value_scope = 2;
 		/* Counter */
 		if (inst->value3.value_scope == 2) {
-			inst->value3.value_id = local_counter;
-			local_counter++;
+			/* Only value_id preserves the value2 values */
+			inst->value3.value_id = inst->value2.value_id;
 		}
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
@@ -423,7 +432,7 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 			inst->value2.ref_log;
 		inst->value3.value_scope = inst->value2.value_scope;
 		/* Counter */
-		inst->value3.value_id = 1;
+		inst->value3.value_id = inst->value2.value_id;
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
