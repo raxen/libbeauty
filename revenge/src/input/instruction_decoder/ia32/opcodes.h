@@ -55,6 +55,25 @@ enum {
 #define SAR 18
 #define IN  19
 #define OUT 20
+#define IF  21
+
+#define OVERFLOW 1
+#define NOT_OVERFLOW 2
+#define BELOW 3
+#define NOT_BELOW 4
+#define EQUAL 5
+#define NOT_EQUAL 6
+#define ABOVE 7
+#define NOT_ABOVE 8
+#define SIGNED 9
+#define NO_SIGNED 10
+#define PARITY 11
+#define NOT_PARITY 12
+#define LESS 13
+#define GREATER_EQUAL 14
+#define LESS_EQUAL 15
+#define GREATER 16
+
 
 extern char * opcode_table[];
 

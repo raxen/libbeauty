@@ -604,15 +604,30 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x73:												/* JNB */
 	case 0x74:												/* JZ */
 	case 0x75:												/* JNZ */
-	case 0x76:												/* JBE */
-	case 0x77:												/* JNBE */
+	case 0x76:	/* JBE or JA */
+	case 0x77:	/* JNBE or JNA */
 	case 0x78:												/* JS */
 	case 0x79:												/* JNS */
 	case 0x7a:												/* JP */
 	case 0x7b:												/* JNP */
 	case 0x7c:												/* JL */
 	case 0x7d:												/* JNL */
-	case 0x7e:												/* JLE */
+	case 0x7e:	/* JLE relative 1 byte */
+		instruction = &instructions->instruction[instructions->instruction_number];	
+		instruction->opcode = IF;
+		instruction->flags = 0;
+		instruction->dstA.store = STORE_IMMED;
+		instruction->dstA.indirect = 0;
+		instruction->dstA.index = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instructions->bytes_used+=1;
+		instruction->dstA.size = 4;
+		instruction->srcA.store = STORE_IMMED;
+		instruction->srcA.indirect = 0;
+		instruction->srcA.index = LESS_EQUAL;
+		instruction->srcA.size = 4;
+		instructions->instruction_number++;
+		result = 1;
+		break;
 	case 0x7f:												/* JNLE */
 	case 0x80:												/* Grpl Eb,Ib */
 		break;

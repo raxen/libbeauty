@@ -67,31 +67,39 @@ int print_inst(struct instruction_s *instruction, int instruction_number)
 		instruction_number,
 		opcode_table[instruction->opcode],
 		dis_flags_table[instruction->flags]);
-	if (instruction->srcA.indirect) {
-		printf(" %s[%s0x%" PRIx64 "]%s,",
-			indirect_table[instruction->srcA.indirect],
+	if (instruction->opcode != IF) {
+		if (instruction->srcA.indirect) {
+			printf(" %s[%s0x%" PRIx64 "]%s,",
+				indirect_table[instruction->srcA.indirect],
+				store_table[instruction->srcA.store],
+				instruction->srcA.index,
+				size_table[instruction->srcA.size]);
+		} else {
+			printf(" %s0x%" PRIx64 "%s,",
 			store_table[instruction->srcA.store],
 			instruction->srcA.index,
 			size_table[instruction->srcA.size]);
-	} else {
-		printf(" %s0x%" PRIx64 "%s,",
-		store_table[instruction->srcA.store],
-		instruction->srcA.index,
-		size_table[instruction->srcA.size]);
-	}
-	if (instruction->dstA.indirect) {
-		printf(" %s[%s0x%" PRIx64 "]%s\n",
-			indirect_table[instruction->dstA.indirect],
+		}
+		if (instruction->dstA.indirect) {
+			printf(" %s[%s0x%" PRIx64 "]%s\n",
+				indirect_table[instruction->dstA.indirect],
+				store_table[instruction->dstA.store],
+				instruction->dstA.index,
+				size_table[instruction->dstA.size]);
+		} else {
+			printf(" %s0x%" PRIx64 "%s\n",
 			store_table[instruction->dstA.store],
 			instruction->dstA.index,
 			size_table[instruction->dstA.size]);
-	} else {
-		printf(" %s0x%" PRIx64 "%s\n",
-		store_table[instruction->dstA.store],
-		instruction->dstA.index,
-		size_table[instruction->dstA.size]);
+		}
+		return 1;
 	}
-	return 1;
+	if (instruction->opcode == IF) {
+		printf(" cond=%d", instruction->srcA.index);
+		printf(" JMP-REL=0x%x\n", instruction->dstA.index);
+		return 1;
+	}
+	return 0;
 }
 
 int print_instructions(void)

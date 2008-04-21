@@ -44,13 +44,14 @@ struct operand_s {
          */
 	int indirect;
 	/* value depends on store */
-	/* For IF instruction, this is the memory index. */
+	/* For IF srcA, this is the condition statement */
+	/* For IF dstA, this is the IP memory index. */
 	uint64_t index;
 	/* value depends on store */
-	/* For IF instruction, this is within this group's RTL index. */
+	/* For IF dstA, this is within this group's RTL index. */
 	uint64_t value;
 	/* number of bytes in value. */
-	/* For IF instruction, this will be a 4 bytes. */
+	/* For IF dstA, this will be a 4 bytes. */
 	int size;
 } ;
 
@@ -61,9 +62,9 @@ struct instruction_s {
 	int opcode;
 	/* Set to 1 if this instruction should effect flags. */
 	int flags;
-	operand_t srcA;
-	operand_t srcB;
-	operand_t dstA;
+	operand_t srcA; /* Used */
+	operand_t srcB; /* Not currently used */
+	operand_t dstA; /* Used */
 } ;
 
 typedef struct instructions_s instructions_t;

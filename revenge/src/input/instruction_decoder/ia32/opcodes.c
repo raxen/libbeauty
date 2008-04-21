@@ -49,7 +49,8 @@ char * opcode_table[] = {
 	"SHR",
 	"SAR",
 	"IN ",
-	"OUT"
+	"OUT",
+	"IF "
 };
 
 #define REG_AX 0x04

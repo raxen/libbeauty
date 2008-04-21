@@ -314,138 +314,15 @@ static int get_value_RTL_instruction(
 	return 0;
 }
 
-
-
-
-
-
-
-
-int execute_instruction(void *self, struct inst_log_entry_s *inst)
+static int put_value_RTL_instruction(
+	struct inst_log_entry_s *inst)
 {
 	struct instruction_s *instruction;
 	struct memory_s *value;
 	struct memory_s *value_mem;
 	struct memory_s *value_stack;
-	int ret;
-
-	instruction = &inst->instruction;
-	printf("Execute Instruction %d:%s%s\n",
-		instruction->opcode,
-		opcode_table[instruction->opcode],
-		dis_flags_table[instruction->flags]);
-
-	/* Get value of srcA */
-	/* TODO */
-	ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
-	/* Get value of dstA */
-	ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
-	/* Create result */
-	/* TODO */
-	switch (instruction->opcode) {
-	case NOP:
-		printf("NOP\n");
-		break;
-	case MOV:
-		printf("MOV\n");
-		inst->value3.start_address = inst->value1.start_address;
-		inst->value3.length = inst->value1.length;
-		inst->value3.init_value_type = inst->value1.init_value_type;
-		inst->value3.init_value = inst->value1.init_value;
-		inst->value3.offset_value = inst->value1.offset_value;
-		inst->value3.value_type = inst->value1.value_type;
-		if (inst->instruction.dstA.indirect) {
-			inst->value3.indirect_init_value =
-				inst->value1.indirect_init_value;
-			inst->value3.indirect_offset_value =
-				inst->value1.indirect_offset_value;
-		}
-		inst->value3.ref_memory =
-			inst->value1.ref_memory;
-		inst->value3.ref_log =
-			inst->value1.ref_log;
-		inst->value3.value_scope = inst->value1.value_scope;
-		/* MOV param to local */
-		/* FIXME: What about mov local -> param */
-		if (inst->value3.value_scope == 1)
-			inst->value3.value_scope = 2;
-		/* Counter */
-		if (inst->value3.value_scope == 2) {
-			/* Only value_id preserves the value2 values */
-			inst->value3.value_id = inst->value2.value_id;
-		}
-		/* 1 - Entry Used */
-		inst->value3.valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
-				inst->value3.init_value,
-				inst->value3.offset_value,
-				inst->value3.init_value +
-					inst->value3.offset_value);
-		break;
-		break;
-	case ADD:
-		printf("ADD\n");
-		inst->value3.start_address = inst->value2.start_address;
-		inst->value3.length = inst->value2.length;
-		inst->value3.init_value_type = inst->value2.init_value_type;
-		inst->value3.init_value = inst->value2.init_value;
-		inst->value3.offset_value =
-			inst->value2.offset_value + inst->value1.init_value;
-		inst->value3.value_type = inst->value2.value_type;
-		if (inst->instruction.dstA.indirect) {
-			inst->value3.indirect_init_value =
-				inst->value2.indirect_init_value;
-			inst->value3.indirect_offset_value =
-				inst->value2.indirect_offset_value;
-		}
-		inst->value3.ref_memory =
-		inst->value3.ref_memory =
-			inst->value2.ref_memory;
-		inst->value3.ref_log =
-			inst->value2.ref_log;
-		inst->value3.value_scope = inst->value2.value_scope;
-		/* Counter */
-		inst->value3.value_id = inst->value2.value_id;
-		/* 1 - Entry Used */
-		inst->value3.valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
-				inst->value3.init_value,
-				inst->value3.offset_value,
-				inst->value3.init_value +
-					inst->value3.offset_value);
-		break;
-	case ADC:
-		printf("ADC\n");
-		break;
-	case SUB:
-		printf("SUB\n");
-		inst->value3.start_address = inst->value2.start_address;
-		inst->value3.length = inst->value2.length;
-		inst->value3.init_value_type = inst->value2.init_value_type;
-		inst->value3.init_value = inst->value2.init_value;
-		inst->value3.offset_value = inst->value2.offset_value -
-			inst->value1.init_value;
-		inst->value3.value_type = inst->value2.value_type;
-		inst->value3.ref_memory =
-			inst->value2.ref_memory;
-		inst->value3.ref_log =
-			inst->value2.ref_log;
-		inst->value3.value_scope = inst->value2.value_scope;
-		/* Counter */
-		inst->value3.value_id = inst->value2.value_id;
-		/* 1 - Entry Used */
-		inst->value3.valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
-				inst->value3.init_value,
-				inst->value3.offset_value,
-				inst->value3.init_value +
-					inst->value3.offset_value);
-		break;
-	default:
-		break;
-	}
 	/* Put result in dstA */
-	/* TODO */
+	instruction = &inst->instruction;
 	switch (instruction->dstA.indirect) {
 	case 0:
 		/* Not indirect */
@@ -576,6 +453,164 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		/* Should not get here */
 		printf("FAILED\n");
 		return 0;
+	}
+	return 1;
+}
+
+
+
+
+
+
+
+int execute_instruction(void *self, struct inst_log_entry_s *inst)
+{
+	struct instruction_s *instruction;
+	struct memory_s *value;
+	struct memory_s *value_mem;
+	struct memory_s *value_stack;
+	int ret;
+
+	instruction = &inst->instruction;
+	printf("Execute Instruction %d:%s%s\n",
+		instruction->opcode,
+		opcode_table[instruction->opcode],
+		dis_flags_table[instruction->flags]);
+
+	switch (instruction->opcode) {
+	case NOP:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("NOP\n");
+		put_value_RTL_instruction(inst);
+		break;
+	case MOV:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("MOV\n");
+		inst->value3.start_address = inst->value1.start_address;
+		inst->value3.length = inst->value1.length;
+		inst->value3.init_value_type = inst->value1.init_value_type;
+		inst->value3.init_value = inst->value1.init_value;
+		inst->value3.offset_value = inst->value1.offset_value;
+		inst->value3.value_type = inst->value1.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value1.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value1.indirect_offset_value;
+		}
+		inst->value3.ref_memory =
+			inst->value1.ref_memory;
+		inst->value3.ref_log =
+			inst->value1.ref_log;
+		inst->value3.value_scope = inst->value1.value_scope;
+		/* MOV param to local */
+		/* FIXME: What about mov local -> param */
+		if (inst->value3.value_scope == 1)
+			inst->value3.value_scope = 2;
+		/* Counter */
+		if (inst->value3.value_scope == 2) {
+			/* Only value_id preserves the value2 values */
+			inst->value3.value_id = inst->value2.value_id;
+		}
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%llx+0x%llx=0x%llx\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(inst);
+		break;
+	case ADD:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("ADD\n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = inst->value2.init_value;
+		inst->value3.offset_value =
+			inst->value2.offset_value + inst->value1.init_value;
+		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+		}
+		inst->value3.ref_memory =
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%llx+0x%llx=0x%llx\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(inst);
+		break;
+	case ADC:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("ADC\n");
+		put_value_RTL_instruction(inst);
+		break;
+	case SUB:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("SUB\n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = inst->value2.init_value;
+		inst->value3.offset_value = inst->value2.offset_value -
+			inst->value1.init_value;
+		inst->value3.value_type = inst->value2.value_type;
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%llx+0x%llx=0x%llx\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(inst);
+		break;
+	case IF:
+		printf("IF\n");
+		break;
+
+	default:
+		break;
 	}
 	return 1;
 }
