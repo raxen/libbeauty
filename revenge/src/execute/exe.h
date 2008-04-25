@@ -41,6 +41,10 @@ struct memory_s {
 
 struct inst_log_entry_s {
 	struct instruction_s instruction;	/* The instruction */
+	int prev_size;
+	int *prev;
+	int next_size;
+	int *next;
 	struct memory_s value1;		/* First input value */
 	struct memory_s value2;		/* Second input value */
 	struct memory_s value3;		/* Result */

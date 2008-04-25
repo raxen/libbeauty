@@ -140,6 +140,20 @@ int print_instructions(void)
 			inst_log1->value1.value_id,
 			inst_log1->value2.value_id,
 			inst_log1->value3.value_id);
+		if (inst_log1->prev_size > 0) {
+			int n;
+			for (n = 0; n < inst_log1->prev_size; n++) {
+				printf("inst_prev:%d\n",
+					inst_log1->prev[n]);
+			}
+		}
+		if (inst_log1->next_size > 0) {
+			int n;
+			for (n = 0; n < inst_log1->next_size; n++) {
+				printf("inst_next:%d\n",
+					inst_log1->next[n]);
+			}
+		}
 	}
 }
 
@@ -336,6 +350,7 @@ int main(int argc, char *argv[])
 	ram_init();
 	reg_init();
 	stack_init();
+
 	handle = bf_test_open_file(file);
 	if (!handle) {
 		printf("Failed to find or recognise file\n");
@@ -405,6 +420,7 @@ int main(int argc, char *argv[])
 		}
 		for (n = 0; n < instructions.instruction_number; n++) {
 			struct inst_log_entry_s *inst_exe;
+			struct inst_log_entry_s *inst_exe_prev;
 
 			instruction = &instructions.instruction[n];
 			printf( "Printing inst1111:%d, %d, %d\n",instruction_offset, n, inst_log);
@@ -412,8 +428,28 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 			inst_exe = &inst_log_entry[inst_log];
-			inst_log++;
 			memcpy(&(inst_exe->instruction), instruction, sizeof(struct instruction_s));
+			if (inst_log > 0) {
+				inst_exe_prev = &inst_log_entry[inst_log - 1];
+				inst_exe->prev_size++;
+				if (inst_exe->prev_size == 1) {
+					inst_exe->prev = malloc(sizeof(inst_exe->prev));
+				} else {
+					inst_exe->prev = realloc(inst_exe->prev, sizeof(inst_exe->prev) * inst_exe->prev_size);
+				}
+				inst_exe->prev[inst_exe->prev_size - 1] = inst_log - 1;
+				inst_exe_prev->next_size++;
+				if (inst_exe_prev->next_size == 1) {
+					inst_exe_prev->next = malloc(sizeof(inst_exe_prev->next));
+					inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
+				} else {
+					inst_exe_prev->next = realloc(inst_exe_prev->next, sizeof(inst_exe_prev->next) * inst_exe_prev->next_size);
+					inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
+				}
+				inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
+			}
+
+			inst_log++;
 
 			if (!execute_instruction(self, inst_exe)) {
 				printf("execute_intruction failed\n");
