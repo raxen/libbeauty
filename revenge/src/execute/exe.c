@@ -606,7 +606,33 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		put_value_RTL_instruction(inst);
 		break;
 	case IF:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
 		printf("IF\n");
+		/* Create absolute JMP value in value3 */
+		value = search_store(memory_reg,
+				REG_IP,
+				4);
+		inst->value3.start_address = value->start_address;
+		inst->value3.length = value->length;
+		inst->value3.init_value_type = value->init_value_type;
+		inst->value3.init_value = value->init_value;
+		inst->value3.offset_value = value->offset_value +
+			inst->value2.init_value;
+		inst->value3.value_type = value->value_type;
+		inst->value3.ref_memory =
+			value->ref_memory;
+		inst->value3.ref_log =
+			value->ref_log;
+		inst->value3.value_scope = value->value_scope;
+		/* Counter */
+		inst->value3.value_id = value->value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+		/* No put_RTL_value is done for an IF */
 		break;
 
 	default:

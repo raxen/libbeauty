@@ -66,7 +66,10 @@ extern char out_buf[1024];
 extern int local_counter;
 extern void *self;
 
-extern struct memory_s memory_ram[1000];
+/* For the .data segment. I.e. Static data */
+extern struct memory_s memory_data[1000];
+/* For the .text segment. I.e. Instructions. */
+extern struct memory_s memory_text[1000];
 extern struct memory_s memory_reg[100];
 extern struct memory_s memory_stack[100];
 

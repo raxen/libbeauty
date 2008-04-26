@@ -881,6 +881,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xc6:												/* MOV Eb,Ib */
 	case 0xc7:												/* MOV EW,Iv */
 	case 0xc8:												/* ENTER Iv,Ib */
+		break;
 	case 0xc9:												/* LEAVE */
 		/* ESP = EBP; */
 		/* POP EBP -> EBP=[SP]; SP=SP+4 (+2 for word); */

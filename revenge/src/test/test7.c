@@ -4,7 +4,7 @@
 int test7(int value1 );
 
 int test7(int value1 ) {
-	int local1;
+	int local1 = value1;
 	if (value1 > 5) {
 		local1 = value1 + 10;
 	}

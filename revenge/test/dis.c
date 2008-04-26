@@ -45,6 +45,8 @@
 #include <revenge/exe.h>
 #include <dis-asm.h>
 
+#define EIP_START 0x40000000
+
 instructions_t instructions;
 uint8_t *inst;
 struct rev_eng *handle;
@@ -55,7 +57,10 @@ char out_buf[1024];
 int local_counter = 1;
 void *self = NULL;
 
-struct memory_s memory_ram[1000];
+/* For the .data segment. I.e. Static data */
+struct memory_s memory_data[1000];
+/* For the .text segment. I.e. Instructions. */
+struct memory_s memory_text[1000];
 struct memory_s memory_reg[100];
 struct memory_s memory_stack[100];
 
@@ -182,7 +187,7 @@ int ram_init(void)
 int reg_init(void)
 {
 	/* esp */
-	memory_reg[0].start_address = 0x14;
+	memory_reg[0].start_address = REG_SP;
 	/* 4 bytes */
 	memory_reg[0].length = 4;
 	/* 1 - Known */
@@ -210,7 +215,7 @@ int reg_init(void)
 	memory_reg[0].valid = 1;
 
 	/* ebp */
-	memory_reg[1].start_address = 0x18;
+	memory_reg[1].start_address = REG_BP;
 	/* 4 bytes */
 	memory_reg[1].length = 4;
 	/* 1 - Known */
@@ -238,13 +243,13 @@ int reg_init(void)
 	memory_reg[1].valid = 1;
 
 	/* eip */
-	memory_reg[2].start_address = 0x24;
+	memory_reg[2].start_address = REG_IP;
 	/* 4 bytes */
 	memory_reg[2].length = 4;
 	/* 1 - Known */
 	memory_reg[2].init_value_type = 1;
 	/* Initial value when first accessed */
-	memory_reg[2].init_value = 40000000;
+	memory_reg[2].init_value = EIP_START;
 	/* No offset yet */
 	memory_reg[2].offset_value = 0;
 	/* 0 - unknown,
@@ -395,7 +400,7 @@ int main(int argc, char *argv[])
 			offset += instructions.bytes_used) {
 		instructions.instruction_number = 0;
 		instructions.bytes_used = 0;
-		result = disassemble(&instructions, inst+offset);
+		result = disassemble(&instructions, &inst[offset]);
 		printf("bytes used = %d\n", instructions.bytes_used);
 		for (n = 0; n < instructions.bytes_used; n++) {
 			printf(" 0x%02x", inst[n + offset]);
@@ -407,6 +412,8 @@ int main(int argc, char *argv[])
 		printf("disassemble: ");
 		octets = (*disassemble_fn) (offset, &disasm_info);
 		printf("  octets=%d\n", octets);
+		/* Update EIP */
+		memory_reg[2].offset_value += octets;
 
 		printf("Number of RTL instructions=%d\n",
 			instructions.instruction_number);
