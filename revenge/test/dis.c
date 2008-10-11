@@ -52,7 +52,7 @@ uint8_t *inst;
 struct rev_eng *handle;
 struct disassemble_info disasm_info;
 char *dis_flags_table[] = { " ", "f" };
-uint64_t inst_log;	/* Pointer to the current free instruction log entry. */
+uint64_t inst_log = 1;	/* Pointer to the current free instruction log entry. */
 char out_buf[1024];
 int local_counter = 1;
 void *self = NULL;
@@ -65,6 +65,8 @@ struct memory_s memory_reg[100];
 struct memory_s memory_stack[100];
 
 struct inst_log_entry_s inst_log_entry[100];
+int memory_used[100];
+
 
 int print_inst(struct instruction_s *instruction, int instruction_number)
 {
@@ -112,7 +114,7 @@ int print_instructions(void)
 	int n;
 	struct instruction_s *instruction;
 	struct inst_log_entry_s *inst_log1;
-	for (n = 0; n < inst_log; n++) {
+	for (n = 1; n < inst_log; n++) {
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
 		if (!print_inst(instruction, n))
@@ -402,10 +404,20 @@ int main(int argc, char *argv[])
 		instructions.bytes_used = 0;
 		result = disassemble(&instructions, &inst[offset]);
 		printf("bytes used = %d\n", instructions.bytes_used);
-		for (n = 0; n < instructions.bytes_used; n++) {
-			printf(" 0x%02x", inst[n + offset]);
-		}
-		printf("\n");
+		/* Memory not used yet */
+		if (0 == memory_used[offset]) {
+			for (n = 0; n < instructions.bytes_used; n++) {
+				memory_used[offset + n] = -n;
+				printf(" 0x%02x", inst[offset + n]);
+			}
+			printf("\n");
+			memory_used[offset] = inst_log;
+		} else {
+			/* If value == maxint, then it is the destination of a jump */
+			/* But I need to separate the instruction flows */
+			/* A jump/branch inst should create a new instruction tree */
+			printf("Memory already used\n");
+		}	
 		//printf("disassemble_fn\n");
 		//disassemble_fn = disassembler (handle->bfd);
 		//printf("disassemble_fn done\n");
@@ -486,7 +498,7 @@ int main(int argc, char *argv[])
 		//printf("name:%s\n", handle->symtab[l]->name);
 		//printf("value=0x%02x\n", handle->symtab[l]->value);
 	}
-	for (n = 0; n <  inst_log; n++) {
+	for (n = 1; n <  inst_log; n++) {
 		int write_offset = 0;
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
@@ -658,6 +670,10 @@ int main(int argc, char *argv[])
 	}
 	close(fd);
 	bf_test_close_file(handle);
+	for (n = 0; n < inst_size; n++) {
+		printf(" %d", memory_used[n]);
+	}
+	printf("\n");
 	return 0;
 }
 
