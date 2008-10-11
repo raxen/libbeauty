@@ -289,7 +289,7 @@ static int get_value_RTL_instruction(
 		destination->value_scope = value_stack->value_scope;
 		/* counter */
 		destination->value_id = value_stack->value_id;
-		printf("%s: scope=%d, id=%d\n",
+		printf("%s: scope=%d, id=" PRIu64 "\n",
 			info,
 			destination->value_scope,
 			destination->value_id);
@@ -369,7 +369,7 @@ static int put_value_RTL_instruction(
 			value->value_scope = inst->value3.value_scope;
 			/* 1 - Ids */
 			value->value_id = inst->value3.value_id;
-			printf("Saving to reg value_id of %d\n", value->value_id);
+			printf("Saving to reg value_id of " PRIu64 "\n", value->value_id);
 			/* 1 - Entry Used */
 			value->valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",

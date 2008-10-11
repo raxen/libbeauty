@@ -239,17 +239,17 @@ struct rev_eng *bf_test_open_file(const char *fn)
 	print_code_section(ret);
 */
 	storage_needed  = bfd_get_symtab_upper_bound(ret->bfd);
-	printf("symtab_upper_bound = %d\n", storage_needed);
+	printf("symtab_upper_bound = " PRId64 "\n", storage_needed);
 	ret->symtab = calloc(1, storage_needed);
 	printf("symtab = %p\n", ret->symtab);
 	number_of_symbols = bfd_canonicalize_symtab(ret->bfd, ret->symtab);
 	ret->symtab_sz = number_of_symbols;
 	printf("symtab_canon = %ld\n", number_of_symbols);
 	for (l = 0; l < number_of_symbols; l++) {
-		printf("%d\n", l);
+		printf("" PRId64 "\n", l);
 		printf("type:0x%02x\n", ret->symtab[l]->flags);
 		printf("name:%s\n", ret->symtab[l]->name);
-		printf("value=0x%02x\n", ret->symtab[l]->value);
+		printf("value=0x%02" PRIx64 "\n", ret->symtab[l]->value);
 		//printf("value2=0x%02x\n",
 		//	bfd_asymbol_flavour(ret->symtab[l]));
 		//printf("value3=0x%02x\n",
