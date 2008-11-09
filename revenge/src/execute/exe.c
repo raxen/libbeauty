@@ -289,7 +289,7 @@ static int get_value_RTL_instruction(
 		destination->value_scope = value_stack->value_scope;
 		/* counter */
 		destination->value_id = value_stack->value_id;
-		printf("%s: scope=%d, id=" PRIu64 "\n",
+		printf("%s: scope=%d, id=%"PRIu64"\n",
 			info,
 			destination->value_scope,
 			destination->value_id);
@@ -369,7 +369,7 @@ static int put_value_RTL_instruction(
 			value->value_scope = inst->value3.value_scope;
 			/* 1 - Ids */
 			value->value_id = inst->value3.value_id;
-			printf("Saving to reg value_id of " PRIu64 "\n", value->value_id);
+			printf("Saving to reg value_id of %"PRIu64"\n", value->value_id);
 			/* 1 - Entry Used */
 			value->valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
@@ -510,16 +510,17 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 			inst->value1.ref_memory;
 		inst->value3.ref_log =
 			inst->value1.ref_log;
-		inst->value3.value_scope = inst->value1.value_scope;
+		/* Note: value_scope stays from the dst, not the src. */
+		inst->value3.value_scope = inst->value2.value_scope;
 		/* MOV param to local */
 		/* FIXME: What about mov local -> param */
-		if (inst->value3.value_scope == 1)
-			inst->value3.value_scope = 2;
+		//if (inst->value3.value_scope == 1)
+		//	inst->value3.value_scope = 2;
 		/* Counter */
-		if (inst->value3.value_scope == 2) {
+		//if (inst->value3.value_scope == 2) {
 			/* Only value_id preserves the value2 values */
-			inst->value3.value_id = inst->value2.value_id;
-		}
+		inst->value3.value_id = inst->value2.value_id;
+		//}
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
 			printf("value=0x%llx+0x%llx=0x%llx\n",
@@ -634,8 +635,41 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		inst->value3.valid = 1;
 		/* No put_RTL_value is done for an IF */
 		break;
+	case JMP:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		//ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("JMP\n");
+		/* Create absolute JMP value in value3 */
+		value = search_store(memory_reg,
+				REG_IP,
+				4);
+		printf("JMP 0x%"PRIx64"+%"PRId64"\n",
+			value->offset_value, inst->value1.init_value);
+		inst->value3.start_address = value->start_address;
+		inst->value3.length = value->length;
+		inst->value3.init_value_type = value->init_value_type;
+		inst->value3.init_value = value->init_value;
+		inst->value3.offset_value = value->offset_value +
+			inst->value1.init_value;
+		inst->value3.value_type = value->value_type;
+		inst->value3.ref_memory =
+			value->ref_memory;
+		inst->value3.ref_log =
+			value->ref_log;
+		inst->value3.value_scope = value->value_scope;
+		/* Counter */
+		inst->value3.value_id = value->value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+		/* updaqe EIP */
+		value->offset_value = inst->value3.offset_value;
+		break;
 
 	default:
+		return 0;
 		break;
 	}
 	return 1;

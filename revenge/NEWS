@@ -1,0 +1,8 @@
+Just about to test branch instructions.
+Current state is just done implementing the JMP instruction using test13.c.
+Maybe need to add EIP instructions, to similar the EIP changing when it should.
+Eventually add rdtsc changing when it should.
+
+
+
+

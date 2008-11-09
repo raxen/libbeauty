@@ -306,10 +306,39 @@ void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
   instructions->instruction_number++;
 }
 
+void dis_Ex_Ix(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t *reg, int size) {
+  int half;
+  instruction_t *instruction;
+
+  half = rmb(instructions, inst, reg);
+  instruction = &instructions->instruction[instructions->instruction_number];	
+  instruction->opcode = opcode;
+  instruction->flags = 1;
+  instruction->srcA.store = STORE_IMMED;
+  instruction->srcA.indirect = 0;
+  if (4 == size) {
+	instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+	instructions->bytes_used+=4;
+  } else printf("FIXME:JCD1\n");
+  instruction->srcA.size = size;
+  if (!half) {
+    instruction->dstA.store = STORE_REG;
+    instruction->dstA.indirect = 1;
+    if ((instructions->instruction[0].srcA.index >= 0x14) || 
+        (instructions->instruction[0].srcA.index <= 0x18) ) {
+      instruction->dstA.indirect = 2; /* SP and BP use STACK memory and not DATA memory. */
+    }
+    instruction->dstA.index = REG_TMP1;
+    instruction->dstA.size = size;
+  }
+  instructions->instruction_number++;
+}
+
 int disassemble(instructions_t *instructions, uint8_t *inst) {
-	uint8_t reg=0;
-	int half=0;
+	uint8_t reg = 0;
+	int half = 0;
 	int result = 0;
+	int8_t relative = 0;
 	instruction_t *instruction;
 	printf("inst[0]=0x%x\n",inst[0]);
 	instructions->instruction[instructions->instruction_number].opcode = NOP; /* Un-supported OPCODE */
@@ -618,7 +647,10 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->dstA.store = STORE_IMMED;
 		instruction->dstA.indirect = 0;
-		instruction->dstA.index = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		/* Means get from rest of instruction */
+		relative = getbyte(&inst[instructions->bytes_used]);
+		/* extends byte to int64_t */
+		instruction->dstA.index = relative;
 		instructions->bytes_used+=1;
 		instruction->dstA.size = 4;
 		instruction->srcA.store = STORE_IMMED;
@@ -880,6 +912,10 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xc5:												/* LDS */
 	case 0xc6:												/* MOV Eb,Ib */
 	case 0xc7:												/* MOV EW,Iv */
+		/* JCD: Work in progress */
+		dis_Ex_Ix(MOV, instructions, inst, &reg, 4);
+		result = 1;
+		break;
 	case 0xc8:												/* ENTER Iv,Ib */
 		break;
 	case 0xc9:												/* LEAVE */
@@ -1013,6 +1049,22 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		break;
 	case 0xea:												/* JMP Ap */
 	case 0xeb:												/* JMP Jb */
+		instruction = &instructions->instruction[instructions->instruction_number];	
+		instruction->opcode = JMP;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_IMMED;
+		instruction->srcA.indirect = 0;
+		relative = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = relative;
+		instructions->bytes_used+=1;
+		instruction->srcA.size = 4;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = 1;
+		instruction->dstA.index = REG_IP;
+		instruction->dstA.size = 4;
+		instructions->instruction_number++;
+		result = 1;
+		break;
 	case 0xec:												/* IN AL,DX */
 		break;
 	case 0xed:												/* IN eAX,DX */

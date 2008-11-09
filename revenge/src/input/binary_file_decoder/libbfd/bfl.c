@@ -151,16 +151,16 @@ const char *bfd_err(void)
 struct rev_eng *bf_test_open_file(const char *fn)
 {
 	struct rev_eng *ret;
-	long tmp;
+	int64_t tmp;
 	bfd *b;
 	char **matching;
 	int result;
-	long result2;
-	long val;
-	long storage_needed;
-	long number_of_symbols;
+	int64_t result2;
+	int64_t val;
+	int64_t storage_needed;
+	int64_t number_of_symbols;
 	int n;
-	long l;
+	int64_t l;
 	//symbol_info sym_info;
 
         printf("Open entered\n");
@@ -239,17 +239,17 @@ struct rev_eng *bf_test_open_file(const char *fn)
 	print_code_section(ret);
 */
 	storage_needed  = bfd_get_symtab_upper_bound(ret->bfd);
-	printf("symtab_upper_bound = " PRId64 "\n", storage_needed);
+	printf("symtab_upper_bound = %"PRId64"\n", storage_needed);
 	ret->symtab = calloc(1, storage_needed);
 	printf("symtab = %p\n", ret->symtab);
 	number_of_symbols = bfd_canonicalize_symtab(ret->bfd, ret->symtab);
 	ret->symtab_sz = number_of_symbols;
-	printf("symtab_canon = %ld\n", number_of_symbols);
+	printf("symtab_canon = %"PRId64"\n", number_of_symbols);
 	for (l = 0; l < number_of_symbols; l++) {
-		printf("" PRId64 "\n", l);
+		printf("%"PRId64"\n", l);
 		printf("type:0x%02x\n", ret->symtab[l]->flags);
 		printf("name:%s\n", ret->symtab[l]->name);
-		printf("value=0x%02" PRIx64 "\n", ret->symtab[l]->value);
+		printf("value=0x%02"PRIx64"\n", ret->symtab[l]->value);
 		//printf("value2=0x%02x\n",
 		//	bfd_asymbol_flavour(ret->symtab[l]));
 		//printf("value3=0x%02x\n",

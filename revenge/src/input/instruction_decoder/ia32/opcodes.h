@@ -45,7 +45,7 @@ enum {
 #define AND 8
 #define CMP 9
 #define MUL 10
-#define JMP 11
+#define JMP 11 /* Relative */
 #define ROL 12
 #define ROR 13
 #define RCL 14
