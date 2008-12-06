@@ -78,6 +78,7 @@ int memory_used[100];
 
 int print_inst(struct instruction_s *instruction, int instruction_number)
 {
+	int ret = 1; /* Default to failed */
 	printf("Instruction %d:%s%s",
 		instruction_number,
 		opcode_table[instruction->opcode],
@@ -107,14 +108,17 @@ int print_inst(struct instruction_s *instruction, int instruction_number)
 			instruction->dstA.index,
 			size_table[instruction->dstA.size]);
 		}
-		return 1;
+		ret = 0;
+		goto print_inst_exit;
 	}
 	if (instruction->opcode == IF) {
 		printf(" cond=%"PRIu64"", instruction->srcA.index);
 		printf(" JMP-REL=0x%"PRIx64"\n", instruction->dstA.index);
-		return 1;
+		ret = 0;
+		goto print_inst_exit;
 	}
-	return 0;
+print_inst_exit:
+	return ret;
 }
 
 int print_instructions(void)
@@ -125,7 +129,7 @@ int print_instructions(void)
 	for (n = 1; n < inst_log; n++) {
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
-		if (!print_inst(instruction, n))
+		if (print_inst(instruction, n))
 			return 1;
 		printf("init:%"PRIx64", %"PRIx64" -> %"PRIx64"\n",
 			inst_log1->value1.init_value,
@@ -483,7 +487,7 @@ int main(int argc, char *argv[])
 		for (n = 0; n < instructions.instruction_number; n++) {
 			instruction = &instructions.instruction[n];
 			printf( "Printing inst1111:%d, %d, %"PRId64"\n",instruction_offset, n, inst_log);
-			if (!print_inst(instruction, instruction_offset + n)) {
+			if (print_inst(instruction, instruction_offset + n)) {
 				return 1;
 			}
 			inst_exe_prev = &inst_log_entry[inst_log_prev];
@@ -511,7 +515,7 @@ int main(int argc, char *argv[])
 
 			inst_log++;
 
-			if (!execute_instruction(self, inst_exe)) {
+			if (execute_instruction(self, inst_exe)) {
 				printf("execute_intruction failed\n");
 				return 1;
 			}
@@ -524,7 +528,7 @@ int main(int argc, char *argv[])
 	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (fd < 0) {
 		printf("Failed to open file %s, error=%d\n", filename, fd);
-		return 0;
+		return 1;
 	}
 	printf("fd=%d\n", fd);
 	printf("writing out to file\n");
@@ -572,7 +576,7 @@ int main(int argc, char *argv[])
 				 */
 				if (inst_log1->value1.value_type == 5)
 					break;
-				if (!print_inst(instruction, n))
+				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
@@ -618,7 +622,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case ADD:
-				if (!print_inst(instruction, n))
+				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
@@ -664,7 +668,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case SUB:
-				if (!print_inst(instruction, n))
+				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
@@ -710,7 +714,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case JMP:
-				if (!print_inst(instruction, n))
+				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
@@ -725,6 +729,7 @@ int main(int argc, char *argv[])
 
 			default:
 				printf("Unhandled output instruction1\n");
+				return 1;
 				break;
 			}
 		}

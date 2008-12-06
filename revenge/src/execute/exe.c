@@ -215,7 +215,7 @@ static int get_value_RTL_instruction(
 		default:
 			/* Should not get here */
 			printf("FAILED\n");
-			return 0;
+			return 1;
 		}
 		break;
 	case 1:
@@ -309,7 +309,7 @@ static int get_value_RTL_instruction(
 	default:
 		/* Should not get here */
 		printf("FAILED\n");
-		return 0;
+		return 1;
 	}
 	return 0;
 }
@@ -388,7 +388,7 @@ static int put_value_RTL_instruction(
 		default:
 			/* Should not get here */
 			printf("FAILED\n");
-			return 0;
+			return 1;
 		}
 		break;
 	case 1:
@@ -452,9 +452,9 @@ static int put_value_RTL_instruction(
 	default:
 		/* Should not get here */
 		printf("FAILED\n");
-		return 0;
+		return 1;
 	}
-	return 1;
+	return 0;
 }
 
 
@@ -485,6 +485,16 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("NOP\n");
+		put_value_RTL_instruction(inst);
+		break;
+	case CMP:
+		/* Currently, do the same as NOP */
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("CMP\n");
 		put_value_RTL_instruction(inst);
 		break;
 	case MOV:
@@ -669,10 +679,10 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		break;
 
 	default:
-		return 0;
+		return 1;
 		break;
 	}
-	return 1;
+	return 0;
 }
 
 int ram_init(void)
