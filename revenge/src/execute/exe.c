@@ -179,6 +179,7 @@ static int get_value_RTL_instruction(
 						source->index,
 						source->size);
 				value->value_id = local_counter;
+				value->value_scope = 2;
 				local_counter++;
 			}
 			if (!value)

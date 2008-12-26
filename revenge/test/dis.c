@@ -162,14 +162,16 @@ int print_instructions(void)
 		if (inst_log1->prev_size > 0) {
 			int n;
 			for (n = 0; n < inst_log1->prev_size; n++) {
-				printf("inst_prev:%d\n",
+				printf("inst_prev:%d:%d\n",
+					n,
 					inst_log1->prev[n]);
 			}
 		}
 		if (inst_log1->next_size > 0) {
 			int n;
 			for (n = 0; n < inst_log1->next_size; n++) {
-				printf("inst_next:%d\n",
+				printf("inst_next:%d:%d\n",
+					n,
 					inst_log1->next[n]);
 			}
 		}
@@ -494,6 +496,21 @@ int main(int argc, char *argv[])
 			inst_exe = &inst_log_entry[inst_log];
 			inst_log_prev = inst_log;
 			memcpy(&(inst_exe->instruction), instruction, sizeof(struct instruction_s));
+			if (execute_instruction(self, inst_exe)) {
+				printf("execute_intruction failed\n");
+				return 1;
+			}
+			if (0 == memory_reg[2].offset_value) {
+				printf("Function exited\n");
+				inst_exe->prev_size++;
+				if (inst_exe->prev_size == 1) {
+					inst_exe->prev = malloc(sizeof(inst_exe->prev));
+				} else {
+					inst_exe->prev = realloc(inst_exe->prev, sizeof(inst_exe->prev) * inst_exe->prev_size);
+				}
+				inst_exe->prev[inst_exe->prev_size - 1] = inst_log - 1;
+				break;
+			}
 			if (inst_log > 0) {
 				inst_exe->prev_size++;
 				if (inst_exe->prev_size == 1) {
@@ -514,13 +531,12 @@ int main(int argc, char *argv[])
 			}
 
 			inst_log++;
-
-			if (execute_instruction(self, inst_exe)) {
-				printf("execute_intruction failed\n");
-				return 1;
-			}
 		}
 		instruction_offset += instructions.instruction_number;
+		if (0 == memory_reg[2].offset_value) {
+			printf("Breaking\n");
+			break;
+		}
 	}
 	printf("Instructions=%"PRId64"\n", inst_log);
 	print_instructions();
@@ -554,19 +570,15 @@ int main(int argc, char *argv[])
 					write_offset += tmp;
 		}
 		/* Test to see if we have an instruction to output */
-		printf("Inst %d: value_scope = %d, %d, %d\n", instruction->opcode,
+		printf("Inst %d: %d: value_scope = %d, %d, %d\n", n,
+			instruction->opcode,
 			inst_log1->value1.value_scope,
 			inst_log1->value2.value_scope,
 			inst_log1->value3.value_scope);
-		if ((inst_log1->value1.value_scope == 1) ||
-			(inst_log1->value1.value_scope == 2) ||
-			(inst_log1->value1.value_scope == 3) ||
-			(inst_log1->value2.value_scope == 1) ||
-			(inst_log1->value2.value_scope == 2) ||
-			(inst_log1->value2.value_scope == 3) ||
-			(inst_log1->value3.value_scope == 1) ||
-			(inst_log1->value3.value_scope == 2) ||
-			(inst_log1->value3.value_scope == 3)) {
+		if ((0 == inst_log1->value3.value_type) ||
+			(1 == inst_log1->value3.value_type) ||
+			(2 == inst_log1->value3.value_type) ||
+			(3 == inst_log1->value3.value_type)) {
 			switch (instruction->opcode) {
 			case MOV:
 				if (inst_log1->value1.value_type == 6)
@@ -726,9 +738,17 @@ int main(int argc, char *argv[])
 					inst_log1->next[0]);
 				write_offset += tmp;
 				break;
+			case CMP:
+				/* Don't do anything for this instruction. */
+				/* only does anything if combined with a branch instruction */
+				if (print_inst(instruction, n))
+					return 1;
+				break;
 
 			default:
 				printf("Unhandled output instruction1\n");
+				if (print_inst(instruction, n))
+					return 1;
 				return 1;
 				break;
 			}
@@ -739,6 +759,7 @@ int main(int argc, char *argv[])
 			write(fd, out_buf, write_offset);
 		}
 		write_offset = 0;
+		printf("GOT HERE1. value_type=%d\n", inst_log1->value3.value_type);
 		if ((inst_log1->value3.value_type == 5) &&
 			(!instruction->dstA.indirect) &&
 			(instruction->dstA.store == STORE_REG) &&
