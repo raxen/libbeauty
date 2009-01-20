@@ -49,8 +49,10 @@
 
 instructions_t instructions;
 uint8_t *inst;
+size_t inst_size = 0;
 struct rev_eng *handle;
 struct disassemble_info disasm_info;
+disassembler_ftype disassemble_fn;
 char *dis_flags_table[] = { " ", "f" };
 uint64_t inst_log = 1;	/* Pointer to the current free instruction log entry. */
 char out_buf[1024];
@@ -351,72 +353,18 @@ int stack_init(void)
 #endif
 }
 
-int main(int argc, char *argv[])
-{
-	int n = 0;
+int process_block( uint64_t inst_log_prev) {
 	uint64_t offset = 0;
+	int result;
+	int n = 0;
+	int err;
+	struct inst_log_entry_s *inst_exe_prev;
+	struct inst_log_entry_s *inst_exe;
+	struct instruction_s *instruction;
 	int instruction_offset = 0;
 	int octets = 0;
-	int result;
-	char *filename;
-	int fd;
-	int tmp;
-	int err;
-	disassembler_ftype disassemble_fn;
-	const char *file = "test.obj";
-	size_t inst_size = 0;
-	int l;
-	struct instruction_s *instruction;
-	struct inst_log_entry_s *inst_log1;
-	struct inst_log_entry_s *inst_exe;
-	struct inst_log_entry_s *inst_exe_prev;
-	struct memory_s *value;
-	uint64_t inst_log_prev = 0;
-	ram_init();
-	reg_init();
-	stack_init();
-
-	handle = bf_test_open_file(file);
-	if (!handle) {
-		printf("Failed to find or recognise file\n");
-		return 1;
-	}
-
-	printf("symtab_canon2 = %ld\n", handle->symtab_sz);
-	for (l = 0; l < handle->symtab_sz; l++) {
-		printf("%d\n", l);
-		printf("type:0x%02x\n", handle->symtab[l]->flags);
-		printf("name:%s\n", handle->symtab[l]->name);
-		printf("value=0x%02"PRIx64"\n", handle->symtab[l]->value);
-	}
-	printf("Setup ok\n");
-	inst_size = bf_get_code_size(handle);
-	inst = malloc(inst_size);
-	bf_copy_code_section(handle, inst, inst_size);
+	printf("inst_log=%"PRId64"\n", inst_log);
 	printf("dis:Data at %p, size=%"PRId32"\n", inst, inst_size);
-	for (n = 0; n < inst_size; n++) {
-		printf(" 0x%02x", inst[n]);
-	}
-	printf("\n");
-
-	printf("handle=%p\n", handle);
-	init_disassemble_info(&disasm_info, stdout, (fprintf_ftype) fprintf);
-	disasm_info.flavour = bfd_get_flavour(handle->bfd);
-	disasm_info.arch = bfd_get_arch(handle->bfd);
-	disasm_info.mach = bfd_get_mach(handle->bfd);
-	disasm_info.disassembler_options = NULL;
-	disasm_info.octets_per_byte = bfd_octets_per_byte(handle->bfd);
-	disasm_info.skip_zeroes = 8;
-	disasm_info.skip_zeroes_at_end = 3;
-	disasm_info.disassembler_needs_relocs = 0;
-	disasm_info.buffer_length = inst_size;
-	disasm_info.buffer = inst;
-
-	printf("disassemble_fn\n");
-	disassemble_fn = disassembler(handle->bfd);
-	printf("disassemble_fn done %p, %p\n", disassemble_fn, print_insn_i386);
-	instructions.bytes_used = 0;
-	inst_exe = &inst_log_entry[0];
 	for (offset = 0; ;
 			/* Update EIP */
 			offset = memory_reg[2].offset_value
@@ -431,6 +379,7 @@ int main(int argc, char *argv[])
 		printf("bytes used = %d\n", instructions.bytes_used);
 		/* Memory not used yet */
 		if (0 == memory_used[offset]) {
+			printf("Memory not used yet\n");
 			for (n = 0; n < instructions.bytes_used; n++) {
 				memory_used[offset + n] = -n;
 				printf(" 0x%02x", inst[offset + n]);
@@ -502,47 +451,28 @@ int main(int argc, char *argv[])
 				printf("execute_intruction failed err=%d\n", err);
 				return 1;
 			}
-			if (0 == memory_reg[2].offset_value) {
-				printf("Function exited\n");
-				inst_exe->prev_size++;
-				if (inst_exe->prev_size == 1) {
-					inst_exe->prev = malloc(sizeof(inst_exe->prev));
-				} else {
-					inst_exe->prev = realloc(inst_exe->prev, sizeof(inst_exe->prev) * inst_exe->prev_size);
-				}
-				inst_exe->prev[inst_exe->prev_size - 1] = inst_log - 1;
-				inst_exe_prev->next_size++;
-				if (inst_exe_prev->next_size == 1) {
-					inst_exe_prev->next = malloc(sizeof(inst_exe_prev->next));
-					inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
-				} else {
-					inst_exe_prev->next = realloc(inst_exe_prev->next, sizeof(inst_exe_prev->next) * inst_exe_prev->next_size);
-					inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
-				}
-				inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
-				inst_log++;
-				break;
+			inst_exe->prev_size++;
+			if (inst_exe->prev_size == 1) {
+				inst_exe->prev = malloc(sizeof(inst_exe->prev));
+			} else {
+				inst_exe->prev = realloc(inst_exe->prev, sizeof(inst_exe->prev) * inst_exe->prev_size);
 			}
-			if (inst_log > 0) {
-				inst_exe->prev_size++;
-				if (inst_exe->prev_size == 1) {
-					inst_exe->prev = malloc(sizeof(inst_exe->prev));
-				} else {
-					inst_exe->prev = realloc(inst_exe->prev, sizeof(inst_exe->prev) * inst_exe->prev_size);
-				}
-				inst_exe->prev[inst_exe->prev_size - 1] = inst_log - 1;
-				inst_exe_prev->next_size++;
-				if (inst_exe_prev->next_size == 1) {
-					inst_exe_prev->next = malloc(sizeof(inst_exe_prev->next));
-					inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
-				} else {
-					inst_exe_prev->next = realloc(inst_exe_prev->next, sizeof(inst_exe_prev->next) * inst_exe_prev->next_size);
-					inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
-				}
+			inst_exe->prev[inst_exe->prev_size - 1] = inst_log - 1;
+			inst_exe_prev->next_size++;
+			if (inst_exe_prev->next_size == 1) {
+				inst_exe_prev->next = malloc(sizeof(inst_exe_prev->next));
+				inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
+			} else {
+				inst_exe_prev->next = realloc(inst_exe_prev->next, sizeof(inst_exe_prev->next) * inst_exe_prev->next_size);
 				inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
 			}
+			inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
 
 			inst_log++;
+			if (0 == memory_reg[2].offset_value) {
+				printf("Function exited\n");
+				break;
+			}
 		}
 		instruction_offset += instructions.instruction_number;
 		if (0 == memory_reg[2].offset_value) {
@@ -550,6 +480,79 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
+}
+
+
+int main(int argc, char *argv[])
+{
+	int n = 0;
+	uint64_t offset = 0;
+	int instruction_offset = 0;
+	int octets = 0;
+	int result;
+	char *filename;
+	int fd;
+	int tmp;
+	int err;
+	const char *file = "test.obj";
+	size_t inst_size = 0;
+	int l;
+	struct instruction_s *instruction;
+	struct inst_log_entry_s *inst_log1;
+	struct inst_log_entry_s *inst_exe;
+	struct inst_log_entry_s *inst_exe_prev;
+	struct memory_s *value;
+	uint64_t inst_log_prev = 0;
+	ram_init();
+	reg_init();
+	stack_init();
+
+	handle = bf_test_open_file(file);
+	if (!handle) {
+		printf("Failed to find or recognise file\n");
+		return 1;
+	}
+
+	printf("symtab_canon2 = %ld\n", handle->symtab_sz);
+	for (l = 0; l < handle->symtab_sz; l++) {
+		printf("%d\n", l);
+		printf("type:0x%02x\n", handle->symtab[l]->flags);
+		printf("name:%s\n", handle->symtab[l]->name);
+		printf("value=0x%02"PRIx64"\n", handle->symtab[l]->value);
+	}
+	printf("Setup ok\n");
+	inst_size = bf_get_code_size(handle);
+	inst = malloc(inst_size);
+	bf_copy_code_section(handle, inst, inst_size);
+	printf("dis:Data at %p, size=%"PRId32"\n", inst, inst_size);
+	for (n = 0; n < inst_size; n++) {
+		printf(" 0x%02x", inst[n]);
+	}
+	printf("\n");
+
+	printf("handle=%p\n", handle);
+	init_disassemble_info(&disasm_info, stdout, (fprintf_ftype) fprintf);
+	disasm_info.flavour = bfd_get_flavour(handle->bfd);
+	disasm_info.arch = bfd_get_arch(handle->bfd);
+	disasm_info.mach = bfd_get_mach(handle->bfd);
+	disasm_info.disassembler_options = NULL;
+	disasm_info.octets_per_byte = bfd_octets_per_byte(handle->bfd);
+	disasm_info.skip_zeroes = 8;
+	disasm_info.skip_zeroes_at_end = 3;
+	disasm_info.disassembler_needs_relocs = 0;
+	disasm_info.buffer_length = inst_size;
+	disasm_info.buffer = inst;
+
+	printf("disassemble_fn\n");
+	disassemble_fn = disassembler(handle->bfd);
+	printf("disassemble_fn done %p, %p\n", disassemble_fn, print_insn_i386);
+	instructions.bytes_used = 0;
+	inst_exe = &inst_log_entry[0];
+	/* EIP is a parameter for process_block */
+	/* Update EIP */
+	memory_reg[2].offset_value = 0;
+	process_block( inst_log_prev);
+
 	/* Correct inst_log to identify how many instructions there have been */
 	inst_log--;
 	printf("Instructions=%"PRId64"\n", inst_log);
