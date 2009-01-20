@@ -126,7 +126,7 @@ int print_instructions(void)
 	int n;
 	struct instruction_s *instruction;
 	struct inst_log_entry_s *inst_log1;
-	for (n = 1; n < inst_log; n++) {
+	for (n = 1; n <= inst_log; n++) {
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
 		if (print_inst(instruction, n))
@@ -361,6 +361,7 @@ int main(int argc, char *argv[])
 	char *filename;
 	int fd;
 	int tmp;
+	int err;
 	disassembler_ftype disassemble_fn;
 	const char *file = "test.obj";
 	size_t inst_size = 0;
@@ -489,15 +490,16 @@ int main(int argc, char *argv[])
 		for (n = 0; n < instructions.instruction_number; n++) {
 			instruction = &instructions.instruction[n];
 			printf( "Printing inst1111:%d, %d, %"PRId64"\n",instruction_offset, n, inst_log);
-			if (print_inst(instruction, instruction_offset + n)) {
+			if (print_inst(instruction, instruction_offset + n + 1)) {
 				return 1;
 			}
 			inst_exe_prev = &inst_log_entry[inst_log_prev];
 			inst_exe = &inst_log_entry[inst_log];
 			inst_log_prev = inst_log;
 			memcpy(&(inst_exe->instruction), instruction, sizeof(struct instruction_s));
-			if (execute_instruction(self, inst_exe)) {
-				printf("execute_intruction failed\n");
+			err = execute_instruction(self, inst_exe);
+			if (err) {
+				printf("execute_intruction failed err=%d\n", err);
 				return 1;
 			}
 			if (0 == memory_reg[2].offset_value) {
@@ -509,6 +511,16 @@ int main(int argc, char *argv[])
 					inst_exe->prev = realloc(inst_exe->prev, sizeof(inst_exe->prev) * inst_exe->prev_size);
 				}
 				inst_exe->prev[inst_exe->prev_size - 1] = inst_log - 1;
+				inst_exe_prev->next_size++;
+				if (inst_exe_prev->next_size == 1) {
+					inst_exe_prev->next = malloc(sizeof(inst_exe_prev->next));
+					inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
+				} else {
+					inst_exe_prev->next = realloc(inst_exe_prev->next, sizeof(inst_exe_prev->next) * inst_exe_prev->next_size);
+					inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
+				}
+				inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
+				inst_log++;
 				break;
 			}
 			if (inst_log > 0) {
@@ -538,6 +550,8 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
+	/* Correct inst_log to identify how many instructions there have been */
+	inst_log--;
 	printf("Instructions=%"PRId64"\n", inst_log);
 	print_instructions();
 	filename = "test.c";
@@ -559,7 +573,7 @@ int main(int argc, char *argv[])
 		//printf("name:%s\n", handle->symtab[l]->name);
 		//printf("value=0x%02x\n", handle->symtab[l]->value);
 	}
-	for (n = 1; n <  inst_log; n++) {
+	for (n = 1; n <= inst_log; n++) {
 		int write_offset = 0;
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
@@ -578,7 +592,8 @@ int main(int argc, char *argv[])
 		if ((0 == inst_log1->value3.value_type) ||
 			(1 == inst_log1->value3.value_type) ||
 			(2 == inst_log1->value3.value_type) ||
-			(3 == inst_log1->value3.value_type)) {
+			(3 == inst_log1->value3.value_type) ||
+			(5 == inst_log1->value3.value_type)) {
 			switch (instruction->opcode) {
 			case MOV:
 				if (inst_log1->value1.value_type == 6)
@@ -726,6 +741,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case JMP:
+				printf("JMP reached XXXX\n");
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
@@ -743,6 +759,26 @@ int main(int argc, char *argv[])
 				/* only does anything if combined with a branch instruction */
 				if (print_inst(instruction, n))
 					return 1;
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
+				write_offset += tmp;
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+					"cmp;\n");
+				write_offset += tmp;
+				printf("cmp;\n");
+				break;
+
+			case IF:
+				/* FIXME: Never gets here, why? */
+				/* Don't do anything for this instruction. */
+				/* only does anything if combined with a branch instruction */
+				if (print_inst(instruction, n))
+					return 1;
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
+				write_offset += tmp;
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+					"if;\n");
+				write_offset += tmp;
+				printf("if;\n");
 				break;
 
 			default:
@@ -759,8 +795,15 @@ int main(int argc, char *argv[])
 			write(fd, out_buf, write_offset);
 		}
 		write_offset = 0;
-		printf("GOT HERE1. value_type=%d\n", inst_log1->value3.value_type);
-		if ((inst_log1->value3.value_type == 5) &&
+		printf("GOT HERE1. value_type=%d\n",
+			inst_log1->value3.value_type);
+		printf("GOT HERE2. dstA.indirect=%d\n",
+			instruction->dstA.indirect);
+		printf("GOT HERE3. dstA.store=%x cmp %x\n",
+			instruction->dstA.store, STORE_REG);
+		printf("GOT HERE4. dstA.index=%"PRIx64" cmp %x\n",
+			instruction->dstA.index, REG_IP);
+		if ((5 == inst_log1->value3.value_type) &&
 			(!instruction->dstA.indirect) &&
 			(instruction->dstA.store == STORE_REG) &&
 			(instruction->dstA.index ==  REG_IP)) {
