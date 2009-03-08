@@ -59,6 +59,26 @@ char out_buf[1024];
 int local_counter = 1;
 void *self = NULL;
 
+char *condition_table[] = {
+	"Unknown_0",
+	"OVERFLOW_1",
+	"NOT_OVERFLOW_2",
+	"BELOW_3",
+	"NOT_BELOW_4",
+	"EQUAL_5",
+	"NOT_EQUAL_6",
+	"ABOVE_7",
+	"NOT_ABOVE_8",
+	"SIGNED_9",
+	"NO_SIGNED_10",
+	"PARITY_11",
+	"NOT_PARITY_12",
+	"LESS_13",
+	"GREATER_EQUAL_14",
+	"LESS_EQUAL_15",
+	"GREATER_16"
+};
+
 /* For the .data segment. I.e. Static data */
 struct memory_s memory_data[1000];
 /* For the .text segment. I.e. Instructions. */
@@ -77,6 +97,19 @@ struct inst_log_entry_s inst_log_entry[100];
  */
 int memory_used[100];
 
+struct entry_point_s {
+	uint64_t eip_offset_value;
+	uint64_t previous_instuction;
+} ;
+
+/* This is used to hold entry points into the code */
+struct entry_point_s base_entry_point[100];
+int base_entry_point_list_length;
+/* This is used to hold return values from process block */
+struct entry_point_s entry_point[2];
+uint64_t entry_point_list_length;
+
+	
 
 int print_inst(struct instruction_s *instruction, int instruction_number)
 {
@@ -353,7 +386,7 @@ int stack_init(void)
 #endif
 }
 
-int process_block( uint64_t inst_log_prev) {
+int process_block( uint64_t inst_log_prev, uint64_t *list_length, struct entry_point_s *entry) {
 	uint64_t offset = 0;
 	int result;
 	int n = 0;
@@ -363,6 +396,7 @@ int process_block( uint64_t inst_log_prev) {
 	struct instruction_s *instruction;
 	int instruction_offset = 0;
 	int octets = 0;
+	printf("process_block entry\n");
 	printf("inst_log=%"PRId64"\n", inst_log);
 	printf("dis:Data at %p, size=%"PRId32"\n", inst, inst_size);
 	for (offset = 0; ;
@@ -371,6 +405,7 @@ int process_block( uint64_t inst_log_prev) {
 			) {
 	//for (offset = 0; offset < inst_size;
 			//offset += instructions.bytes_used) {
+		offset = memory_reg[2].offset_value;
 		instructions.instruction_number = 0;
 		instructions.bytes_used = 0;
 		printf("eip=0x%"PRIx64", offset=0x%"PRIx64"\n",
@@ -421,7 +456,7 @@ int process_block( uint64_t inst_log_prev) {
 		printf("  octets=%d\n", octets);
 		if (instructions.bytes_used != octets) {
 			printf("Unhandled instruction. Length mismatch. Exiting\n");
-			return 0;
+			return 1;
 		}
 		/* Update EIP */
 		memory_reg[2].offset_value += octets;
@@ -430,7 +465,7 @@ int process_block( uint64_t inst_log_prev) {
 			instructions.instruction_number);
 		if (result == 0) {
 			printf("Unhandled instruction. Exiting\n");
-			return 0;
+			return 1;
 		}
 		if (instructions.instruction_number == 0) {
 			printf("NOP instruction. Get next inst\n");
@@ -439,17 +474,18 @@ int process_block( uint64_t inst_log_prev) {
 		for (n = 0; n < instructions.instruction_number; n++) {
 			instruction = &instructions.instruction[n];
 			printf( "Printing inst1111:%d, %d, %"PRId64"\n",instruction_offset, n, inst_log);
-			if (print_inst(instruction, instruction_offset + n + 1)) {
-				return 1;
+			err = print_inst(instruction, instruction_offset + n + 1);
+			if (err) {
+				printf("print_inst failed\n");
+				return err;
 			}
 			inst_exe_prev = &inst_log_entry[inst_log_prev];
 			inst_exe = &inst_log_entry[inst_log];
-			inst_log_prev = inst_log;
 			memcpy(&(inst_exe->instruction), instruction, sizeof(struct instruction_s));
 			err = execute_instruction(self, inst_exe);
 			if (err) {
 				printf("execute_intruction failed err=%d\n", err);
-				return 1;
+				return err;
 			}
 			inst_exe->prev_size++;
 			if (inst_exe->prev_size == 1) {
@@ -457,7 +493,7 @@ int process_block( uint64_t inst_log_prev) {
 			} else {
 				inst_exe->prev = realloc(inst_exe->prev, sizeof(inst_exe->prev) * inst_exe->prev_size);
 			}
-			inst_exe->prev[inst_exe->prev_size - 1] = inst_log - 1;
+			inst_exe->prev[inst_exe->prev_size - 1] = inst_log_prev;
 			inst_exe_prev->next_size++;
 			if (inst_exe_prev->next_size == 1) {
 				inst_exe_prev->next = malloc(sizeof(inst_exe_prev->next));
@@ -468,6 +504,7 @@ int process_block( uint64_t inst_log_prev) {
 			}
 			inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
 
+			inst_log_prev = inst_log;
 			inst_log++;
 			if (0 == memory_reg[2].offset_value) {
 				printf("Function exited\n");
@@ -479,9 +516,55 @@ int process_block( uint64_t inst_log_prev) {
 			printf("Breaking\n");
 			break;
 		}
+		if (IF == instruction->opcode) {
+			printf("Breaking at IF\n");
+			printf("IF: this EIP = 0x%"PRIx64"\n",
+				memory_reg[2].offset_value);
+			printf("IF: jump dst abs EIP = 0x%"PRIx64"\n",
+				inst_exe->value3.offset_value);
+			printf("IF: inst_log = %"PRId64"\n",
+				inst_log);
+			*list_length = 2;
+			entry[0].eip_offset_value = memory_reg[2].offset_value;
+			entry[0].previous_instuction = inst_log - 1;
+			entry[1].eip_offset_value = inst_exe->value3.offset_value;
+			entry[1].previous_instuction = inst_log - 1;
+			break;
+		}
 	}
+	return 0;
 }
 
+int output_variable(int store, uint64_t index, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, int *write_offset) {
+	int tmp;
+	switch (store) {
+	case STORE_IMMED:
+		printf("%"PRIx64";\n", index);
+		tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "0x%"PRIx64";\n",
+			index);
+		*write_offset += tmp;
+		break;
+	case STORE_REG:
+		if ((value_scope) == 2) {
+			printf("local%04"PRIu64";\n", (value_id));
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "local%04"PRIu64";\n",
+				value_id);
+			*write_offset += tmp;
+		} else {
+			printf("param%04"PRIu64";\n", (indirect_offset_value));
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "param%04"PRIu64";\n",
+				indirect_offset_value);
+			*write_offset += tmp;
+			printf("write_offset=%d\n", *write_offset);
+		}
+		break;
+	case STORE_MEM:
+	case STORE_STACK:
+	default:
+		printf("Unhandled store1\n");
+		break;
+	}
+}
 
 int main(int argc, char *argv[])
 {
@@ -498,7 +581,9 @@ int main(int argc, char *argv[])
 	size_t inst_size = 0;
 	int l;
 	struct instruction_s *instruction;
+	struct instruction_s *instruction_prev;
 	struct inst_log_entry_s *inst_log1;
+	struct inst_log_entry_s *inst_log1_prev;
 	struct inst_log_entry_s *inst_exe;
 	struct inst_log_entry_s *inst_exe_prev;
 	struct memory_s *value;
@@ -551,11 +636,44 @@ int main(int argc, char *argv[])
 	/* EIP is a parameter for process_block */
 	/* Update EIP */
 	memory_reg[2].offset_value = 0;
-	process_block( inst_log_prev);
-
+	inst_log_prev = 0;
+	err = process_block( inst_log_prev, &entry_point_list_length, entry_point);
+	if (err) {
+		printf("process_block failed\n");
+		return err;
+	}
+	if (entry_point_list_length > 0) {
+		for (n = 0; n < entry_point_list_length; n++ ) {
+			printf("eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
+				entry_point[n].eip_offset_value,
+				entry_point[n].previous_instuction);
+		}
+	}
+	//inst_log--;
+	printf("Instructions=%"PRId64", entry_point_list_length=%"PRId64"\n",
+		inst_log,
+		entry_point_list_length);
+	for (n = 0; n < entry_point_list_length; n++ ) {
+		/* EIP is a parameter for process_block */
+		/* Update EIP */
+		memory_reg[2].offset_value = entry_point[n].eip_offset_value;
+		inst_log_prev = entry_point[n].previous_instuction;
+		err = process_block( inst_log_prev, &entry_point_list_length, entry_point);
+		if (err) {
+			printf("process_block failed\n");
+			return err;
+		}
+	}
 	/* Correct inst_log to identify how many instructions there have been */
 	inst_log--;
-	printf("Instructions=%"PRId64"\n", inst_log);
+	print_instructions();
+	if (entry_point_list_length > 0) {
+		for (n = 0; n < entry_point_list_length; n++ ) {
+			printf("eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
+				entry_point[n].eip_offset_value,
+				entry_point[n].previous_instuction);
+		}
+	}
 	print_instructions();
 	filename = "test.c";
 	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
@@ -579,7 +697,9 @@ int main(int argc, char *argv[])
 	for (n = 1; n <= inst_log; n++) {
 		int write_offset = 0;
 		inst_log1 =  &inst_log_entry[n];
+		inst_log1_prev =  &inst_log_entry[inst_log1->prev[0]];
 		instruction =  &inst_log1->instruction;
+		instruction_prev =  &inst_log1_prev->instruction;
 		if ((inst_log1->prev_size) > 1) {
 					printf("\tlabel%04"PRIx32":\n", n);
 					tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
@@ -747,7 +867,6 @@ int main(int argc, char *argv[])
 				printf("JMP reached XXXX\n");
 				if (print_inst(instruction, n))
 					return 1;
-				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
 				printf("goto label%04"PRIx32";\n}\n",
@@ -776,12 +895,24 @@ int main(int argc, char *argv[])
 				/* only does anything if combined with a branch instruction */
 				if (print_inst(instruction, n))
 					return 1;
+				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
+				printf("if ");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-					"if;\n");
+					"if ");
 				write_offset += tmp;
-				printf("if;\n");
+				printf("\t prev=%d, ",inst_log1->prev[0]);
+				printf("\t prev inst=%d, ",instruction_prev->opcode);
+				printf("\t %s", condition_table[instruction->srcA.index]);
+				printf("\t LHS=%d, ",inst_log1->prev[0]);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+					"\t %s", condition_table[instruction->srcA.index]);
+				write_offset += tmp;
+				printf("\t goto label%04"PRIx32";\n", inst_log1->next[1]);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+					"\tgoto label%04"PRIx32";\n", inst_log1->next[1]);
+				write_offset += tmp;
 				break;
 
 			default:
@@ -826,7 +957,7 @@ int main(int argc, char *argv[])
 	close(fd);
 	bf_test_close_file(handle);
 	for (n = 0; n < inst_size; n++) {
-		printf(" %d\n", memory_used[n]);
+		printf("0x%04x: %d\n", n, memory_used[n]);
 	}
 	printf("\n");
 	return 0;

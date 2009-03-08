@@ -16,6 +16,6 @@ include_HEADERS = \
 libinput_bfd_la_SOURCES = \
 	bfl.c
 
-libinput_bfd_la_LIBADD = -lbfd -liberty -lz
+libinput_bfd_la_LIBADD = -lbfd-single -liberty -lz
 libinput_bfd_la_LDFLAGS = \
 	 -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
