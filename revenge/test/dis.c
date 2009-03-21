@@ -636,6 +636,7 @@ int main(int argc, char *argv[])
 	int result;
 	char *filename;
 	int fd;
+	int write_offset;
 	int tmp;
 	int err;
 	const char *file = "test.obj";
@@ -775,7 +776,7 @@ int main(int argc, char *argv[])
 		//printf("value=0x%02x\n", handle->symtab[l]->value);
 	}
 	for (n = 1; n <= inst_log; n++) {
-		int write_offset = 0;
+		write_offset = 0;
 		inst_log1 =  &inst_log_entry[n];
 		inst_log1_prev =  &inst_log_entry[inst_log1->prev[0]];
 		instruction =  &inst_log1->instruction;
@@ -1045,6 +1046,14 @@ int main(int argc, char *argv[])
 		}
 		//tmp = snprintf(out_buf, 1024, "%d\n", l);
 		//write(fd, out_buf, tmp);
+	}
+	if (inst_log1->next[0]) {		
+		printf("\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
+		tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+			"\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
+		write_offset += tmp;
+		write(fd, out_buf, write_offset);
+		write_offset = 0;
 	}
 	close(fd);
 	bf_test_close_file(handle);
