@@ -99,8 +99,13 @@ int memory_used[100];
 
 struct entry_point_s {
 	int used;
-	uint64_t eip_offset_value;
+	/* FIXME: Is this enough, or will full register backup be required */
+	uint64_t esp_init_value;
 	uint64_t esp_offset_value;
+	uint64_t ebp_init_value;
+	uint64_t ebp_offset_value;
+	uint64_t eip_init_value;
+	uint64_t eip_offset_value;
 	uint64_t previous_instuction;
 } ;
 
@@ -525,7 +530,11 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 				inst_log);
 			for (n = 0; n < list_length; n++ ) {
 				if (0 == entry[n].used) {
+					entry[n].esp_init_value = memory_reg[0].init_value;
 					entry[n].esp_offset_value = memory_reg[0].offset_value;
+					entry[n].ebp_init_value = memory_reg[1].init_value;
+					entry[n].ebp_offset_value = memory_reg[1].offset_value;
+					entry[n].eip_init_value = memory_reg[2].init_value;
 					entry[n].eip_offset_value = memory_reg[2].offset_value;
 					entry[n].previous_instuction = inst_log - 1;
 					entry[n].used = 1;
@@ -535,7 +544,11 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 			/* FIXME: Would starting a "n" be better here? */
 			for (n = 0; n < list_length; n++ ) {
 				if (0 == entry[n].used) {
+					entry[n].esp_init_value = memory_reg[0].init_value;
 					entry[n].esp_offset_value = memory_reg[0].offset_value;
+					entry[n].ebp_init_value = memory_reg[1].init_value;
+					entry[n].ebp_offset_value = memory_reg[1].offset_value;
+					entry[n].eip_init_value = inst_exe->value3.init_value;
 					entry[n].eip_offset_value = inst_exe->value3.offset_value;
 					entry[n].previous_instuction = inst_log - 1;
 					entry[n].used = 1;
@@ -704,8 +717,12 @@ int main(int argc, char *argv[])
 	//memory_reg[2].offset_value = 0;
 	//inst_log_prev = 0;
 	entry_point[0].used = 1;
+	entry_point[0].esp_init_value = memory_reg[0].init_value;
 	entry_point[0].esp_offset_value = memory_reg[0].offset_value;
-	entry_point[0].eip_offset_value = 0;
+	entry_point[0].ebp_init_value = memory_reg[1].init_value;
+	entry_point[0].ebp_offset_value = memory_reg[1].offset_value;
+	entry_point[0].eip_init_value = memory_reg[2].init_value;
+	entry_point[0].eip_offset_value = memory_reg[2].offset_value;
 	entry_point[0].previous_instuction = 0;
 	entry_point_list_length = 100;
 	do {
@@ -715,7 +732,11 @@ int main(int argc, char *argv[])
 			/* Update EIP */
 			printf("entry:%d\n",n);
 			if (entry_point[n].used) {
+				memory_reg[0].init_value = entry_point[n].esp_init_value;
 				memory_reg[0].offset_value = entry_point[n].esp_offset_value;
+				memory_reg[1].init_value = entry_point[n].ebp_init_value;
+				memory_reg[1].offset_value = entry_point[n].ebp_offset_value;
+				memory_reg[2].init_value = entry_point[n].eip_init_value;
 				memory_reg[2].offset_value = entry_point[n].eip_offset_value;
 				inst_log_prev = entry_point[n].previous_instuction;
 				not_finished = 1;
