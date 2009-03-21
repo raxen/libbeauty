@@ -780,14 +780,24 @@ int main(int argc, char *argv[])
 		inst_log1_prev =  &inst_log_entry[inst_log1->prev[0]];
 		instruction =  &inst_log1->instruction;
 		instruction_prev =  &inst_log1_prev->instruction;
+		/* Output labels when this is a join point */
+		/* or when the previous instruction was some sort of jump */
 		if ((inst_log1->prev_size) > 1) {
-					printf("label%04"PRIx32":\n", n);
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-						"label%04"PRIx32":\n", n);
-					write_offset += tmp;
+			printf("label%04"PRIx32":\n", n);
+			tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+				"label%04"PRIx32":\n", n);
+			write_offset += tmp;
+		} else {
+			if (inst_log1->prev[0] != (n - 1)) {		
+				printf("label%04"PRIx32":\n", n);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+					"label%04"PRIx32":\n", n);
+				write_offset += tmp;
+			}
 		}
+			
 		/* Test to see if we have an instruction to output */
-		printf("Inst %d: %d: value_scope = %d, %d, %d\n", n,
+		printf("Inst 0x%04x: %d: value_scope = %d, %d, %d\n", n,
 			instruction->opcode,
 			inst_log1->value1.value_scope,
 			inst_log1->value2.value_scope,
