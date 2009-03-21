@@ -522,6 +522,7 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		inst->value3.ref_log =
 			inst->value1.ref_log;
 		/* Note: value_scope stays from the dst, not the src. */
+		/* FIXME Maybe Exception is the MOV instruction */
 		inst->value3.value_scope = inst->value2.value_scope;
 		/* MOV param to local */
 		/* FIXME: What about mov local -> param */

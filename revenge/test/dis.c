@@ -98,23 +98,22 @@ struct inst_log_entry_s inst_log_entry[100];
 int memory_used[100];
 
 struct entry_point_s {
+	int used;
 	uint64_t eip_offset_value;
+	uint64_t esp_offset_value;
 	uint64_t previous_instuction;
 } ;
 
-/* This is used to hold entry points into the code */
-struct entry_point_s base_entry_point[100];
-int base_entry_point_list_length;
 /* This is used to hold return values from process block */
-struct entry_point_s entry_point[2];
-uint64_t entry_point_list_length;
+struct entry_point_s entry_point[100];
+uint64_t entry_point_list_length = 100;
 
 	
 
 int print_inst(struct instruction_s *instruction, int instruction_number)
 {
 	int ret = 1; /* Default to failed */
-	printf("Instruction %d:%s%s",
+	printf("Instruction 0x%04x:%s%s",
 		instruction_number,
 		opcode_table[instruction->opcode],
 		dis_flags_table[instruction->flags]);
@@ -197,7 +196,7 @@ int print_instructions(void)
 		if (inst_log1->prev_size > 0) {
 			int n;
 			for (n = 0; n < inst_log1->prev_size; n++) {
-				printf("inst_prev:%d:%d\n",
+				printf("inst_prev:%d:0x%04x\n",
 					n,
 					inst_log1->prev[n]);
 			}
@@ -205,7 +204,7 @@ int print_instructions(void)
 		if (inst_log1->next_size > 0) {
 			int n;
 			for (n = 0; n < inst_log1->next_size; n++) {
-				printf("inst_next:%d:%d\n",
+				printf("inst_next:%d:0x%04x\n",
 					n,
 					inst_log1->next[n]);
 			}
@@ -386,7 +385,7 @@ int stack_init(void)
 #endif
 }
 
-int process_block( uint64_t inst_log_prev, uint64_t *list_length, struct entry_point_s *entry) {
+int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry) {
 	uint64_t offset = 0;
 	int result;
 	int n = 0;
@@ -524,11 +523,25 @@ int process_block( uint64_t inst_log_prev, uint64_t *list_length, struct entry_p
 				inst_exe->value3.offset_value);
 			printf("IF: inst_log = %"PRId64"\n",
 				inst_log);
-			*list_length = 2;
-			entry[0].eip_offset_value = memory_reg[2].offset_value;
-			entry[0].previous_instuction = inst_log - 1;
-			entry[1].eip_offset_value = inst_exe->value3.offset_value;
-			entry[1].previous_instuction = inst_log - 1;
+			for (n = 0; n < list_length; n++ ) {
+				if (0 == entry[n].used) {
+					entry[n].esp_offset_value = memory_reg[0].offset_value;
+					entry[n].eip_offset_value = memory_reg[2].offset_value;
+					entry[n].previous_instuction = inst_log - 1;
+					entry[n].used = 1;
+					break;
+				}
+			}
+			/* FIXME: Would starting a "n" be better here? */
+			for (n = 0; n < list_length; n++ ) {
+				if (0 == entry[n].used) {
+					entry[n].esp_offset_value = memory_reg[0].offset_value;
+					entry[n].eip_offset_value = inst_exe->value3.offset_value;
+					entry[n].previous_instuction = inst_log - 1;
+					entry[n].used = 1;
+					break;
+				}
+			}
 			break;
 		}
 	}
@@ -637,6 +650,7 @@ int main(int argc, char *argv[])
 	struct memory_s *value;
 	uint64_t inst_log_prev = 0;
 	char *expression;
+	int not_finished;
 	ram_init();
 	reg_init();
 	stack_init();
@@ -686,13 +700,36 @@ int main(int argc, char *argv[])
 	inst_exe = &inst_log_entry[0];
 	/* EIP is a parameter for process_block */
 	/* Update EIP */
-	memory_reg[2].offset_value = 0;
-	inst_log_prev = 0;
-	err = process_block( inst_log_prev, &entry_point_list_length, entry_point);
-	if (err) {
-		printf("process_block failed\n");
-		return err;
-	}
+	//memory_reg[2].offset_value = 0;
+	//inst_log_prev = 0;
+	entry_point[0].used = 1;
+	entry_point[0].esp_offset_value = memory_reg[0].offset_value;
+	entry_point[0].eip_offset_value = 0;
+	entry_point[0].previous_instuction = 0;
+	entry_point_list_length = 100;
+	do {
+		not_finished = 0;
+		for (n = 0; n < entry_point_list_length; n++ ) {
+			/* EIP is a parameter for process_block */
+			/* Update EIP */
+			printf("entry:%d\n",n);
+			if (entry_point[n].used) {
+				memory_reg[0].offset_value = entry_point[n].esp_offset_value;
+				memory_reg[2].offset_value = entry_point[n].eip_offset_value;
+				inst_log_prev = entry_point[n].previous_instuction;
+				not_finished = 1;
+				err = process_block( inst_log_prev, entry_point_list_length, entry_point);
+				/* clear the entry after calling process_block */
+				entry_point[n].used = 0;
+				if (err) {
+					printf("process_block failed\n");
+					return err;
+				}
+			}
+		}
+	} while (not_finished);
+
+/*
 	if (entry_point_list_length > 0) {
 		for (n = 0; n < entry_point_list_length; n++ ) {
 			printf("eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
@@ -700,27 +737,19 @@ int main(int argc, char *argv[])
 				entry_point[n].previous_instuction);
 		}
 	}
+*/
 	//inst_log--;
 	printf("Instructions=%"PRId64", entry_point_list_length=%"PRId64"\n",
 		inst_log,
 		entry_point_list_length);
-	for (n = 0; n < entry_point_list_length; n++ ) {
-		/* EIP is a parameter for process_block */
-		/* Update EIP */
-		memory_reg[2].offset_value = entry_point[n].eip_offset_value;
-		inst_log_prev = entry_point[n].previous_instuction;
-		err = process_block( inst_log_prev, &entry_point_list_length, entry_point);
-		if (err) {
-			printf("process_block failed\n");
-			return err;
-		}
-	}
+
 	/* Correct inst_log to identify how many instructions there have been */
 	inst_log--;
 	print_instructions();
 	if (entry_point_list_length > 0) {
 		for (n = 0; n < entry_point_list_length; n++ ) {
-			printf("eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
+			printf("%d, eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
+				entry_point[n].used,
 				entry_point[n].eip_offset_value,
 				entry_point[n].previous_instuction);
 		}
