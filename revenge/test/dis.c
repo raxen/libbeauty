@@ -390,6 +390,36 @@ int stack_init(void)
 #endif
 }
 
+int print_mem_reg(int location) {
+	printf("start_address:0x%"PRIx64"\n",
+		memory_reg[location].start_address);
+	printf("length:0x%x\n",
+		memory_reg[location].length);
+	printf("init_value_type:0x%x\n",
+		memory_reg[location].init_value_type);
+	printf("init:0x%"PRIx64"\n",
+		memory_reg[location].init_value);
+	printf("offset:0x%"PRIx64"\n",
+		memory_reg[location].offset_value);
+	printf("indirect_init:0x%"PRIx64"\n",
+		memory_reg[location].indirect_init_value);
+	printf("indirect_offset:0x%"PRIx64"\n",
+		memory_reg[location].indirect_offset_value);
+	printf("value_type:0x%x\n",
+		memory_reg[location].value_type);
+	printf("ref_memory:0x%"PRIx32"\n",
+		memory_reg[location].ref_memory);
+	printf("ref_log:0x%"PRIx32"\n",
+		memory_reg[location].ref_log);
+	printf("value_scope:0x%x\n",
+		memory_reg[location].value_scope);
+	printf("value_id:0x%"PRIx64"\n",
+		memory_reg[location].value_id);
+	printf("valid:0x%"PRIx64"\n",
+		memory_reg[location].valid);
+	return 0;
+}
+
 int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry) {
 	uint64_t offset = 0;
 	int result;
@@ -486,7 +516,9 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 			inst_exe_prev = &inst_log_entry[inst_log_prev];
 			inst_exe = &inst_log_entry[inst_log];
 			memcpy(&(inst_exe->instruction), instruction, sizeof(struct instruction_s));
+	print_mem_reg(1);
 			err = execute_instruction(self, inst_exe);
+	print_mem_reg(1);
 			if (err) {
 				printf("execute_intruction failed err=%d\n", err);
 				return err;
@@ -571,17 +603,27 @@ int output_variable(int store, uint64_t index, uint64_t value_scope, uint64_t va
 		*write_offset += tmp;
 		break;
 	case STORE_REG:
-		if ((value_scope) == 2) {
+		switch (value_scope) {
+		case 2:
 			printf("local%04"PRIx64";\n", (value_id));
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "local%04"PRIx64,
 				value_id);
 			*write_offset += tmp;
-		} else {
+			break;
+		case 1:
 			printf("param%04"PRIx64";\n", (indirect_offset_value));
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "param%04"PRIx64,
 				indirect_offset_value);
 			*write_offset += tmp;
 			printf("write_offset=%d\n", *write_offset);
+			break;
+		default:
+			printf("unknown%04"PRIx64";\n", (indirect_offset_value));
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "unknown%04"PRIx64,
+				indirect_offset_value);
+			*write_offset += tmp;
+			printf("write_offset=%d\n", *write_offset);
+			break;
 		}
 		break;
 	case STORE_MEM:
@@ -669,6 +711,8 @@ int main(int argc, char *argv[])
 	reg_init();
 	stack_init();
 
+	print_mem_reg(1);
+
 	expression = malloc(1000); /* Buffer for if expressions */
 
 	handle = bf_test_open_file(file);
@@ -677,6 +721,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+/*
 	printf("symtab_canon2 = %ld\n", handle->symtab_sz);
 	for (l = 0; l < handle->symtab_sz; l++) {
 		printf("%d\n", l);
@@ -684,6 +729,7 @@ int main(int argc, char *argv[])
 		printf("name:%s\n", handle->symtab[l]->name);
 		printf("value=0x%02"PRIx64"\n", handle->symtab[l]->value);
 	}
+*/
 	printf("Setup ok\n");
 	inst_size = bf_get_code_size(handle);
 	inst = malloc(inst_size);
@@ -730,7 +776,7 @@ int main(int argc, char *argv[])
 		for (n = 0; n < entry_point_list_length; n++ ) {
 			/* EIP is a parameter for process_block */
 			/* Update EIP */
-			printf("entry:%d\n",n);
+			//printf("entry:%d\n",n);
 			if (entry_point[n].used) {
 				memory_reg[0].init_value = entry_point[n].esp_init_value;
 				memory_reg[0].offset_value = entry_point[n].esp_offset_value;
@@ -1019,6 +1065,7 @@ int main(int argc, char *argv[])
 	write(fd, out_buf, write_offset);
 	write_offset = 0;
 	close(fd);
+	print_mem_reg(1);
 	bf_test_close_file(handle);
 	for (n = 0; n < inst_size; n++) {
 		printf("0x%04x: %d\n", n, memory_used[n]);

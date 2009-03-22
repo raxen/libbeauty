@@ -63,6 +63,7 @@ struct memory_s *search_store(
 		if ((start >= memory_start) &&
 			(end <= memory_end)) {
 			result = &memory[n];
+			printf("Found entry %d, %p\n", n, result);
 			break;
 		}
 		n++;
@@ -249,13 +250,16 @@ static int get_value_RTL_instruction(
 				value->init_value +
 					value->offset_value,
 					source->size);
-		printf("EXE2 value_stack=%p\n", value_stack);
+		printf("EXE2 value_stack=%p, %p\n", value_stack, &value_stack);
 		if (!value_stack) {
 			value_stack = add_new_store(memory_stack,
 				value->init_value +
 					value->offset_value,
 					source->size);
+			printf("EXE3 value_stack=%p, %p\n", value_stack, &value_stack);
 			/* Only do this init on new stores */
+			/* FIXME: 0x10000 should be a global variable */
+			/* because it should match the ESP entry value */
 			if ((value->init_value +
 				value->offset_value) > 0x10000) {
 				printf("PARAM\n");
@@ -273,6 +277,8 @@ static int get_value_RTL_instruction(
 			}
 /* Section ends */
 		}
+		printf("variable on stack:0x%"PRIx64"\n",
+			value->init_value + value->offset_value);
 		if (!value_stack)
 			break;
 		destination->start_address = 0;
@@ -442,10 +448,10 @@ static int put_value_RTL_instruction(
 		value_stack->value_id = inst->value3.value_id;
 		/* 1 - Entry Used */
 		value_stack->valid = 1;
-		printf("value_stack=0x%llx+0x%llx=0x%llx\n",
+		printf("value_stack=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
 			value_stack->init_value,
 			value_stack->offset_value,
-			value_stack->init_value + value->offset_value);
+			value_stack->init_value + value_stack->offset_value);
 		break;
 	case 3:
 		/* p - ????? */
