@@ -63,7 +63,7 @@ struct memory_s *search_store(
 		if ((start >= memory_start) &&
 			(end <= memory_end)) {
 			result = &memory[n];
-			printf("Found entry %d, %p\n", n, result);
+			printf("Found entry %d in table %p, %p\n", n, memory, result);
 			break;
 		}
 		n++;
@@ -95,7 +95,7 @@ struct memory_s *add_new_store(
 		n++;
 	}
 	result = &memory[n];
-	printf("Found empty entry %d, %p\n", n, result);
+	printf("Found empty entry %d in table %p, %p\n", n, memory, result);
 	result->start_address = index;
 	result->length = size;
 	/* unknown */
@@ -173,7 +173,7 @@ static int get_value_RTL_instruction(
 			value = search_store(memory_reg,
 					source->index,
 					source->size);
-			printf("EXE value=%p\n", value);
+			printf("GET:EXE value=%p\n", value);
 			/* FIXME what to do in NULL */
 			if (!value) {
 				value = add_new_store(memory_reg,
@@ -183,8 +183,10 @@ static int get_value_RTL_instruction(
 				value->value_scope = 2;
 				local_counter++;
 			}
-			if (!value)
+			if (!value) {
+				printf("GET CASE0:STORE_REG ERROR!\n");
 				break;
+			}
 			destination->start_address = 0;
 			destination->length = value->length;
 			destination->init_value_type = value->init_value_type;
@@ -244,8 +246,10 @@ static int get_value_RTL_instruction(
 			value->value_id = local_counter;
 			local_counter++;
 		}
-		if (!value)
+		if (!value) {
+			printf("GET CASE2:STORE_REG ERROR!\n");
 			break;
+		}
 		value_stack = search_store(memory_stack,
 				value->init_value +
 					value->offset_value,
@@ -279,8 +283,10 @@ static int get_value_RTL_instruction(
 		}
 		printf("variable on stack:0x%"PRIx64"\n",
 			value->init_value + value->offset_value);
-		if (!value_stack)
+		if (!value_stack) {
+			printf("GET CASE2:STORE_REG2 ERROR!\n");
 			break;
+		}
 		destination->start_address = 0;
 		destination->length = value_stack->length;
 		destination->init_value_type = value_stack->init_value_type;
@@ -353,8 +359,10 @@ static int put_value_RTL_instruction(
 						instruction->dstA.index,
 						instruction->dstA.size);
 			}
-			if (!value)
+			if (!value) {
+				printf("PUT CASE0:STORE_REG ERROR!\n");
 				break;
+			}
 			/* eip changing */
 			/* Make the constant 0x24 configurable
 			 * depending on CPU type.
@@ -418,8 +426,10 @@ static int put_value_RTL_instruction(
 					instruction->dstA.index,
 					instruction->dstA.size);
 		}
-		if (!value)
+		if (!value) {
+			printf("PUT CASE2:STORE_REG ERROR!\n");
 			break;
+		}
 		value_stack = search_store(memory_stack,
 				value->init_value +
 					value->offset_value,
@@ -431,8 +441,10 @@ static int put_value_RTL_instruction(
 					value->offset_value,
 					instruction->dstA.size);
 		}
-		if (!value_stack)
+		if (!value_stack) {
+			printf("PUT CASE2:STORE_REG2 ERROR!\n");
 			break;
+		}
 		/* FIXME: these should always be the same */
 		/* value_stack->length = inst->value3.length; */
 		value_stack->init_value_type = inst->value3.init_value_type;
@@ -446,6 +458,9 @@ static int put_value_RTL_instruction(
 		value_stack->value_scope = inst->value3.value_scope;
 		/* 1 - Ids */
 		value_stack->value_id = inst->value3.value_id;
+		printf("PUT: scope=%d, id=%"PRIu64"\n",
+			value_stack->value_scope,
+			value_stack->value_id);
 		/* 1 - Entry Used */
 		value_stack->valid = 1;
 		printf("value_stack=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
@@ -502,7 +517,8 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("CMP\n");
-		put_value_RTL_instruction(inst);
+		/* A CMP does not save any values */
+		//put_value_RTL_instruction(inst);
 		break;
 	case MOV:
 		/* Get value of srcA */
