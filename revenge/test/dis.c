@@ -50,6 +50,8 @@
 instructions_t instructions;
 uint8_t *inst;
 size_t inst_size = 0;
+uint8_t *data;
+size_t data_size = 0;
 struct rev_eng *handle;
 struct disassemble_info disasm_info;
 disassembler_ftype disassemble_fn;
@@ -734,9 +736,18 @@ int main(int argc, char *argv[])
 	inst_size = bf_get_code_size(handle);
 	inst = malloc(inst_size);
 	bf_copy_code_section(handle, inst, inst_size);
-	printf("dis:Data at %p, size=%"PRId32"\n", inst, inst_size);
+	printf("dis:.text Data at %p, size=%"PRId32"\n", inst, inst_size);
 	for (n = 0; n < inst_size; n++) {
 		printf(" 0x%02x", inst[n]);
+	}
+	printf("\n");
+
+	data_size = bf_get_data_size(handle);
+	data = malloc(data_size);
+	bf_copy_data_section(handle, data, data_size);
+	printf("dis:.data Data at %p, size=%"PRId32"\n", data, data_size);
+	for (n = 0; n < data_size; n++) {
+		printf(" 0x%02x", data[n]);
 	}
 	printf("\n");
 
@@ -1051,7 +1062,7 @@ int main(int argc, char *argv[])
 		//tmp = snprintf(out_buf, 1024, "%d\n", l);
 		//write(fd, out_buf, tmp);
 	}
-	if (inst_log1->next[0]) {		
+	if (0 < inst_log1->next_size && inst_log1->next[0]) {		
 		printf("\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
 		tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
 			"\tgoto label%04"PRIx32";\n", inst_log1->next[0]);

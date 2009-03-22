@@ -120,6 +120,7 @@ static void print_code_section(struct rev_eng* ret)
   free(data);
   data = NULL;
 }
+
 int64_t bf_get_code_size(struct rev_eng* ret)
 {
   asection          *section = ret->section[0];
@@ -133,9 +134,32 @@ int64_t bf_get_code_size(struct rev_eng* ret)
   return code_size;
 }
 
+int64_t bf_get_data_size(struct rev_eng* ret)
+{
+  asection          *section = ret->section[1];
+  int                n;
+  bfd_byte          *data = NULL;
+  bfd_size_type      datasize = 0;
+  int64_t            code_size = 0;
+
+  datasize = bfd_get_section_size(section);
+  code_size = datasize;
+  return code_size;
+}
+
 int bf_copy_code_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size)
 {
   asection          *section = ret->section[0];
+  bfd_size_type      datasize = data_size;
+
+  bfd_get_section_contents(ret->bfd, section, data, 0, datasize);
+  printf("Data at %p\n",data);
+  return 1;
+}
+
+int bf_copy_data_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size)
+{
+  asection          *section = ret->section[1];
   bfd_size_type      datasize = data_size;
 
   bfd_get_section_contents(ret->bfd, section, data, 0, datasize);

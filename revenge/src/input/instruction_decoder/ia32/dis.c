@@ -788,11 +788,39 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		break;
 	case 0xa0:												/* MOV AL,Ob */
 		break;
-	case 0xa1:												/* MOV eAX,Ow */
+	case 0xa1:		/* MOV eAX,Ow */
+		instruction = &instructions->instruction[instructions->instruction_number];	
+		instruction->opcode = MOV;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_MEM;
+		instruction->srcA.indirect = 1;
+		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instructions->bytes_used+=4;
+		instruction->srcA.size = 4;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = 0;
+		instruction->dstA.index = REG_AX;
+		instruction->dstA.size = 4;
+		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0xa2:												/* MOV Ob,AL */
 		break;
-	case 0xa3:												/* MOV Ow,eAX */
+	case 0xa3:		/* MOV Ow,eAX */
+		instruction = &instructions->instruction[instructions->instruction_number];	
+		instruction->opcode = MOV;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_REG;
+		instruction->srcA.indirect = 0;
+		instruction->srcA.index = REG_AX;
+		instruction->srcA.size = 4;
+		instruction->dstA.store = STORE_MEM;
+		instruction->dstA.indirect = 1;
+		instruction->dstA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instructions->bytes_used+=4;
+		instruction->dstA.size = 4;
+		instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0xa4:												/* MOVSB */
 	case 0xa5:												/* MOVSW */
