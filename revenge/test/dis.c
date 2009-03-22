@@ -566,19 +566,19 @@ int output_variable(int store, uint64_t index, uint64_t value_scope, uint64_t va
 	switch (store) {
 	case STORE_IMMED:
 		printf("%"PRIx64";\n", index);
-		tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "0x%"PRIx64" ",
+		tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "0x%"PRIx64,
 			index);
 		*write_offset += tmp;
 		break;
 	case STORE_REG:
 		if ((value_scope) == 2) {
-			printf("local%04"PRIu64";\n", (value_id));
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "local%04"PRIu64" ",
+			printf("local%04"PRIx64";\n", (value_id));
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "local%04"PRIx64,
 				value_id);
 			*write_offset += tmp;
 		} else {
-			printf("param%04"PRIu64";\n", (indirect_offset_value));
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "param%04"PRIu64" ",
+			printf("param%04"PRIx64";\n", (indirect_offset_value));
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "param%04"PRIx64,
 				indirect_offset_value);
 			*write_offset += tmp;
 			printf("write_offset=%d\n", *write_offset);
@@ -608,7 +608,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 	case CMP:
 		switch (condition) {
 		case LESS_EQUAL:
-			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, "( ");
+			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, "(");
 			*write_offset += tmp;
 			store = inst_log1_flagged->instruction.dstA.store;
 			index = inst_log1_flagged->instruction.dstA.index;
@@ -616,7 +616,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 			value_id = inst_log1_flagged->value2.value_id;
 			indirect_offset_value = inst_log1_flagged->value2.indirect_offset_value;
 			tmp = output_variable(store, index, value_scope, value_id, indirect_offset_value, out_buf, write_offset);
-			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, "<= "
+			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, " <= "
 				);
 			*write_offset += tmp;
 			store = inst_log1_flagged->instruction.srcA.store;
@@ -843,45 +843,26 @@ int main(int argc, char *argv[])
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
-				if ((inst_log1->value3.value_scope) == 2) {
-					printf("local%04"PRIu64" = ", (inst_log1->value3.value_id));
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04"PRIu64" = ",
-						inst_log1->value3.value_id);
-					write_offset += tmp;
-				} else {
-					printf("param%04"PRIu64" = ", (inst_log1->value3.indirect_offset_value));
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04"PRIu64" = ",
-						inst_log1->value3.indirect_offset_value);
-					write_offset += tmp;
-				}
+
+				tmp = output_variable(instruction->dstA.store,
+					instruction->dstA.index,
+					inst_log1->value3.value_scope,
+					inst_log1->value3.value_id,
+					inst_log1->value3.indirect_offset_value,
+					out_buf, &write_offset);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " = ");
+				write_offset += tmp;
+
 				printf("\nstore=%d\n", instruction->srcA.store);
-				switch (instruction->srcA.store) {
-				case STORE_IMMED:
-					printf("%"PRIx64";\n", instruction->srcA.index);
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "0x%"PRIx64";\n",
-						instruction->srcA.index);
-					write_offset += tmp;
-					break;
-				case STORE_REG:
-					if ((inst_log1->value1.value_scope) == 2) {
-						printf("local%04"PRIu64";\n", (inst_log1->value1.value_id));
-						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04"PRIu64";\n",
-							inst_log1->value1.value_id);
-						write_offset += tmp;
-					} else {
-						printf("param%04"PRIu64";\n", (inst_log1->value1.indirect_offset_value));
-						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04"PRIu64";\n",
-							inst_log1->value1.indirect_offset_value);
-						write_offset += tmp;
-						printf("write_offset=%d\n", write_offset);
-					}
-					break;
-				case STORE_MEM:
-				case STORE_STACK:
-				default:
-					printf("Unhandled store1\n");
-					break;
-				}
+				tmp = output_variable(instruction->srcA.store,
+					instruction->srcA.index,
+					inst_log1->value1.value_scope,
+					inst_log1->value1.value_id,
+					inst_log1->value1.indirect_offset_value,
+					out_buf, &write_offset);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
+				write_offset += tmp;
+
 				break;
 			case ADD:
 				if (print_inst(instruction, n))
@@ -889,45 +870,23 @@ int main(int argc, char *argv[])
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
-				if ((inst_log1->value3.value_scope) == 2) {
-					printf("local%04"PRIu64" += ", (inst_log1->value3.value_id));
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04"PRIu64" += ",
-						inst_log1->value3.value_id);
-					write_offset += tmp;
-				} else {
-					printf("param%04"PRIu64" += ", (inst_log1->value3.indirect_offset_value));
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04"PRIu64" += ",
-						inst_log1->value3.indirect_offset_value);
-					write_offset += tmp;
-				}
+				tmp = output_variable(instruction->dstA.store,
+					instruction->dstA.index,
+					inst_log1->value3.value_scope,
+					inst_log1->value3.value_id,
+					inst_log1->value3.indirect_offset_value,
+					out_buf, &write_offset);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " += ");
+				write_offset += tmp;
 				printf("\nstore=%d\n", instruction->srcA.store);
-				switch (instruction->srcA.store) {
-				case STORE_IMMED:
-					printf("%"PRIx64";\n", instruction->srcA.index);
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "0x%"PRIx64";\n",
-						instruction->srcA.index);
-					write_offset += tmp;
-					break;
-				case STORE_REG:
-					if ((inst_log1->value1.value_scope) == 2) {
-						printf("local%04"PRIu64";\n", (inst_log1->value1.value_id));
-						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04"PRIu64";\n",
-							inst_log1->value1.value_id);
-						write_offset += tmp;
-					} else {
-						printf("param%04"PRIu64";\n", (inst_log1->value1.indirect_offset_value));
-						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04"PRIu64";\n",
-							inst_log1->value1.indirect_offset_value);
-						write_offset += tmp;
-						printf("write_offset=%d\n", write_offset);
-					}
-					break;
-				case STORE_MEM:
-				case STORE_STACK:
-				default:
-					printf("Unhandled store1\n");
-					break;
-				}
+				tmp = output_variable(instruction->srcA.store,
+					instruction->srcA.index,
+					inst_log1->value1.value_scope,
+					inst_log1->value1.value_id,
+					inst_log1->value1.indirect_offset_value,
+					out_buf, &write_offset);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
+				write_offset += tmp;
 				break;
 			case SUB:
 				if (print_inst(instruction, n))
@@ -935,45 +894,23 @@ int main(int argc, char *argv[])
 				printf("\t");
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
-				if ((inst_log1->value3.value_scope) == 2) {
-					printf("local%04"PRIu64" -= ", (inst_log1->value3.value_id));
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04"PRIu64" -= ",
-						inst_log1->value3.value_id);
-					write_offset += tmp;
-				} else {
-					printf("param%04"PRIu64" -= ", (inst_log1->value3.indirect_offset_value));
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04"PRIu64" -= ",
-						inst_log1->value3.indirect_offset_value);
-					write_offset += tmp;
-				}
+				tmp = output_variable(instruction->dstA.store,
+					instruction->dstA.index,
+					inst_log1->value3.value_scope,
+					inst_log1->value3.value_id,
+					inst_log1->value3.indirect_offset_value,
+					out_buf, &write_offset);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " -= ");
+				write_offset += tmp;
 				printf("\nstore=%d\n", instruction->srcA.store);
-				switch (instruction->srcA.store) {
-				case STORE_IMMED:
-					printf("%"PRIx64";\n", instruction->srcA.index);
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "0x%"PRIx64";\n",
-						instruction->srcA.index);
-					write_offset += tmp;
-					break;
-				case STORE_REG:
-					if ((inst_log1->value1.value_scope) == 2) {
-						printf("local%04"PRIu64";\n", (inst_log1->value1.value_id));
-						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "local%04"PRIu64";\n",
-							inst_log1->value1.value_id);
-						write_offset += tmp;
-					} else {
-						printf("param%04"PRIu64";\n", (inst_log1->value1.indirect_offset_value));
-						tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "param%04"PRIu64";\n",
-							inst_log1->value1.indirect_offset_value);
-						write_offset += tmp;
-						printf("write_offset=%d\n", write_offset);
-					}
-					break;
-				case STORE_MEM:
-				case STORE_STACK:
-				default:
-					printf("Unhandled store1\n");
-					break;
-				}
+				tmp = output_variable(instruction->srcA.store,
+					instruction->srcA.index,
+					inst_log1->value1.value_scope,
+					inst_log1->value1.value_id,
+					inst_log1->value1.indirect_offset_value,
+					out_buf, &write_offset);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
+				write_offset += tmp;
 				break;
 			case JMP:
 				printf("JMP reached XXXX\n");
@@ -981,10 +918,10 @@ int main(int argc, char *argv[])
 					return 1;
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
-				printf("goto label%04"PRIx32";\n}\n",
+				printf("goto label%04"PRIx32";\n",
 					inst_log1->next[0]);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-					"goto label%04"PRIx32";\n}\n",
+					"goto label%04"PRIx32";\n",
 					inst_log1->next[0]);
 				write_offset += tmp;
 				break;
@@ -1060,7 +997,7 @@ int main(int argc, char *argv[])
 			value = search_store(memory_reg,
 					4, 4);
 			printf("\treturn local%04"PRId64";\n}\n", value->value_id);
-			tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\treturn local%04"PRId64";\n}\n", value->value_id);
+			tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\treturn local%04"PRId64";\n", value->value_id);
 			write_offset += tmp;
 			write(fd, out_buf, write_offset);
 			write_offset = 0;
@@ -1076,6 +1013,11 @@ int main(int argc, char *argv[])
 		write(fd, out_buf, write_offset);
 		write_offset = 0;
 	}
+	tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+		"}\n");
+	write_offset += tmp;
+	write(fd, out_buf, write_offset);
+	write_offset = 0;
 	close(fd);
 	bf_test_close_file(handle);
 	for (n = 0; n < inst_size; n++) {
