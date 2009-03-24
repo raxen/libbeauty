@@ -1,6 +1,8 @@
 include $(top_srcdir)/misc/Makefile.common
 
-SUBDIRS = src misc
+SUBDIRS = src misc test
 
-EXTRA_DIST = libreverse.spec \
-	Makefile.include
+EXTRA_DIST = src/test
+
+#EXTRA_DIST = libreverse.spec \
+#	Makefile.include
