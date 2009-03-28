@@ -192,7 +192,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			instruction->flags = 0;
 		}
 		instruction->srcA.store = STORE_DIRECT;
-		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect = IND_MEM;
 		instruction->srcA.index = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
 		instructions->bytes_used+=4;
 		instruction->srcA.size = 4;
@@ -250,11 +250,11 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			instruction->srcA.index = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
 			instructions->bytes_used+=4;
 		}
-	instruction->dstA.store = STORE_REG;
-	instruction->dstA.indirect = IND_DIRECT;
-	instruction->dstA.index = REG_TMP1;
-	instruction->dstA.size = 4;
-	instructions->instruction_number++;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.index = REG_TMP1;
+		instruction->dstA.size = 4;
+		instructions->instruction_number++;
 	}
 	return 0;
 }
@@ -285,28 +285,26 @@ void dis_Ex_Gx(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
 }
 
 void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t *reg, int size) {
-  int half=0;
-  instruction_t *instruction;
+	int half=0;
+	int instruction_number = instructions->instruction_number;
+	instruction_t *instruction;
 
-  half = rmb(instructions, inst, reg);
-  instruction = &instructions->instruction[instructions->instruction_number];	
-  instruction->opcode = opcode;
-  instruction->flags = 1;
-  instruction->dstA.store = STORE_REG;
-  instruction->dstA.indirect = IND_DIRECT;
-  instruction->dstA.index = reg_table[*reg].offset;
-  instruction->dstA.size = size;
-  if (!half) {
-    instruction->dstA.indirect = IND_MEM;
-    instruction->dstA.store = STORE_REG;
-    if ((instructions->instruction[0].srcA.index >= 0x14) || 
-        (instructions->instruction[0].srcA.index <= 0x18) ) {
-      instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
-    }
-    instruction->srcA.index = REG_TMP1;
-    instruction->srcA.size = size;
-  }
-  instructions->instruction_number++;
+	half = rmb(instructions, inst, reg);
+	instruction = &instructions->instruction[instructions->instruction_number];	
+	instruction->opcode = opcode;
+	instruction->flags = 1;
+	instruction->dstA.store = STORE_REG;
+	instruction->dstA.indirect = IND_DIRECT;
+	instruction->dstA.index = reg_table[*reg].offset;
+	instruction->dstA.size = size;
+	if (!half) {
+		printf("!half\n");
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.store = STORE_REG;
+		instruction->srcA.index = REG_TMP1;
+		instruction->srcA.size = size;
+	}
+	instructions->instruction_number++;
 }
 
 void dis_Ex_Ix(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t *reg, int size) {
@@ -677,6 +675,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
 		instructions->bytes_used += 4;
 		instruction->srcA.size = 4;
+		/* FIXME: !half bad */
 		if (!half) {
     			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.store = STORE_REG;
@@ -702,6 +701,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->srcA.index = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
 		instructions->bytes_used++;
 		instruction->srcA.size = 4;
+		/* FIXME: !half bad */
 		if (!half) {
     			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.store = STORE_REG;
