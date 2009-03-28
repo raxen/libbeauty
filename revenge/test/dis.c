@@ -264,7 +264,7 @@ int reg_init(void)
 	memory_reg[0].value_type = 6;
 	memory_reg[0].ref_memory = 0;
 	memory_reg[0].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
+	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
 	memory_reg[0].value_scope = 0;
 	/* Each time a new value is assigned, this value_id increases */
 	memory_reg[0].value_id = 0;
@@ -292,7 +292,7 @@ int reg_init(void)
 	memory_reg[1].value_type = 6;
 	memory_reg[1].ref_memory = 0;
 	memory_reg[1].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
+	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
 	memory_reg[1].value_scope = 0;
 	/* Each time a new value is assigned, this value_id increases */
 	memory_reg[1].value_id = 0;
@@ -320,7 +320,7 @@ int reg_init(void)
 	memory_reg[2].value_type = 5;
 	memory_reg[2].ref_memory = 0;
 	memory_reg[2].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
+	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
 	memory_reg[2].value_scope = 3;
 	/* Each time a new value is assigned, this value_id increases */
 	memory_reg[2].value_id = 0;
@@ -352,7 +352,7 @@ int stack_init(void)
 	memory_stack[n].value_type = 5;
 	memory_stack[n].ref_memory = 0;
 	memory_stack[n].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
+	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
 	memory_stack[n].value_scope = 0;
 	/* Each time a new value is assigned, this value_id increases */
 	memory_stack[n].value_id = 0;
@@ -382,7 +382,7 @@ int stack_init(void)
 	memory_stack[n].value_type = 2;
 	memory_stack[n].ref_memory = 0;
 	memory_stack[n].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
+	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
 	memory_stack[n].value_scope = 0;
 	/* Each time a new value is assigned, this value_id increases */
 	memory_stack[n].value_id = 0;
@@ -595,13 +595,18 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 	return 0;
 }
 
-int output_variable(int store, uint64_t index, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, char *out_buf, int *write_offset) {
+int output_variable(int store, int indirect, uint64_t index, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, char *out_buf, int *write_offset) {
 	int tmp;
 	switch (store) {
-	case STORE_IMMED:
+	case STORE_DIRECT:
 		printf("%"PRIx64";\n", index);
-		tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "0x%"PRIx64,
-			index);
+		if (indirect == IND_MEM) {
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "mem%"PRIx64,
+				index);
+		} else {
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "0x%"PRIx64,
+				index);
+		}
 		*write_offset += tmp;
 		break;
 	case STORE_REG:
@@ -620,16 +625,14 @@ int output_variable(int store, uint64_t index, uint64_t value_scope, uint64_t va
 			printf("write_offset=%d\n", *write_offset);
 			break;
 		default:
-			printf("unknown%04"PRIx64";\n", (indirect_offset_value));
+			printf("unknown%04"PRIx64";\n", (value_scope));
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "unknown%04"PRIx64,
-				indirect_offset_value);
+				value_scope);
 			*write_offset += tmp;
 			printf("write_offset=%d\n", *write_offset);
 			break;
 		}
 		break;
-	case STORE_MEM:
-	case STORE_STACK:
 	default:
 		printf("Unhandled store1\n");
 		break;
@@ -643,6 +646,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 	int err = 0;
 	int tmp;
 	int store;
+	int indirect;
 	uint64_t index;
 	uint64_t value_scope;
 	uint64_t value_id;
@@ -655,20 +659,22 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, "(");
 			*write_offset += tmp;
 			store = inst_log1_flagged->instruction.dstA.store;
+			indirect = inst_log1_flagged->instruction.dstA.indirect;
 			index = inst_log1_flagged->instruction.dstA.index;
 			value_scope = inst_log1_flagged->value2.value_scope;
 			value_id = inst_log1_flagged->value2.value_id;
 			indirect_offset_value = inst_log1_flagged->value2.indirect_offset_value;
-			tmp = output_variable(store, index, value_scope, value_id, indirect_offset_value, out_buf, write_offset);
+			tmp = output_variable(store, indirect, index, value_scope, value_id, indirect_offset_value, out_buf, write_offset);
 			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, " <= "
 				);
 			*write_offset += tmp;
 			store = inst_log1_flagged->instruction.srcA.store;
+			indirect = inst_log1_flagged->instruction.srcA.indirect;
 			index = inst_log1_flagged->instruction.srcA.index;
 			value_scope = inst_log1_flagged->value1.value_scope;
 			value_id = inst_log1_flagged->value1.value_id;
 			indirect_offset_value = inst_log1_flagged->value1.indirect_offset_value;
-			tmp = output_variable(store, index, value_scope, value_id, indirect_offset_value, out_buf, write_offset);
+			tmp = output_variable(store, indirect, index, value_scope, value_id, indirect_offset_value, out_buf, write_offset);
 			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, ") ");
 			*write_offset += tmp;
 			break;
@@ -902,6 +908,7 @@ int main(int argc, char *argv[])
 				write_offset += tmp;
 
 				tmp = output_variable(instruction->dstA.store,
+					instruction->dstA.indirect,
 					instruction->dstA.index,
 					inst_log1->value3.value_scope,
 					inst_log1->value3.value_id,
@@ -912,6 +919,7 @@ int main(int argc, char *argv[])
 
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = output_variable(instruction->srcA.store,
+					instruction->srcA.indirect,
 					instruction->srcA.index,
 					inst_log1->value1.value_scope,
 					inst_log1->value1.value_id,
@@ -928,6 +936,7 @@ int main(int argc, char *argv[])
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
 				tmp = output_variable(instruction->dstA.store,
+					instruction->dstA.indirect,
 					instruction->dstA.index,
 					inst_log1->value3.value_scope,
 					inst_log1->value3.value_id,
@@ -937,6 +946,7 @@ int main(int argc, char *argv[])
 				write_offset += tmp;
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = output_variable(instruction->srcA.store,
+					instruction->srcA.indirect,
 					instruction->srcA.index,
 					inst_log1->value1.value_scope,
 					inst_log1->value1.value_id,
@@ -952,6 +962,7 @@ int main(int argc, char *argv[])
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
 				write_offset += tmp;
 				tmp = output_variable(instruction->dstA.store,
+					instruction->dstA.indirect,
 					instruction->dstA.index,
 					inst_log1->value3.value_scope,
 					inst_log1->value3.value_id,
@@ -961,6 +972,7 @@ int main(int argc, char *argv[])
 				write_offset += tmp;
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = output_variable(instruction->srcA.store,
+					instruction->srcA.indirect,
 					instruction->srcA.index,
 					inst_log1->value1.value_scope,
 					inst_log1->value1.value_id,

@@ -33,11 +33,12 @@
 
 typedef struct operand_s operand_t;
 struct operand_s {
-	/* 0 = value, 1 = reg, 2 = data_memory, 3 = stack_memory */
-	int store;
-	/* 0 = direct or immeadiate value. ( e.g. MOV AX,BX),
-	 * 1 = indirect or from_memory value. (e.g. MOV AX,[BX])
+	/* 0 = immeadiate value. ( e.g. MOV AX,0x0),
+	 * 1 = register value. (e.g. MOV AX,BX)
 	 */
+	int store;
+	/* 0 = direct, 1 = data_memory, 2 = stack_memory, 3 = in-out port */
+
 	/* For IF instruction, the value "indirect" contains
          * 0 = relative
          * 1 = absolute

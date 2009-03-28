@@ -28,10 +28,16 @@
 
 /* enums for store_table */
 enum {
-	STORE_IMMED,
+	STORE_DIRECT,
 	STORE_REG,
-	STORE_MEM,
-	STORE_STACK,
+};
+
+/* enums for indirect_table */
+enum {
+	IND_DIRECT,
+	IND_MEM,
+	IND_STACK,
+	IND_IO,
 };
 
 #define NOP 0
