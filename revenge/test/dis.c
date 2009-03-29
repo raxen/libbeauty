@@ -601,7 +601,7 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t value_scop
 	case STORE_DIRECT:
 		printf("%"PRIx64";\n", index);
 		if (indirect == IND_MEM) {
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "mem%"PRIx64,
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "data%"PRIx64,
 				index);
 		} else {
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "0x%"PRIx64,

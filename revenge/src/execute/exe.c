@@ -131,11 +131,11 @@ static int get_value_RTL_instruction(
 	if (info_id == 1) info = "dstA";
 	printf ("get_value_RTL_instruction:%p, %p, %i\n", source, destination, info_id);
 	switch (source->indirect) {
-	case 0:
+	case IND_DIRECT:
 		/* Not indirect */
 		printf("%s-direct\n", info);
 		switch (source->store) {
-		case STORE_IMMED:
+		case STORE_DIRECT:
 			/* i - immediate */
 			printf("%s-immediate\n", info);
 			printf("index=%"PRIx64", size=%d\n",
@@ -208,26 +208,26 @@ static int get_value_RTL_instruction(
 				destination->init_value +
 					destination->offset_value);
 			break;
-		case STORE_MEM:
-			/* m - memory */
-			printf("%s-memory-NOT\n", info);
-			break;
-		case STORE_STACK:
-			/* s - stack */
-			printf("%s-stack-NOT\n", info);
-			break;
+//		case STORE_MEM:
+//			/* m - memory */
+//			printf("%s-memory-NOT\n", info);
+//			break;
+//		case STORE_STACK:
+//			/* s - stack */
+//			printf("%s-stack-NOT\n", info);
+//			break;
 		default:
 			/* Should not get here */
 			printf("FAILED\n");
 			return 1;
 		}
 		break;
-	case 1:
+	case IND_MEM:
 		/* m - memory */
 		printf("%s-indirect-NOT\n", info);
 		printf("%s-memory-NOT\n", info);
 		break;
-	case 2:
+	case IND_STACK:
 		/* s - stack */
 		printf("%s-indirect\n", info);
 		printf("%s-stack\n", info);
@@ -314,11 +314,6 @@ static int get_value_RTL_instruction(
 			destination->init_value +
 				destination->offset_value);
 		break;
-	case 3:
-		/* p - ????? */
-		printf("%s-indirect-NOT\n", info);
-		printf("%s-ppp-NOT\n", info);
-		break;
 	default:
 		/* Should not get here */
 		printf("FAILED\n");
@@ -337,11 +332,11 @@ static int put_value_RTL_instruction(
 	/* Put result in dstA */
 	instruction = &inst->instruction;
 	switch (instruction->dstA.indirect) {
-	case 0:
+	case IND_DIRECT:
 		/* Not indirect */
 		printf("dstA-direct\n");
 		switch (instruction->dstA.store) {
-		case STORE_IMMED:
+		case STORE_DIRECT:
 			/* i - immediate */
 			printf("dstA-immediate-THIS SHOULD NEVER HAPPEN!\n");
 			break;
@@ -392,24 +387,18 @@ static int put_value_RTL_instruction(
 				value->offset_value,
 				value->init_value + value->offset_value);
 			break;
-		case STORE_MEM:
-			/* m - memory */
-			printf("dstA-memory saving result - NOT\n");
-			break;
-		case STORE_STACK:
-			/* s - stack */
-			printf("dstA-stack saving result - NOT\n");
-			break;
 		default:
 			/* Should not get here */
 			printf("FAILED\n");
 			return 1;
 		}
 		break;
-	case 1:
+	case IND_MEM:
 		/* m - memory */
+		printf("dstA-indirect-NOT\n");
+		printf("dstA-memory-NOT\n");
 		break;
-	case 2:
+	case IND_STACK:
 		/* s - stack */
 		printf("dstA-indirect\n");
 		printf("dstA-stack saving result\n");
@@ -467,9 +456,6 @@ static int put_value_RTL_instruction(
 			value_stack->init_value,
 			value_stack->offset_value,
 			value_stack->init_value + value_stack->offset_value);
-		break;
-	case 3:
-		/* p - ????? */
 		break;
 	default:
 		/* Should not get here */
