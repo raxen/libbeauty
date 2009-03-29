@@ -42,9 +42,30 @@
 #include <fcntl.h>
 #include "../input/instruction_decoder/ia32/dis.h"
 #include "../input/binary_file_decoder/libbfd/bfl.h"
+#include "../rev.h"
 #include "exe.h"
 #include <dis-asm.h>
 
+
+uint64_t read_data(struct self_s *self, uint64_t offset, int size) {
+	uint64_t tmp, tmp2, tmp3;
+	int n;
+
+	tmp = 0;
+	printf("read_data:offset = %"PRIx64"\n", offset);
+	for (n = (size - 1); n >= 0; n--) {
+		tmp2 = (tmp << 8);
+		tmp3 = self->data[n + offset];
+		printf("read_data:data = %"PRIx64"\n", tmp3);
+		tmp = tmp2 | tmp3;
+	}
+	printf("read_data:return = %"PRIx64"\n", tmp);
+	
+	return tmp;
+}
+
+	
+	
 struct memory_s *search_store(
 	struct memory_s *memory, uint64_t index, int size)
 {
@@ -119,13 +140,15 @@ exit_add_new_store:
 }
 
 static int get_value_RTL_instruction(
+	struct self_s *self,
 	operand_t *source,
 	struct memory_s *destination,
 	int info_id )
 {
 	struct memory_s *value;
-	struct memory_s *value_mem;
+	struct memory_s *value_data;
 	struct memory_s *value_stack;
+	uint64_t data_index;
 	char *info;
 	if (info_id == 0) info = "srcA";
 	if (info_id == 1) info = "dstA";
@@ -208,14 +231,6 @@ static int get_value_RTL_instruction(
 				destination->init_value +
 					destination->offset_value);
 			break;
-//		case STORE_MEM:
-//			/* m - memory */
-//			printf("%s-memory-NOT\n", info);
-//			break;
-//		case STORE_STACK:
-//			/* s - stack */
-//			printf("%s-stack-NOT\n", info);
-//			break;
 		default:
 			/* Should not get here */
 			printf("FAILED\n");
@@ -224,8 +239,86 @@ static int get_value_RTL_instruction(
 		break;
 	case IND_MEM:
 		/* m - memory */
-		printf("%s-indirect-NOT\n", info);
-		printf("%s-memory-NOT\n", info);
+		printf("%s-indirect\n", info);
+		printf("%s-memory\n", info);
+		printf("index=%"PRIx64", size=%d\n",
+				source->index,
+				source->size);
+		switch (source->store) {
+		case STORE_DIRECT:
+			data_index = source->index;
+			break;
+		case STORE_REG:
+			value = search_store(memory_reg,
+					source->index,
+					source->size);
+			printf("EXE value=%p\n", value);
+			/* FIXME what to do in NULL */
+			if (!value) {
+				value = add_new_store(memory_reg,
+						source->index,
+						source->size);
+				value->value_id = local_counter;
+				local_counter++;
+			}
+			if (!value) {
+				printf("GET CASE2:STORE_REG ERROR!\n");
+				break;
+			}
+			data_index = value->init_value + value->offset_value;
+			break;
+		default:
+			break;
+		}
+		value_data = search_store(memory_data,
+				data_index,
+				source->size);
+		printf("EXE2 value_data=%p, %p\n", value_data, &value_data);
+		if (!value_data) {
+			value_data = add_new_store(memory_data,
+				data_index,
+				source->size);
+			value_data->init_value = read_data(self, data_index, 4); 
+			printf("EXE3 value_data=%p, %p\n", value_data, &value_data);
+			printf("EXE3 value_data->init_value=%"PRIx64"\n", value_data->init_value);
+			/* Data */
+			value_data->value_scope = 3;
+			/* Param number */
+			value_data->value_id =
+				data_index;
+		}
+		printf("variable on data:0x%"PRIx64"\n",
+			data_index);
+		if (!value_data) {
+			printf("GET CASE2:STORE_REG2 ERROR!\n");
+			break;
+		}
+		destination->start_address = 0;
+		destination->length = value_data->length;
+		destination->init_value_type = value_data->init_value_type;
+		destination->init_value = value_data->init_value;
+		destination->offset_value = value_data->offset_value;
+		destination->indirect_init_value = value->init_value;
+		destination->indirect_offset_value = value->offset_value;
+		destination->value_type = value_data->value_type;
+		destination->ref_memory =
+			value_data->ref_memory;
+		destination->ref_log =
+			value_data->ref_log;
+		destination->value_scope = value_data->value_scope;
+		/* counter */
+		destination->value_id = value_data->value_id;
+		printf("%s: scope=%d, id=%"PRIu64"\n",
+			info,
+			destination->value_scope,
+			destination->value_id);
+		/* 1 - Entry Used */
+		destination->valid = 1;
+		printf("value=0x%llx+0x%llx=0x%llx\n",
+			destination->init_value,
+			destination->offset_value,
+			destination->init_value +
+				destination->offset_value);
 		break;
 	case IND_STACK:
 		/* s - stack */
@@ -322,13 +415,16 @@ static int get_value_RTL_instruction(
 	return 0;
 }
 
-static int put_value_RTL_instruction(
+static int put_value_RTL_instruction( 
+	struct self_s *self,
 	struct inst_log_entry_s *inst)
 {
 	struct instruction_s *instruction;
 	struct memory_s *value;
 	struct memory_s *value_mem;
+	struct memory_s *value_data;
 	struct memory_s *value_stack;
+	uint64_t data_index;
 	/* Put result in dstA */
 	instruction = &inst->instruction;
 	switch (instruction->dstA.indirect) {
@@ -395,8 +491,73 @@ static int put_value_RTL_instruction(
 		break;
 	case IND_MEM:
 		/* m - memory */
+		/* FIXME TODO */
 		printf("dstA-indirect-NOT\n");
 		printf("dstA-memory-NOT\n");
+		printf("index=%"PRIx64", size=%d\n",
+				instruction->dstA.index,
+				instruction->dstA.size);
+		switch (instruction->dstA.store) {
+		case STORE_DIRECT:
+			data_index = instruction->dstA.index;
+			break;
+		case STORE_REG:
+			value = search_store(memory_reg,
+					instruction->dstA.index,
+					instruction->dstA.size);
+			printf("EXE value=%p\n", value);
+			/* FIXME what to do in NULL */
+			if (!value) {
+				value = add_new_store(memory_reg,
+						instruction->dstA.index,
+						instruction->dstA.size);
+				value->value_id = local_counter;
+				local_counter++;
+			}
+			if (!value) {
+				printf("GET CASE2:STORE_REG ERROR!\n");
+				break;
+			}
+			data_index = value->init_value + value->offset_value;
+			break;
+		default:
+			break;
+		}
+		value_data = search_store(memory_data,
+				data_index,
+				instruction->dstA.size);
+		printf("EXE2 value_stack=%p\n", value_stack);
+		if (!value_data) {
+			value_data = add_new_store(memory_data,
+				data_index,
+				instruction->dstA.size);
+		}
+		if (!value_data) {
+			printf("PUT CASE2:STORE_REG2 ERROR!\n");
+			break;
+		}
+		/* FIXME: these should always be the same */
+		/* value_data->length = inst->value3.length; */
+		value_data->init_value_type = inst->value3.init_value_type;
+		value_data->init_value = inst->value3.init_value;
+		value_data->offset_value = inst->value3.offset_value;
+		value_data->value_type = inst->value3.value_type;
+		value_data->ref_memory =
+			inst->value3.ref_memory;
+		value_data->ref_log =
+			inst->value3.ref_log;
+		value_data->value_scope = inst->value3.value_scope;
+		/* 1 - Ids */
+		value_data->value_id = inst->value3.value_id;
+		printf("PUT: scope=%d, id=%"PRIu64"\n",
+			value_data->value_scope,
+			value_data->value_id);
+		/* 1 - Entry Used */
+		value_data->valid = 1;
+		printf("value_data=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
+			value_data->init_value,
+			value_data->offset_value,
+			value_data->init_value + value_data->offset_value);
 		break;
 	case IND_STACK:
 		/* s - stack */
@@ -488,29 +649,29 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 	switch (instruction->opcode) {
 	case NOP:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("NOP\n");
-		put_value_RTL_instruction(inst);
+		put_value_RTL_instruction(self, inst);
 		break;
 	case CMP:
 		/* Currently, do the same as NOP */
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("CMP\n");
 		/* A CMP does not save any values */
-		//put_value_RTL_instruction(inst);
+		//put_value_RTL_instruction(self, inst);
 		break;
 	case MOV:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("MOV\n");
 		inst->value3.start_address = inst->value1.start_address;
@@ -548,13 +709,13 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 				inst->value3.offset_value,
 				inst->value3.init_value +
 					inst->value3.offset_value);
-		put_value_RTL_instruction(inst);
+		put_value_RTL_instruction(self, inst);
 		break;
 	case ADD:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("ADD\n");
 		inst->value3.start_address = inst->value2.start_address;
@@ -585,22 +746,22 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 				inst->value3.offset_value,
 				inst->value3.init_value +
 					inst->value3.offset_value);
-		put_value_RTL_instruction(inst);
+		put_value_RTL_instruction(self, inst);
 		break;
 	case ADC:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("ADC\n");
-		put_value_RTL_instruction(inst);
+		put_value_RTL_instruction(self, inst);
 		break;
 	case SUB:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("SUB\n");
 		inst->value3.start_address = inst->value2.start_address;
@@ -624,13 +785,13 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 				inst->value3.offset_value,
 				inst->value3.init_value +
 					inst->value3.offset_value);
-		put_value_RTL_instruction(inst);
+		put_value_RTL_instruction(self, inst);
 		break;
 	case IF:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("IF\n");
 		/* Create absolute JMP value in value3 */
@@ -657,9 +818,9 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		break;
 	case JMP:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction( &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		//ret = get_value_RTL_instruction( &(instruction->dstA), &(inst->value2), 1); 
+		//ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("JMP\n");
 		/* Create absolute JMP value in value3 */

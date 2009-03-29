@@ -299,11 +299,22 @@ void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
 	instruction->dstA.size = size;
 	if (!half) {
 		printf("!half\n");
-		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect = IND_MEM;
 		instruction->srcA.store = STORE_REG;
+		if ((instructions->instruction[0].srcA.index >= 0x14) || 
+		    (instructions->instruction[0].srcA.index <= 0x18) ) {
+			instruction->srcA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
+		}
 		instruction->srcA.index = REG_TMP1;
 		instruction->srcA.size = size;
 	}
+//	if (!half) {
+//		printf("!half\n");
+//		instruction->srcA.indirect = IND_DIRECT;
+//		instruction->srcA.store = STORE_REG;
+//		instruction->srcA.index = REG_TMP1;
+//		instruction->srcA.size = size;
+//	}
 	instructions->instruction_number++;
 }
 

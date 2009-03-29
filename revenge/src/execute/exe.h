@@ -64,7 +64,6 @@ extern char *dis_flags_table[];
 extern uint64_t inst_log;      /* Pointer to the current free instruction log entry. */
 extern char out_buf[1024];
 extern int local_counter;
-extern void *self;
 
 /* For the .data segment. I.e. Static data */
 extern struct memory_s memory_data[1000];

@@ -20,6 +20,8 @@
  *   Copyright (C) 2004 James Courtier-Dutton James@superbug.co.uk
  * 10-11-2007 Updates.
  *   Copyright (C) 2007 James Courtier-Dutton James@superbug.co.uk
+ * 29-03-2009 Updates.
+ *   Copyright (C) 2009 James Courtier-Dutton James@superbug.co.uk
  */
 
 /* Intel ia32 instruction format: -
@@ -43,6 +45,7 @@
 #include <revenge/dis.h>
 #include <revenge/bfl.h>
 #include <revenge/exe.h>
+#include "../src/rev.h"
 #include <dis-asm.h>
 
 #define EIP_START 0x40000000
@@ -59,7 +62,8 @@ char *dis_flags_table[] = { " ", "f" };
 uint64_t inst_log = 1;	/* Pointer to the current free instruction log entry. */
 char out_buf[1024];
 int local_counter = 1;
-void *self = NULL;
+struct self_s *self = NULL;
+
 
 char *condition_table[] = {
 	"Unknown_0",
@@ -392,33 +396,33 @@ int stack_init(void)
 #endif
 }
 
-int print_mem_reg(int location) {
+int print_mem(struct memory_s *memory, int location) {
 	printf("start_address:0x%"PRIx64"\n",
-		memory_reg[location].start_address);
+		memory[location].start_address);
 	printf("length:0x%x\n",
-		memory_reg[location].length);
+		memory[location].length);
 	printf("init_value_type:0x%x\n",
-		memory_reg[location].init_value_type);
+		memory[location].init_value_type);
 	printf("init:0x%"PRIx64"\n",
-		memory_reg[location].init_value);
+		memory[location].init_value);
 	printf("offset:0x%"PRIx64"\n",
-		memory_reg[location].offset_value);
+		memory[location].offset_value);
 	printf("indirect_init:0x%"PRIx64"\n",
-		memory_reg[location].indirect_init_value);
+		memory[location].indirect_init_value);
 	printf("indirect_offset:0x%"PRIx64"\n",
-		memory_reg[location].indirect_offset_value);
+		memory[location].indirect_offset_value);
 	printf("value_type:0x%x\n",
-		memory_reg[location].value_type);
+		memory[location].value_type);
 	printf("ref_memory:0x%"PRIx32"\n",
-		memory_reg[location].ref_memory);
+		memory[location].ref_memory);
 	printf("ref_log:0x%"PRIx32"\n",
-		memory_reg[location].ref_log);
+		memory[location].ref_log);
 	printf("value_scope:0x%x\n",
-		memory_reg[location].value_scope);
+		memory[location].value_scope);
 	printf("value_id:0x%"PRIx64"\n",
-		memory_reg[location].value_id);
+		memory[location].value_id);
 	printf("valid:0x%"PRIx64"\n",
-		memory_reg[location].valid);
+		memory[location].valid);
 	return 0;
 }
 
@@ -518,9 +522,9 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 			inst_exe_prev = &inst_log_entry[inst_log_prev];
 			inst_exe = &inst_log_entry[inst_log];
 			memcpy(&(inst_exe->instruction), instruction, sizeof(struct instruction_s));
-	print_mem_reg(1);
+	print_mem(memory_reg, 1);
 			err = execute_instruction(self, inst_exe);
-	print_mem_reg(1);
+	print_mem(memory_reg, 1);
 			if (err) {
 				printf("execute_intruction failed err=%d\n", err);
 				return err;
@@ -719,7 +723,7 @@ int main(int argc, char *argv[])
 	reg_init();
 	stack_init();
 
-	print_mem_reg(1);
+	print_mem(memory_reg, 1);
 
 	expression = malloc(1000); /* Buffer for if expressions */
 
@@ -750,6 +754,10 @@ int main(int argc, char *argv[])
 
 	data_size = bf_get_data_size(handle);
 	data = malloc(data_size);
+	self = malloc(sizeof *self);
+	printf("sizeof struct self_s = %d\n", sizeof *self);
+	self->data_size = data_size;
+	self->data = data;
 	bf_copy_data_section(handle, data, data_size);
 	printf("dis:.data Data at %p, size=%"PRId32"\n", data, data_size);
 	for (n = 0; n < data_size; n++) {
@@ -849,6 +857,22 @@ int main(int argc, char *argv[])
 	printf("fd=%d\n", fd);
 	printf("writing out to file\n");
 	/* Output function name */
+	printf("\nPRINTING MEMORY_DATA\n");
+	for (n = 0; n < 4; n++) {
+		if (memory_data[n].valid) {
+			printf("int data%"PRIx64" = 0x%"PRIx64"\n",
+				memory_data[n].start_address,
+				memory_data[n].init_value);
+			tmp = snprintf(out_buf, 1024, "int data%"PRIx64" = 0x%"PRIx64"\n",
+				memory_data[n].start_address,
+				memory_data[n].init_value);
+			write(fd, out_buf, tmp);
+		}
+	}
+	tmp = snprintf(out_buf, 1024, "\n");
+	write(fd, out_buf, tmp);
+	printf("\n");
+
 	for (l = 0; l < handle->symtab_sz; l++) {
 		if (handle->symtab[l]->flags == 0x12) {
 			printf("int %s()\n{\n", handle->symtab[l]->name);
@@ -1088,12 +1112,16 @@ int main(int argc, char *argv[])
 	write(fd, out_buf, write_offset);
 	write_offset = 0;
 	close(fd);
-	print_mem_reg(1);
+	print_mem(memory_reg, 1);
 	bf_test_close_file(handle);
 	for (n = 0; n < inst_size; n++) {
 		printf("0x%04x: %d\n", n, memory_used[n]);
 	}
-	printf("\n");
+	printf("\nPRINTING MEMORY_DATA\n");
+	for (n = 0; n < 4; n++) {
+		print_mem(memory_data, n);
+		printf("\n");
+	}
 	return 0;
 }
 
