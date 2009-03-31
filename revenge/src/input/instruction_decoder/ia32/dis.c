@@ -308,13 +308,6 @@ void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
 		instruction->srcA.index = REG_TMP1;
 		instruction->srcA.size = size;
 	}
-//	if (!half) {
-//		printf("!half\n");
-//		instruction->srcA.indirect = IND_DIRECT;
-//		instruction->srcA.store = STORE_REG;
-//		instruction->srcA.index = REG_TMP1;
-//		instruction->srcA.size = size;
-//	}
 	instructions->instruction_number++;
 }
 
