@@ -522,9 +522,7 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 			inst_exe_prev = &inst_log_entry[inst_log_prev];
 			inst_exe = &inst_log_entry[inst_log];
 			memcpy(&(inst_exe->instruction), instruction, sizeof(struct instruction_s));
-	print_mem(memory_reg, 1);
 			err = execute_instruction(self, inst_exe);
-	print_mem(memory_reg, 1);
 			if (err) {
 				printf("execute_intruction failed err=%d\n", err);
 				return err;

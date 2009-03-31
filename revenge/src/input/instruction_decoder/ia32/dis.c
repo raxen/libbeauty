@@ -192,7 +192,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			instruction->flags = 0;
 		}
 		instruction->srcA.store = STORE_DIRECT;
-		instruction->srcA.indirect = IND_MEM;
+		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.index = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
 		instructions->bytes_used+=4;
 		instruction->srcA.size = 4;
@@ -274,7 +274,7 @@ void dis_Ex_Gx(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
 	if (!half) {
 		instruction->dstA.indirect = IND_MEM;
 		instruction->dstA.store = STORE_REG;
-		if ((instructions->instruction[0].srcA.index >= 0x14) || 
+		if ((instructions->instruction[0].srcA.index >= 0x14) && 
 		    (instructions->instruction[0].srcA.index <= 0x18) ) {
 			instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 		}
@@ -301,7 +301,7 @@ void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
 		printf("!half\n");
 		instruction->srcA.indirect = IND_MEM;
 		instruction->srcA.store = STORE_REG;
-		if ((instructions->instruction[0].srcA.index >= 0x14) || 
+		if ((instructions->instruction[0].srcA.index >= 0x14) && 
 		    (instructions->instruction[0].srcA.index <= 0x18) ) {
 			instruction->srcA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 		}
@@ -329,7 +329,7 @@ void dis_Ex_Ix(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
   if (!half) {
     instruction->dstA.indirect = IND_MEM;
     instruction->dstA.store = STORE_REG;
-    if ((instructions->instruction[0].srcA.index >= 0x14) || 
+    if ((instructions->instruction[0].srcA.index >= 0x14) && 
         (instructions->instruction[0].srcA.index <= 0x18) ) {
       instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
     }
@@ -683,7 +683,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		if (!half) {
     			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.store = STORE_REG;
-			if ((instructions->instruction[0].srcA.index >= 0x14) || 
+			if ((instructions->instruction[0].srcA.index >= 0x14) && 
 			    (instructions->instruction[0].srcA.index <= 0x18) ) {
 				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 			}
@@ -709,7 +709,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		if (!half) {
     			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.store = STORE_REG;
-			if ((instructions->instruction[0].srcA.index >= 0x14) || 
+			if ((instructions->instruction[0].srcA.index >= 0x14) && 
 			    (instructions->instruction[0].srcA.index <= 0x18) ) {
 				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 			}
@@ -741,7 +741,36 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x8b:
 		/* MOV Gv,Ev */
 		/* FIXME: Cannot handle 8b 15 00 00 00 00 */
-		dis_Gx_Ex(MOV, instructions, inst, &reg, 4);
+		/* FIXME: Cannot handle 8b 45 fc */
+		//dis_Gx_Ex(MOV, instructions, inst, &reg, 4);
+		half = rmb(instructions, inst, &reg);
+		instruction = &instructions->instruction[instructions->instruction_number];	
+		instruction->opcode = MOV;
+		instruction->flags = 0;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.index = reg_table[reg].offset;
+		instruction->dstA.size = 4;
+		if (!half) {
+			printf("!half number=%d\n", instructions->instruction_number);
+			printf("inst[0].srcA.index = %"PRIx64"\n",
+				instructions->instruction[0].srcA.index);
+			instruction->srcA.indirect = IND_MEM;
+			instruction->srcA.store = STORE_REG;
+			if ((instructions->instruction[0].srcA.index >= 0x14) && 
+			    (instructions->instruction[0].srcA.index <= 0x18) ) {
+				instruction->srcA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
+			}
+			instruction->srcA.index = REG_TMP1;
+			instruction->srcA.size = 4;
+		}
+		//if (!half) {
+		//	instruction->srcA.store = STORE_REG;
+		//	instruction->srcA.indirect = IND_DIRECT;
+		//	instruction->srcA.index = REG_TMP1;
+		//	instruction->srcA.size = 4;
+		//}
+		instructions->instruction_number++;
 		result = 1;
 		break;
 	case 0x8c:												/* Mov Ew,Sw */
@@ -891,7 +920,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		if (!half) {
     			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.store = STORE_REG;
-			if ((instructions->instruction[0].srcA.index >= 0x14) || 
+			if ((instructions->instruction[0].srcA.index >= 0x14) && 
 			    (instructions->instruction[0].srcA.index <= 0x18) ) {
 				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 			}
@@ -1192,7 +1221,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->srcA.size = 4;
 			instruction->dstA.store = STORE_REG;
 			instruction->dstA.indirect = IND_MEM;
-			if ((instructions->instruction[0].srcA.index >= 0x14) || 
+			if ((instructions->instruction[0].srcA.index >= 0x14) && 
 			    (instructions->instruction[0].srcA.index <= 0x18) ) {
 			  instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 			}
@@ -1210,7 +1239,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instruction->srcA.size = 4;
 			instruction->dstA.store = STORE_REG;
 			instruction->dstA.indirect = IND_MEM;
-			if ((instructions->instruction[0].srcA.index >= 0x14) || 
+			if ((instructions->instruction[0].srcA.index >= 0x14) && 
 			    (instructions->instruction[0].srcA.index <= 0x18) ) {
 			  instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 			}
