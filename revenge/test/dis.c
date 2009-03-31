@@ -599,9 +599,17 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 
 int output_variable(int store, int indirect, uint64_t index, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, char *out_buf, int *write_offset) {
 	int tmp;
+	/* FIXME: May handle by using first switch as switch (indirect) */
 	switch (store) {
 	case STORE_DIRECT:
 		printf("%"PRIx64";\n", index);
+		/* FIXME: Handle the case of an immediate value being &data */
+		/* but it is very difficult to know if the value is a pointer (&data) */
+		/* or an offset (data[x]) */
+		/* need to use the relocation table to find out */
+		/* no relocation table entry == offset */
+		/* relocation table entry == pointer */
+		/* this info should be gathered at disassembly point */
 		if (indirect == IND_MEM) {
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "data%"PRIx64,
 				index);
@@ -613,21 +621,34 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t value_scop
 		break;
 	case STORE_REG:
 		switch (value_scope) {
-		case 2:
-			printf("local%04"PRIx64";\n", (value_id));
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "local%04"PRIx64,
-				value_id);
-			*write_offset += tmp;
-			break;
 		case 1:
+			/* FIXME: Should this be param or instead param_reg, param_stack */
 			printf("param%04"PRIx64";\n", (indirect_offset_value));
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "param%04"PRIx64,
 				indirect_offset_value);
 			*write_offset += tmp;
 			printf("write_offset=%d\n", *write_offset);
 			break;
+		case 2:
+			/* FIXME: Should this be local or instead local_reg, local_stack */
+			printf("local%04"PRIx64";\n", (value_id));
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "local%04"PRIx64,
+				value_id);
+			*write_offset += tmp;
+			break;
+		case 3: /* Data */
+			/* FIXME: introduce indirect_value_id and indirect_value_scope */
+			/* in order to resolve somewhere */
+			/* It will always be a register, and therefore can re-use the
+			/* value_id to identify it. */
+			/* It will always be a local and not a param */
+			printf("*data_somewhere%04"PRIx64";\n", (indirect_offset_value));
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "*data_somewhere%04"PRIx64,
+				indirect_offset_value);
+			*write_offset += tmp;
+			break;
 		default:
-			printf("unknown%04"PRIx64";\n", (value_scope));
+			printf("unknown value scope: %04"PRIx64";\n", (value_scope));
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "unknown%04"PRIx64,
 				value_scope);
 			*write_offset += tmp;
