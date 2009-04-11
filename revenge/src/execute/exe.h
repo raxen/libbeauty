@@ -18,6 +18,8 @@ struct memory_s {
 	uint64_t indirect_init_value;
 	/* Indirect offset */
 	uint64_t indirect_offset_value;
+	/* Special case of a value_id before dereferencing */
+	uint64_t indirect_value_id;
 	/* 0 - unknown,
 	 * 1 - unsigned,
 	 * 2 - signed,

@@ -29,22 +29,35 @@
 #include "dis.h"
 
 /* Little endian */
-uint32_t getbyte(uint8_t *address) {
+uint32_t getbyte(uint8_t *base_address, uint64_t offset) {
 	uint32_t result;
-	result=*address;
+	result=base_address[offset];
 	printf(" 0x%x\n",result);
 	return result;
 }
 
-uint32_t getdword(uint8_t *address) {
+uint32_t getdword(uint8_t *base_address, uint64_t offset) {
 	uint32_t result;
-	result=getbyte(address++);
-	result=result | getbyte(address++) << 8;
-	result=result | getbyte(address++) << 16;
-	result=result | getbyte(address++) << 24;
+	result=getbyte(base_address, offset);
+	offset++;
+	result=result | getbyte(base_address, offset) << 8;
+	offset++;
+	result=result | getbyte(base_address, offset) << 16;
+	offset++;
+	result=result | getbyte(base_address, offset) << 24;
+	offset++;
 	return result;
 }
 
+uint32_t relocated_code(struct rev_eng *handle, uint8_t *base_address, uint64_t offset, uint64_t size) {
+	int n;
+	for (n = 0; n < handle->reloc_table_code_sz; n++) {
+		if (handle->reloc_table_code[n].address == offset) {
+			return 1;
+		}
+	}
+	return 0;
+}
 
 void split_ModRM(uint8_t byte, uint8_t *reg,  uint8_t *reg_mem, uint8_t *mod) {
   *reg = (byte >> 3) & 0x7; //bits 3-5
@@ -69,7 +82,7 @@ void split_SIB(uint8_t byte, uint8_t *mul,  uint8_t *index, uint8_t *base) {
     *base);
 }
 
-int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) {
+int rmb(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset, uint8_t *return_reg) {
 	uint8_t reg;
 	uint8_t reg_mem;
 	uint8_t mod;
@@ -81,7 +94,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 	 * inserts an RTL instructions before calling here
 	 */
 	int number = instructions->instruction_number;
-	split_ModRM(getbyte(&bytes_base[instructions->bytes_used]),&reg, &reg_mem, &mod);
+	split_ModRM(getbyte(base_address, offset + instructions->bytes_used), &reg, &reg_mem, &mod);
 	instructions->bytes_used++;
 	*return_reg = reg;
 	if (mod == 3) {  // Special case Reg to Reg transfer
@@ -101,7 +114,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 	}
 	/* FIXME: Case where mod == 3 is not handled yet */
 	if ((reg_mem == 4) && (mod != 3)) {
-		split_SIB(getbyte(&bytes_base[instructions->bytes_used]),&mul, &index, &base);
+		split_SIB(getbyte(base_address, offset + instructions->bytes_used), &mul, &index, &base);
 		instructions->bytes_used++;
 		/* FIXME: index == 4 not explicitly handled */
 		if (index != 4) {
@@ -148,7 +161,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			if (mod==0) {
 				instruction->srcA.store = STORE_DIRECT;
 				instruction->srcA.indirect = IND_DIRECT;
-				instruction->srcA.index = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
+				instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 				instructions->bytes_used+=4;
 				instruction->srcA.size = 4;
 			} else {
@@ -193,7 +206,11 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 		}
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
-		instruction->srcA.index = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
+		tmp = relocated_code(handle, base_address, offset + instructions->bytes_used, 4);
+		if (tmp) {
+			instruction->srcA.relocated = 1;
+		}
 		instructions->bytes_used+=4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = STORE_REG;
@@ -235,7 +252,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 		if (mod == 1) {
 			printf("Got here4 size = 1\n");
 			instruction->srcA.size = 1;
-			instruction->srcA.index = getbyte(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
+			instruction->srcA.index = getbyte(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 			/* if the offset is negative,
 			 * replace ADD with SUB */
 			if ((instruction->opcode == ADD) &&
@@ -247,7 +264,7 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 			instructions->bytes_used++;
 		} else { /* mod == 2 */
 			instruction->srcA.size = 4;
-			instruction->srcA.index = getdword(&bytes_base[instructions->bytes_used]); // Means get from rest of instruction
+			instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 			instructions->bytes_used+=4;
 		}
 		instruction->dstA.store = STORE_REG;
@@ -259,11 +276,11 @@ int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg) 
 	return 0;
 }
 
-void dis_Ex_Gx(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t *reg, int size) {
+void dis_Ex_Gx(struct rev_eng *handle, int opcode, instructions_t *instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half;
 	instruction_t *instruction;
 
-	half = rmb(instructions, inst, reg);
+	half = rmb(handle, instructions, base_address, offset, reg);
 	instruction = &instructions->instruction[instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
@@ -284,12 +301,12 @@ void dis_Ex_Gx(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
 	instructions->instruction_number++;
 }
 
-void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t *reg, int size) {
+void dis_Gx_Ex(struct rev_eng *handle, int opcode, instructions_t *instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half=0;
 	int instruction_number = instructions->instruction_number;
 	instruction_t *instruction;
 
-	half = rmb(instructions, inst, reg);
+	half = rmb(handle, instructions, base_address, offset, reg);
 	instruction = &instructions->instruction[instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
@@ -311,18 +328,18 @@ void dis_Gx_Ex(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
 	instructions->instruction_number++;
 }
 
-void dis_Ex_Ix(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t *reg, int size) {
+void dis_Ex_Ix(struct rev_eng *handle, int opcode, instructions_t *instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
   int half;
   instruction_t *instruction;
 
-  half = rmb(instructions, inst, reg);
+  half = rmb(handle, instructions, base_address, offset, reg);
   instruction = &instructions->instruction[instructions->instruction_number];	
   instruction->opcode = opcode;
   instruction->flags = 1;
   instruction->srcA.store = STORE_DIRECT;
   instruction->srcA.indirect = IND_DIRECT;
   if (4 == size) {
-	instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+	instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 	instructions->bytes_used+=4;
   } else printf("FIXME:JCD1\n");
   instruction->srcA.size = size;
@@ -339,31 +356,31 @@ void dis_Ex_Ix(int opcode, instructions_t *instructions, uint8_t *inst, uint8_t 
   instructions->instruction_number++;
 }
 
-int disassemble(instructions_t *instructions, uint8_t *inst) {
+int disassemble(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset) {
 	uint8_t reg = 0;
 	int half = 0;
 	int result = 0;
 	int8_t relative = 0;
 	instruction_t *instruction;
-	printf("inst[0]=0x%x\n",inst[0]);
+	printf("inst[0]=0x%x\n",base_address[offset + 0]);
 	instructions->instruction[instructions->instruction_number].opcode = NOP; /* Un-supported OPCODE */
 	instructions->instruction[instructions->instruction_number].flags = 0; /* No flags effected */
 	
-	switch(inst[instructions->bytes_used++]) {
+	switch(base_address[offset + instructions->bytes_used++]) {
 	case 0x00:												/* ADD Eb,Gb */
-		dis_Ex_Gx(ADD, instructions, inst, &reg, 1);
+		dis_Ex_Gx(handle, ADD, instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x01:												/* ADD Ev,Gv */
-		dis_Ex_Gx(ADD, instructions, inst, &reg, 4);
+		dis_Ex_Gx(handle, ADD, instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x02:												/* ADD Gb,Eb */
-		dis_Gx_Ex(ADD, instructions, inst, &reg, 1);
+		dis_Gx_Ex(handle, ADD, instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x03:												/* ADD Gv,Ev */
-		dis_Gx_Ex(ADD, instructions, inst, &reg, 4);
+		dis_Gx_Ex(handle, ADD, instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x04:												/* ADD AL,Ib */
@@ -374,7 +391,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
-		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 		instructions->bytes_used+=4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = STORE_REG;
@@ -391,19 +408,19 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
                 /* POP -> ES=[SP]; SP=SP+4 (+2 for word); */
 		break;
 	case 0x08:												/* OR Eb,Gb */
-		dis_Ex_Gx(OR, instructions, inst, &reg, 1);
+		dis_Ex_Gx(handle, OR, instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x09:												/* OR Ev,Gv */
-		dis_Ex_Gx(OR, instructions, inst, &reg, 4);
+		dis_Ex_Gx(handle, OR, instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x0a:												/* OR Gb,Eb */
-		dis_Gx_Ex(OR, instructions, inst, &reg, 1);
+		dis_Gx_Ex(handle, OR, instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x0b:												/* OR Gv,Ev */
-		dis_Gx_Ex(OR, instructions, inst, &reg, 4);
+		dis_Gx_Ex(handle, OR, instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x0c:												/* OR AL,Ib */
@@ -413,7 +430,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x0e:												/* PUSH CS */		
 		break;
 	case 0x0f:												/* 2 byte opcodes*/
-		prefix_0f(instructions, inst);
+		prefix_0f(handle, instructions, base_address, offset);
 		break;
 	case 0x10:												/* ADC Eb,Gb */
 		break;
@@ -464,19 +481,19 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x27:												/* DAA */
 		break;
 	case 0x28:												/* SUB Eb,Gb */
-		dis_Ex_Gx(SUB, instructions, inst, &reg, 1);
+		dis_Ex_Gx(handle, SUB, instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x29:												/* SUB Ev,Gv */
-		dis_Ex_Gx(SUB, instructions, inst, &reg, 4);
+		dis_Ex_Gx(handle, SUB, instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x2a:												/* SUB Gb,Eb */
-		dis_Gx_Ex(SUB, instructions, inst, &reg, 1);
+		dis_Gx_Ex(handle, SUB, instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x2b:												/* SUB Gv,Ev */
-		dis_Gx_Ex(SUB, instructions, inst, &reg, 4);
+		dis_Gx_Ex(handle, SUB, instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x2c:												/* SUB AL,Ib */
@@ -487,7 +504,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
-		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 		instructions->bytes_used+=4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = STORE_REG;
@@ -562,7 +579,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = STORE_REG;
 		instruction->srcA.indirect = IND_DIRECT;
-		instruction->srcA.index = reg_table[inst[0] & 0x7].offset;
+		instruction->srcA.index = reg_table[base_address[offset + 0] & 0x7].offset;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = IND_STACK;
@@ -586,7 +603,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = IND_DIRECT;
-		instruction->dstA.index = reg_table[inst[0] & 0x7].offset;
+		instruction->dstA.index = reg_table[base_address[offset + 0] & 0x7].offset;
 		instruction->dstA.size = 4;
 		instruction->srcA.store = STORE_REG;
 		instruction->srcA.indirect = IND_STACK;
@@ -653,7 +670,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->dstA.store = STORE_DIRECT;
 		instruction->dstA.indirect = IND_DIRECT;
 		/* Means get from rest of instruction */
-		relative = getbyte(&inst[instructions->bytes_used]);
+		relative = getbyte(base_address, offset + instructions->bytes_used);
 		/* extends byte to int64_t */
 		instruction->dstA.index = relative;
 		instructions->bytes_used+=1;
@@ -669,14 +686,14 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x80:												/* Grpl Eb,Ib */
 		break;
 	case 0x81:												/* Grpl Ev,Iv */
-		half = rmb(instructions, inst, &reg);
+		half = rmb(handle, instructions, base_address, offset, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];
 		instruction->opcode = immed_table[reg];
 		instruction->flags = 1;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
 		/* FIXME: This may sometimes be a word and not dword */
-		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 		instructions->bytes_used += 4;
 		instruction->srcA.size = 4;
 		/* FIXME: !half bad */
@@ -696,13 +713,13 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x82:												/* Grpl Eb,Ib Mirror instruction */
 		break;
 	case 0x83:												/* Grpl Ev,Ix */
-		half = rmb(instructions, inst, &reg);
+		half = rmb(handle, instructions, base_address, offset, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = immed_table[reg];
 		instruction->flags = 1;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
-		instruction->srcA.index = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getbyte(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 		instructions->bytes_used++;
 		instruction->srcA.size = 4;
 		/* FIXME: !half bad */
@@ -727,23 +744,23 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x87:												/* XCHG Ev,Gv */
 		break;
 	case 0x88:												/* MOV Eb,Gb */
-		dis_Ex_Gx(MOV, instructions, inst, &reg, 1);
+		dis_Ex_Gx(handle, MOV, instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x89:												/* MOV Ev,Gv */
-		dis_Ex_Gx(MOV, instructions, inst, &reg, 4);
+		dis_Ex_Gx(handle, MOV, instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x8a:												/* MOV Gb,Eb */
-		dis_Gx_Ex(MOV, instructions, inst, &reg, 1);
+		dis_Gx_Ex(handle, MOV, instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x8b:
 		/* MOV Gv,Ev */
 		/* FIXME: Cannot handle 8b 15 00 00 00 00 */
 		/* FIXME: Cannot handle 8b 45 fc */
-		//dis_Gx_Ex(MOV, instructions, inst, &reg, 4);
-		half = rmb(instructions, inst, &reg);
+		//dis_Gx_Ex(handle, MOV, instructions, base_address, offset, &reg, 4);
+		half = rmb(handle, instructions, base_address, offset, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->flags = 0;
@@ -776,7 +793,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0x8c:												/* Mov Ew,Sw */
 		break;
 	case 0x8d:												/* LEA Gv */
-		half = rmb(instructions, inst, &reg);
+		half = rmb(handle, instructions, base_address, offset, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->flags = 0;
@@ -832,7 +849,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_MEM;
-		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 		instructions->bytes_used+=4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = STORE_REG;
@@ -854,7 +871,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->srcA.size = 4;
 		instruction->dstA.store = STORE_DIRECT;
 		instruction->dstA.indirect = IND_MEM;
-		instruction->dstA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->dstA.index = getdword(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 		instructions->bytes_used+=4;
 		instruction->dstA.size = 4;
 		instructions->instruction_number++;
@@ -886,8 +903,8 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
-		instruction->srcA.index =
-			getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		// Means get from rest of instruction
+		instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used);
 		instructions->bytes_used += 4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = STORE_REG;
@@ -908,13 +925,13 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xc0:												/* GRP2 Eb,Ib */
 		break;
 	case 0xc1:												/* GRP2 Ev,Ib */
-		half = rmb(instructions, inst, &reg);
+		half = rmb(handle, instructions, base_address, offset, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = shift2_table[reg];
 		instruction->flags = 1;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
-		instruction->srcA.index = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		instruction->srcA.index = getbyte(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 		instructions->bytes_used++;
 		instruction->srcA.size = 4;
 		if (!half) {
@@ -979,7 +996,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xc6:												/* MOV Eb,Ib */
 	case 0xc7:												/* MOV EW,Iv */
 		/* JCD: Work in progress */
-		dis_Ex_Ix(MOV, instructions, inst, &reg, 4);
+		dis_Ex_Ix(handle, MOV, instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0xc8:												/* ENTER Iv,Ib */
@@ -1103,7 +1120,8 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
-		instruction->srcA.index = getdword(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		// Means get from rest of instruction
+		instruction->srcA.index = getdword(base_address, offset + instructions->bytes_used);
 		instructions->bytes_used+=4;
 		instruction->srcA.size = 4;
 		instruction->dstA.store = STORE_REG;
@@ -1120,7 +1138,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 		instruction->flags = 0;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
-		relative = getbyte(&inst[instructions->bytes_used]); // Means get from rest of instruction
+		relative = getbyte(base_address, offset + instructions->bytes_used); // Means get from rest of instruction
 		instruction->srcA.index = relative;
 		instructions->bytes_used+=1;
 		instruction->srcA.size = 4;
@@ -1191,7 +1209,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 	case 0xfe:												/* GRP4 Eb */
 		break;
 	case 0xff:												/* GRP5 Ev */
-		half = inst[instructions->bytes_used] & 0x38;
+		half = base_address[offset + instructions->bytes_used] & 0x38;
 		if (half == 0x30) { /* Special for the PUSH case */
 			instruction = &instructions->instruction[instructions->instruction_number];
 			instruction->opcode = SUB;  /* ESP = ESP - 4 */
@@ -1207,7 +1225,7 @@ int disassemble(instructions_t *instructions, uint8_t *inst) {
 			instructions->instruction_number++;
 
 		}
-		half = rmb(instructions, inst, &reg);
+		half = rmb(handle, instructions, base_address, offset, &reg);
 		printf("Unfinished section 0xff\n");
 		printf("half=0x%x, reg=0x%x\n",half, reg);
 		instruction = &instructions->instruction[instructions->instruction_number];

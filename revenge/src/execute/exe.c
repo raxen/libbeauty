@@ -266,6 +266,7 @@ static int get_value_RTL_instruction(
 				break;
 			}
 			data_index = value->init_value + value->offset_value;
+			destination->indirect_value_id = value->value_id;
 			break;
 		default:
 			break;

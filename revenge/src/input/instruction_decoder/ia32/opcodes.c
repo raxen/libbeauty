@@ -81,7 +81,7 @@ int immed_table[] = {
 	OR,
 	ADC,
 	SBB,
-	AND,
+	rAND,
 	SUB,
 	XOR,
 	CMP

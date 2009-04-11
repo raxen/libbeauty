@@ -48,7 +48,7 @@ enum {
 #define SBB 5
 #define OR  6
 #define XOR 7
-#define AND 8
+#define rAND 8
 #define CMP 9
 #define MUL 10
 #define JMP 11 /* Relative */
@@ -71,7 +71,7 @@ enum {
 #define NOT_EQUAL 6
 #define ABOVE 7
 #define NOT_ABOVE 8
-#define SIGNED 9
+#define rSIGNED 9
 #define NO_SIGNED 10
 #define PARITY 11
 #define NOT_PARITY 12

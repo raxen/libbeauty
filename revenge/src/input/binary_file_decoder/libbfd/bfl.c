@@ -29,6 +29,12 @@
 
 #include "bfl.h"
 
+/* The symbol table.  */
+static asymbol **syms;
+
+/* Number of symbols in `syms'.  */
+static long symcount = 0;
+
 static void insert_section(struct bfd *b, asection *sect, void *obj)
 {
 	struct rev_eng *r = obj;
@@ -145,6 +151,191 @@ int64_t bf_get_data_size(struct rev_eng* ret)
   datasize = bfd_get_section_size(section);
   code_size = datasize;
   return code_size;
+}
+
+int bf_get_reloc_table_size_code_section(struct rev_eng* ret, uint64_t *size)
+{
+	asection          *section = ret->section[0];
+	bfd_size_type      datasize = *size;
+
+	datasize = bfd_get_reloc_upper_bound(ret->bfd, section);
+	*size = datasize;
+	return 1;
+}
+
+static void
+dump_reloc_set (bfd *abfd, asection *sec, arelent **relpp, long relcount)
+{
+  arelent **p;
+  char *last_filename, *last_functionname;
+  unsigned int last_line;
+
+  /* Get column headers lined up reasonably.  */
+  {
+    static int width;
+
+    if (width == 0)
+      {
+	char buf[30];
+
+	bfd_sprintf_vma (abfd, buf, (bfd_vma) -1);
+	width = strlen (buf) - 7;
+      }
+    printf ("OFFSET %*s TYPE %*s VALUE \n", width, "", 12, "");
+  }
+
+  last_filename = NULL;
+  last_functionname = NULL;
+  last_line = 0;
+
+  for (p = relpp; relcount && *p != NULL; p++, relcount--)
+    {
+      arelent *q = *p;
+      const char *filename, *functionname;
+      unsigned int line;
+      const char *sym_name;
+      const char *section_name;
+
+      if (q->sym_ptr_ptr && *q->sym_ptr_ptr)
+	{
+	  sym_name = (*(q->sym_ptr_ptr))->name;
+	  section_name = (*(q->sym_ptr_ptr))->section->name;
+	}
+      else
+	{
+	  sym_name = NULL;
+	  section_name = NULL;
+	}
+
+      bfd_printf_vma (abfd, q->address);
+      if (q->howto == NULL)
+	printf (" *unknown*         ");
+      else if (q->howto->name)
+	printf (" %-16s  ", q->howto->name);
+      else
+	printf (" %-16d  ", q->howto->type);
+      if (sym_name)
+	printf("sym_name: %s\n", sym_name);
+//	objdump_print_symname (abfd, NULL, *q->sym_ptr_ptr);
+      else
+	{
+	  if (section_name == NULL)
+	    section_name = "*unknown*";
+	  printf ("[%s]", section_name);
+	}
+
+      if (q->addend)
+	{
+	  printf ("+0x");
+	  bfd_printf_vma (abfd, q->addend);
+	}
+
+      printf ("\n");
+    }
+}
+
+int bf_get_reloc_table_code_section(struct rev_eng* ret)
+{
+	asection	*section = ret->section[0];
+	asection	*sym_sec;
+	bfd_size_type	datasize;
+	arelent		**relpp;
+	arelent		*rel;
+	uint64_t relcount;
+	int n;
+	const char *sym_name;
+
+	datasize = bfd_get_reloc_upper_bound(ret->bfd, section);
+	relpp = malloc (datasize);
+	/* This function silently fails if ret->symtab is not set
+	 * to an already loaded symbol table.
+	 */
+	relcount = bfd_canonicalize_reloc(ret->bfd, section, relpp, ret->symtab);
+	//printf("relcount=0x%"PRIx64"\n", relcount);
+	ret->reloc_table_code = calloc(relcount, sizeof(*ret->reloc_table_code));
+	ret->reloc_table_code_sz = relcount;
+	//printf("reloc_size=%d\n", sizeof(*ret->reloc_table));
+	//dump_reloc_set (ret->bfd, section, relpp, relcount);
+	for (n=0; n < relcount; n++) {
+		rel = relpp[n];
+		//printf("rel:addr = 0x%"PRIx64"\n", rel->address);
+		ret->reloc_table_code[n].address = rel->address;
+		ret->reloc_table_code[n].size = (uint64_t) bfd_get_reloc_size (rel->howto);
+		//printf("rel:size = 0x%"PRIx64"\n", (uint64_t) bfd_get_reloc_size (rel->howto));
+		//if (rel->howto == NULL)
+		//	printf (" *unknown*\n");
+		//else if (rel->howto->name)
+		//	printf (" %-16s\n", rel->howto->name);
+		//else
+		//	printf (" %-16d\n", rel->howto->type);
+
+		//printf("p1 %p\n",&rel->sym_ptr_ptr);
+		//printf("p2 %p\n",rel->sym_ptr_ptr);
+		if (rel->sym_ptr_ptr == NULL) {
+			continue;
+		}
+		
+		sym_name = bfd_asymbol_name(*rel->sym_ptr_ptr);
+		sym_sec = bfd_get_section(*rel->sym_ptr_ptr);
+		ret->reloc_table_code[n].section = sym_sec->index;
+		
+		//printf (" %i, %s\n",sym_sec->index, sym_name);
+
+	}
+	free(relpp);
+	return 1;
+}
+
+int bf_get_reloc_table_data_section(struct rev_eng* ret)
+{
+	asection	*section = ret->section[1];
+	asection	*sym_sec;
+	bfd_size_type	datasize;
+	arelent		**relpp;
+	arelent		*rel;
+	uint64_t relcount;
+	int n;
+	const char *sym_name;
+
+	datasize = bfd_get_reloc_upper_bound(ret->bfd, section);
+	relpp = malloc (datasize);
+	/* This function silently fails if ret->symtab is not set
+	 * to an already loaded symbol table.
+	 */
+	relcount = bfd_canonicalize_reloc(ret->bfd, section, relpp, ret->symtab);
+	//printf("relcount=0x%"PRIx64"\n", relcount);
+	ret->reloc_table_data = calloc(relcount, sizeof(*ret->reloc_table_data));
+	ret->reloc_table_data_sz = relcount;
+	//printf("reloc_size=%d\n", sizeof(*ret->reloc_table));
+	//dump_reloc_set (ret->bfd, section, relpp, relcount);
+	for (n=0; n < relcount; n++) {
+		rel = relpp[n];
+		//printf("rel:addr = 0x%"PRIx64"\n", rel->address);
+		ret->reloc_table_data[n].address = rel->address;
+		ret->reloc_table_data[n].size = (uint64_t) bfd_get_reloc_size (rel->howto);
+		//printf("rel:size = 0x%"PRIx64"\n", (uint64_t) bfd_get_reloc_size (rel->howto));
+		//if (rel->howto == NULL)
+		//	printf (" *unknown*\n");
+		//else if (rel->howto->name)
+		//	printf (" %-16s\n", rel->howto->name);
+		//else
+		//	printf (" %-16d\n", rel->howto->type);
+
+		//printf("p1 %p\n",&rel->sym_ptr_ptr);
+		//printf("p2 %p\n",rel->sym_ptr_ptr);
+		if (rel->sym_ptr_ptr == NULL) {
+			continue;
+		}
+		
+		sym_name = bfd_asymbol_name(*rel->sym_ptr_ptr);
+		sym_sec = bfd_get_section(*rel->sym_ptr_ptr);
+		ret->reloc_table_data[n].section = sym_sec->index;
+		
+		//printf (" %i, %s\n",sym_sec->index, sym_name);
+
+	}
+	free(relpp);
+	return 1;
 }
 
 int bf_copy_code_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size)

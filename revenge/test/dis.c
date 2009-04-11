@@ -192,6 +192,10 @@ int print_instructions(void)
 			inst_log1->value1.indirect_offset_value,
 			inst_log1->value2.indirect_offset_value,
 			inst_log1->value3.indirect_offset_value);
+		printf("indirect value_id:%"PRIx64", %"PRIx64" -> %"PRIx64"\n",
+			inst_log1->value1.indirect_value_id,
+			inst_log1->value2.indirect_value_id,
+			inst_log1->value3.indirect_value_id);
 		printf("value_type:0x%x, 0x%x -> 0x%x\n",
 			inst_log1->value1.value_type,
 			inst_log1->value2.value_type,
@@ -426,7 +430,7 @@ int print_mem(struct memory_s *memory, int location) {
 	return 0;
 }
 
-int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry) {
+int process_block(struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry) {
 	uint64_t offset = 0;
 	int result;
 	int n = 0;
@@ -450,7 +454,7 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 		instructions.bytes_used = 0;
 		printf("eip=0x%"PRIx64", offset=0x%"PRIx64"\n",
 			memory_reg[2].offset_value, offset);
-		result = disassemble(&instructions, &inst[offset]);
+		result = disassemble(handle, &instructions, inst, offset);
 		printf("bytes used = %d\n", instructions.bytes_used);
 		/* Memory not used yet */
 		if (0 == memory_used[offset]) {
@@ -495,7 +499,7 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 		octets = (*disassemble_fn) (offset, &disasm_info);
 		printf("  octets=%d\n", octets);
 		if (instructions.bytes_used != octets) {
-			printf("Unhandled instruction. Length mismatch. Exiting\n");
+			printf("Unhandled instruction. Length mismatch. Got %d, expected %d, Exiting\n", instructions.bytes_used, octets);
 			return 1;
 		}
 		/* Update EIP */
@@ -597,7 +601,7 @@ int process_block( uint64_t inst_log_prev, uint64_t list_length, struct entry_po
 	return 0;
 }
 
-int output_variable(int store, int indirect, uint64_t index, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, char *out_buf, int *write_offset) {
+int output_variable(int store, int indirect, uint64_t index, uint64_t relocated, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, uint64_t indirect_value_id, char *out_buf, int *write_offset) {
 	int tmp;
 	/* FIXME: May handle by using first switch as switch (indirect) */
 	switch (store) {
@@ -612,6 +616,9 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t value_scop
 		/* this info should be gathered at disassembly point */
 		if (indirect == IND_MEM) {
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "data%"PRIx64,
+				index);
+		} else if (relocated) {
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "&data%"PRIx64,
 				index);
 		} else {
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "0x%"PRIx64,
@@ -642,9 +649,9 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t value_scop
 			/* It will always be a register, and therefore can re-use the
 			/* value_id to identify it. */
 			/* It will always be a local and not a param */
-			printf("*data_somewhere%04"PRIx64";\n", (indirect_offset_value));
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "*data_somewhere%04"PRIx64,
-				indirect_offset_value);
+			printf("*local%04"PRIx64";\n", (indirect_value_id));
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "*local%04"PRIx64,
+				indirect_value_id);
 			*write_offset += tmp;
 			break;
 		default:
@@ -671,9 +678,11 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 	int store;
 	int indirect;
 	uint64_t index;
+	uint64_t relocated;
 	uint64_t value_scope;
 	uint64_t value_id;
 	uint64_t indirect_offset_value;
+	uint64_t indirect_value_id;
 
 	switch (opcode) {
 	case CMP:
@@ -684,20 +693,22 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 			store = inst_log1_flagged->instruction.dstA.store;
 			indirect = inst_log1_flagged->instruction.dstA.indirect;
 			index = inst_log1_flagged->instruction.dstA.index;
+			relocated = inst_log1_flagged->instruction.dstA.relocated;
 			value_scope = inst_log1_flagged->value2.value_scope;
 			value_id = inst_log1_flagged->value2.value_id;
 			indirect_offset_value = inst_log1_flagged->value2.indirect_offset_value;
-			tmp = output_variable(store, indirect, index, value_scope, value_id, indirect_offset_value, out_buf, write_offset);
+			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, out_buf, write_offset);
 			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, " <= "
 				);
 			*write_offset += tmp;
 			store = inst_log1_flagged->instruction.srcA.store;
 			indirect = inst_log1_flagged->instruction.srcA.indirect;
 			index = inst_log1_flagged->instruction.srcA.index;
+			relocated = inst_log1_flagged->instruction.srcA.relocated;
 			value_scope = inst_log1_flagged->value1.value_scope;
 			value_id = inst_log1_flagged->value1.value_id;
 			indirect_offset_value = inst_log1_flagged->value1.indirect_offset_value;
-			tmp = output_variable(store, indirect, index, value_scope, value_id, indirect_offset_value, out_buf, write_offset);
+			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, out_buf, write_offset);
 			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, ") ");
 			*write_offset += tmp;
 			break;
@@ -711,6 +722,21 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 		break;
 	}
 	return err;
+}
+
+/* If relocated_data returns 1, it means that there was a
+ * relocation table entry for this data location.
+ * This most likely means that this is a pointer.
+ * FIXME: What to do if the relocation is to the code segment? Pointer to function?
+ */
+uint32_t relocated_data(struct rev_eng *handle, uint64_t offset, uint64_t size) {
+	int n;
+	for (n = 0; n < handle->reloc_table_data_sz; n++) {
+		if (handle->reloc_table_data[n].address == offset) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -727,6 +753,7 @@ int main(int argc, char *argv[])
 	int err;
 	const char *file = "test.obj";
 	size_t inst_size = 0;
+	uint64_t reloc_size = 0;
 	int l;
 	struct instruction_s *instruction;
 	struct instruction_s *instruction_prev;
@@ -736,6 +763,8 @@ int main(int argc, char *argv[])
 	struct inst_log_entry_s *inst_exe_prev;
 	struct memory_s *value;
 	uint64_t inst_log_prev = 0;
+	int param_present[100];
+	int param_size[100];
 	char *expression;
 	int not_finished;
 	ram_init();
@@ -784,6 +813,24 @@ int main(int argc, char *argv[])
 	}
 	printf("\n");
 
+	bf_get_reloc_table_code_section(handle);
+	for (n = 0; n < handle->reloc_table_code_sz; n++) {
+		printf("reloc_table_code:addr = 0x%"PRIx64", size = 0x%"PRIx64", section = 0x%"PRIx64"\n",
+			handle->reloc_table_code[n].address,
+			handle->reloc_table_code[n].size,
+			handle->reloc_table_code[n].section);
+	}
+
+	bf_get_reloc_table_data_section(handle);
+	for (n = 0; n < handle->reloc_table_data_sz; n++) {
+		printf("reloc_table_data:addr = 0x%"PRIx64", size = 0x%"PRIx64", section = 0x%"PRIx64"\n",
+			handle->reloc_table_data[n].address,
+			handle->reloc_table_data[n].size,
+			handle->reloc_table_data[n].section);
+	}
+	
+	printf("handle=%p\n", handle);
+	
 	printf("handle=%p\n", handle);
 	init_disassemble_info(&disasm_info, stdout, (fprintf_ftype) fprintf);
 	disasm_info.flavour = bfd_get_flavour(handle->bfd);
@@ -830,7 +877,7 @@ int main(int argc, char *argv[])
 				memory_reg[2].offset_value = entry_point[n].eip_offset_value;
 				inst_log_prev = entry_point[n].previous_instuction;
 				not_finished = 1;
-				err = process_block( inst_log_prev, entry_point_list_length, entry_point);
+				err = process_block(handle, inst_log_prev, entry_point_list_length, entry_point);
 				/* clear the entry after calling process_block */
 				entry_point[n].used = 0;
 				if (err) {
@@ -879,12 +926,23 @@ int main(int argc, char *argv[])
 	printf("\nPRINTING MEMORY_DATA\n");
 	for (n = 0; n < 4; n++) {
 		if (memory_data[n].valid) {
-			printf("int data%"PRIx64" = 0x%"PRIx64"\n",
-				memory_data[n].start_address,
-				memory_data[n].init_value);
-			tmp = snprintf(out_buf, 1024, "int data%"PRIx64" = 0x%"PRIx64"\n",
-				memory_data[n].start_address,
-				memory_data[n].init_value);
+			
+			tmp = relocated_data(handle, memory_data[n].start_address, 4);
+			if (tmp) {
+				printf("int *data%"PRIx64" = &data%"PRIx64"\n",
+					memory_data[n].start_address,
+					memory_data[n].init_value);
+				tmp = snprintf(out_buf, 1024, "int *data%"PRIx64" = &data%"PRIx64";\n",
+					memory_data[n].start_address,
+					memory_data[n].init_value);
+			} else {
+				printf("int data%"PRIx64" = 0x%"PRIx64"\n",
+					memory_data[n].start_address,
+					memory_data[n].init_value);
+				tmp = snprintf(out_buf, 1024, "int data%"PRIx64" = 0x%"PRIx64";\n",
+					memory_data[n].start_address,
+					memory_data[n].init_value);
+			}
 			write(fd, out_buf, tmp);
 		}
 	}
@@ -892,11 +950,54 @@ int main(int argc, char *argv[])
 	write(fd, out_buf, tmp);
 	printf("\n");
 
+	for (n = 0; n < 100; n++) {
+		param_present[n] = 0;
+	}
+		
+	for (n = 0; n < 10; n++) {
+		if (memory_stack[n].start_address >= 0x10004) {
+			param_present[memory_stack[n].start_address - 0x10000] = 1;
+			param_size[memory_stack[n].start_address - 0x10000] = memory_stack[n].length;
+		}
+	}
+	for (n = 0; n < 100; n++) {
+		if (param_present[n]) {
+			printf("param%04x\n", n);
+			tmp = param_size[n];
+			n += tmp;
+		}
+	}
+
+	write_offset = 0;
 	for (l = 0; l < handle->symtab_sz; l++) {
 		if (handle->symtab[l]->flags == 0x12) {
+			int commas = 0;
 			printf("int %s()\n{\n", handle->symtab[l]->name);
-			tmp = snprintf(out_buf, 1024, "int %s()\n{\n", handle->symtab[l]->name);
-			write(fd, out_buf, tmp);
+			tmp = snprintf(out_buf, 1024, "int %s(", handle->symtab[l]->name);
+			write_offset += tmp;
+			for (n = 0; n < 100; n++) {
+				if (param_present[n]) {
+					printf("param%04x\n", n);
+					if (commas) {
+						tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+							", ");
+						write_offset += tmp;
+					}
+					tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+						"param%04"PRIx32"", n);
+					write_offset += tmp;
+					commas = 1;
+					tmp = param_size[n];
+					n += tmp;
+				}
+			}
+	
+			tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+				")\n{\n", handle->symtab[l]->name);
+			write_offset += tmp;
+			out_buf[write_offset] = 0;
+			write(fd, out_buf, write_offset);
+			write_offset = 0;
 		}
 		//printf("type:0x%02x\n", handle->symtab[l]->flags);
 		//printf("name:%s\n", handle->symtab[l]->name);
@@ -953,9 +1054,11 @@ int main(int argc, char *argv[])
 				tmp = output_variable(instruction->dstA.store,
 					instruction->dstA.indirect,
 					instruction->dstA.index,
+					instruction->dstA.relocated,
 					inst_log1->value3.value_scope,
 					inst_log1->value3.value_id,
 					inst_log1->value3.indirect_offset_value,
+					inst_log1->value3.indirect_value_id,
 					out_buf, &write_offset);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " = ");
 				write_offset += tmp;
@@ -964,9 +1067,11 @@ int main(int argc, char *argv[])
 				tmp = output_variable(instruction->srcA.store,
 					instruction->srcA.indirect,
 					instruction->srcA.index,
+					instruction->srcA.relocated,
 					inst_log1->value1.value_scope,
 					inst_log1->value1.value_id,
 					inst_log1->value1.indirect_offset_value,
+					inst_log1->value1.indirect_value_id,
 					out_buf, &write_offset);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
 				write_offset += tmp;
@@ -981,9 +1086,11 @@ int main(int argc, char *argv[])
 				tmp = output_variable(instruction->dstA.store,
 					instruction->dstA.indirect,
 					instruction->dstA.index,
+					instruction->dstA.relocated,
 					inst_log1->value3.value_scope,
 					inst_log1->value3.value_id,
 					inst_log1->value3.indirect_offset_value,
+					inst_log1->value3.indirect_value_id,
 					out_buf, &write_offset);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " += ");
 				write_offset += tmp;
@@ -991,9 +1098,11 @@ int main(int argc, char *argv[])
 				tmp = output_variable(instruction->srcA.store,
 					instruction->srcA.indirect,
 					instruction->srcA.index,
+					instruction->srcA.relocated,
 					inst_log1->value1.value_scope,
 					inst_log1->value1.value_id,
 					inst_log1->value1.indirect_offset_value,
+					inst_log1->value1.indirect_value_id,
 					out_buf, &write_offset);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
 				write_offset += tmp;
@@ -1007,9 +1116,11 @@ int main(int argc, char *argv[])
 				tmp = output_variable(instruction->dstA.store,
 					instruction->dstA.indirect,
 					instruction->dstA.index,
+					instruction->dstA.relocated,
 					inst_log1->value3.value_scope,
 					inst_log1->value3.value_id,
 					inst_log1->value3.indirect_offset_value,
+					inst_log1->value3.indirect_value_id,
 					out_buf, &write_offset);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " -= ");
 				write_offset += tmp;
@@ -1017,9 +1128,11 @@ int main(int argc, char *argv[])
 				tmp = output_variable(instruction->srcA.store,
 					instruction->srcA.indirect,
 					instruction->srcA.index,
+					instruction->srcA.relocated,
 					inst_log1->value1.value_scope,
 					inst_log1->value1.value_id,
 					inst_log1->value1.indirect_offset_value,
+					inst_log1->value1.indirect_value_id,
 					out_buf, &write_offset);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
 				write_offset += tmp;
@@ -1108,11 +1221,14 @@ int main(int argc, char *argv[])
 			/* Search for EAX */
 			value = search_store(memory_reg,
 					4, 4);
-			printf("\treturn local%04"PRId64";\n}\n", value->value_id);
-			tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\treturn local%04"PRId64";\n", value->value_id);
-			write_offset += tmp;
-			write(fd, out_buf, write_offset);
-			write_offset = 0;
+			/* Catch the rare case of EAX never been used */
+			if (value) {
+				printf("\treturn local%04"PRId64";\n}\n", value->value_id);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\treturn local%04"PRId64";\n", value->value_id);
+				write_offset += tmp;
+				write(fd, out_buf, write_offset);
+				write_offset = 0;
+			}
 		}
 		//tmp = snprintf(out_buf, 1024, "%d\n", l);
 		//write(fd, out_buf, tmp);
@@ -1141,6 +1257,30 @@ int main(int argc, char *argv[])
 		print_mem(memory_data, n);
 		printf("\n");
 	}
+	printf("\nPRINTING STACK_DATA\n");
+	for (n = 0; n < 10; n++) {
+		print_mem(memory_stack, n);
+		printf("\n");
+	}
+	for (n = 0; n < 100; n++) {
+		param_present[n] = 0;
+	}
+		
+	tmp = 0x10004;
+	for (n = 0; n < 10; n++) {
+		if (memory_stack[n].start_address >= tmp) {
+			param_present[memory_stack[n].start_address - 0x10000] = 1;
+			param_size[memory_stack[n].start_address - 0x10000] = memory_stack[n].length;
+		}
+	}
+	for (n = 0; n < 100; n++) {
+		if (param_present[n]) {
+			printf("param%04x\n", n);
+			tmp = param_size[n];
+			n += tmp;
+		}
+	}
+	
 	return 0;
 }
 

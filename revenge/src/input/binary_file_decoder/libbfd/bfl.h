@@ -25,20 +25,9 @@
 
 #include <bfd.h>
 #include <inttypes.h>
+#include <revenge/rev.h>
 
 const char *bfd_err(void);
-
-struct rev_eng {
-	bfd		*bfd;		/* libbfd structure */
-	asection	**section;	/* sections */
-	long		section_sz;
-	asymbol		**symtab;	/* symbols (sorted) */
-	long		symtab_sz;
-	asymbol		**dynsymtab; 	/* dynamic symbols (sorted) */
-	long		dynsymtab_sz;
-	arelent		**dynreloc;	/* dynamic relocations (sorted) */
-	long		dynreloc_sz;
-};
 
 struct rev_eng *bf_test_open_file(const char *fn);
 void bf_test_close_file(struct rev_eng *r);
@@ -46,5 +35,7 @@ int64_t bf_get_code_size(struct rev_eng* ret);
 int bf_copy_code_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size);
 int64_t bf_get_data_size(struct rev_eng* ret);
 int bf_copy_data_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size);
+int bf_get_reloc_table_code_section(struct rev_eng* ret);
+int bf_get_reloc_table_data_section(struct rev_eng* ret);
 
 #endif /* __BFL__ */

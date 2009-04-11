@@ -1,10 +1,10 @@
 #include "dis.h"
 
-int prefix_0f(instructions_t *instructions, uint8_t *bytes_base) {
+int prefix_0f(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset) {
 	int half;
 	uint8_t reg=0;
 	instruction_t *instruction;
-	switch (bytes_base[instructions->bytes_used++]) {
+	switch (base_address[offset + instructions->bytes_used++]) {
 	case 0x00:												/* GRP 6 Exxx */
 	case 0x01:												/* Group 7 Ev */
 	case 0x02:												/* LAR Gv,Ev */
@@ -71,7 +71,7 @@ int prefix_0f(instructions_t *instructions, uint8_t *bytes_base) {
 	case 0xb4:												/* LFS Ev */
 	case 0xb5:												/* LGS Ev */
 	case 0xb6:												/* MOVZX Gv,Eb */
-		half = rmb(instructions, bytes_base, &reg);
+		half = rmb(handle, instructions, base_address, offset, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->dstA.store = STORE_REG;
@@ -87,7 +87,7 @@ int prefix_0f(instructions_t *instructions, uint8_t *bytes_base) {
 		instructions->instruction_number++;
 		break;
 	case 0xb7:												/* MOVZX Gv,Ev */
-		half = rmb(instructions, bytes_base, &reg);
+		half = rmb(handle, instructions, base_address, offset, &reg);
 		instruction = &instructions->instruction[instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->dstA.store = STORE_REG;

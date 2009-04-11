@@ -24,8 +24,37 @@
  *   Copyright (C) 2009 James Courtier-Dutton James@superbug.co.uk
  */
 
+#ifndef __REV__
+#define __REV__
+
+#include <bfd.h>
+#include <inttypes.h>
+
 struct self_s {
 	size_t data_size;
 	uint8_t *data;
 };
 
+struct reloc_table {
+	uint64_t	address;
+	uint64_t	size;
+	uint64_t	section;
+};
+
+struct rev_eng {
+	bfd		*bfd;		/* libbfd structure */
+	asection	**section;	/* sections */
+	long		section_sz;
+	asymbol		**symtab;	/* symbols (sorted) */
+	long		symtab_sz;
+	asymbol		**dynsymtab; 	/* dynamic symbols (sorted) */
+	long		dynsymtab_sz;
+	arelent		**dynreloc;	/* dynamic relocations (sorted) */
+	long		dynreloc_sz;
+	struct reloc_table	*reloc_table_code;   /* relocation table */
+	uint64_t	reloc_table_code_sz;
+	struct reloc_table	*reloc_table_data;   /* relocation table */
+	uint64_t	reloc_table_data_sz;
+};
+
+#endif /* __REV__ */

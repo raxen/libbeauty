@@ -28,15 +28,20 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <revenge/rev.h>
 #include "opcodes.h"
-
 
 typedef struct operand_s operand_t;
 struct operand_s {
 	/* 0 = immeadiate value. ( e.g. MOV AX,0x0),
-	 * 1 = register value. (e.g. MOV AX,BX)
+	 * 1 = register value. (e.g. MOV AX,BX),
+	 * 2 = immeadiate pointer. (if the immeadiate value is in the relocation table) 
 	 */
 	int store;
+	/* 0 = not relocated.
+	 * 1 = relocated. (if the immeadiate value is in the relocation table)
+	 */
+	int relocated;
 	/* 0 = direct, 1 = data_memory, 2 = stack_memory, 3 = in-out port */
 
 	/* For IF instruction, the value "indirect" contains
@@ -77,11 +82,13 @@ struct instructions_s {
 } ;
 
 /* Little endian */
-uint32_t getbyte(uint8_t *address);
+uint32_t getbyte(uint8_t *base_address, uint64_t offset);
 
-uint32_t getdword(uint8_t *address);
+uint32_t getdword(uint8_t *base_address, uint64_t offset);
 
-int prefix_0f(instructions_t *instructions, uint8_t *bytes_base);
+int prefix_0f(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset);
 
-int rmb(instructions_t *instructions, uint8_t *bytes_base, uint8_t *return_reg);
+int rmb(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset, uint8_t *return_reg);
+
+int disassemble(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset);
 
