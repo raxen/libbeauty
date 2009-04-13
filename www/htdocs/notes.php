@@ -10,6 +10,8 @@ include 'header.php'
 <p><a href="notes1.php" >Step 1</a>
 
 <p><a href="notes2.php" >Step 2</a>
+
+<p><a href="notes3.php" >Step 3</a>
 <p>
 
 <P> This page was last updated on 3rd March 2008

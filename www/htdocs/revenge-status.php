@@ -5,7 +5,10 @@ include 'header.php'
 <table width="90%" class="centered">
 <H2>Revenge Status
 </H2>
-<P> The revenge software application developement has already started. We have built the BFD (binary file decoder, program loader) part and also the x86 to RTL instruction decoder. This will take x86 instruction hex code and convert it directly into RTL instructions. This will be our equivalent of disassembly. We can currently disassemble about 50% of the x86 instructions. We can disassemble 100% of the instructions contained in our first simple test program.
+<P> The first release has already been made. Find on the revenge project page.
+</P>
+
+<P> The revenge software application developement has already started. We have built the BFD (binary file decoder, program loader) part and also the x86 to RTL instruction decoder. This will take x86 instruction hex code and convert it directly into RTL instructions. This will be our equivalent of disassembly. We can currently disassemble about 50% of the x86 instructions. The latest svn currently passes the first 13 test sample programs. It produces C source code from the binary .o file. 
 </P>
 <P> The current source code can be found in the SVN repository under the "trunk->revenge". <A HREF="http://developer.berlios.de/svn/?group_id=1165">See svn repository for latest test version.</A>
 </P>
@@ -19,7 +22,7 @@ include 'header.php'
 </P>
 <P> TODO: We do not currently handle jump or conditional jump instructions. This will be implemented next.
 </P>
-<P> This page was last updated on 21th December 2007
+<P> This page was last updated on 13th April 2009
 </P>
 </table>
 </table>
