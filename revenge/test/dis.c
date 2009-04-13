@@ -615,10 +615,10 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 		/* relocation table entry == pointer */
 		/* this info should be gathered at disassembly point */
 		if (indirect == IND_MEM) {
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "data%"PRIx64,
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "data%04"PRIx64,
 				index);
 		} else if (relocated) {
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "&data%"PRIx64,
+			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "&data%04"PRIx64,
 				index);
 		} else {
 			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "0x%"PRIx64,
@@ -668,7 +668,6 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 		break;
 	}
 }
-
 
 int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, char *out_buf, int *write_offset)
 {
@@ -929,17 +928,17 @@ int main(int argc, char *argv[])
 			
 			tmp = relocated_data(handle, memory_data[n].start_address, 4);
 			if (tmp) {
-				printf("int *data%"PRIx64" = &data%"PRIx64"\n",
+				printf("int *data%04"PRIx64" = &data%04"PRIx64"\n",
 					memory_data[n].start_address,
 					memory_data[n].init_value);
-				tmp = snprintf(out_buf, 1024, "int *data%"PRIx64" = &data%"PRIx64";\n",
+				tmp = snprintf(out_buf, 1024, "int *data%04"PRIx64" = &data%04"PRIx64";\n",
 					memory_data[n].start_address,
 					memory_data[n].init_value);
 			} else {
-				printf("int data%"PRIx64" = 0x%"PRIx64"\n",
+				printf("int data%04"PRIx64" = 0x%04"PRIx64"\n",
 					memory_data[n].start_address,
 					memory_data[n].init_value);
-				tmp = snprintf(out_buf, 1024, "int data%"PRIx64" = 0x%"PRIx64";\n",
+				tmp = snprintf(out_buf, 1024, "int data%04"PRIx64" = 0x%"PRIx64";\n",
 					memory_data[n].start_address,
 					memory_data[n].init_value);
 			}
@@ -1093,6 +1092,36 @@ int main(int argc, char *argv[])
 					inst_log1->value3.indirect_value_id,
 					out_buf, &write_offset);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " += ");
+				write_offset += tmp;
+				printf("\nstore=%d\n", instruction->srcA.store);
+				tmp = output_variable(instruction->srcA.store,
+					instruction->srcA.indirect,
+					instruction->srcA.index,
+					instruction->srcA.relocated,
+					inst_log1->value1.value_scope,
+					inst_log1->value1.value_id,
+					inst_log1->value1.indirect_offset_value,
+					inst_log1->value1.indirect_value_id,
+					out_buf, &write_offset);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
+				write_offset += tmp;
+				break;
+			case MUL:
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
+				write_offset += tmp;
+				tmp = output_variable(instruction->dstA.store,
+					instruction->dstA.indirect,
+					instruction->dstA.index,
+					instruction->dstA.relocated,
+					inst_log1->value3.value_scope,
+					inst_log1->value3.value_id,
+					inst_log1->value3.indirect_offset_value,
+					inst_log1->value3.indirect_value_id,
+					out_buf, &write_offset);
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " *= ");
 				write_offset += tmp;
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = output_variable(instruction->srcA.store,

@@ -11,3 +11,6 @@ gcc -c -g -o test10.o test10.c
 gcc -c -g -o test11.o test11.c
 gcc -c -g -o test12.o test12.c
 gcc -c -g -o test13.o test13.c
+gcc -c -g -o test14.o test14.c
+gcc -c -g -o test15.o test15.c
+gcc -c -g -o test16.o test16.c

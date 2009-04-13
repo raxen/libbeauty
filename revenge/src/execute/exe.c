@@ -758,6 +758,45 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		printf("ADC\n");
 		put_value_RTL_instruction(self, inst);
 		break;
+	case MUL:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("ADD\n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = inst->value2.init_value;
+		inst->value3.offset_value =
+			((inst->value1.offset_value + inst->value1.init_value) 
+			* (inst->value2.offset_value + inst->value2.init_value))
+			 - inst->value2.init_value;
+		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+		}
+		inst->value3.ref_memory =
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%llx+0x%llx=0x%llx\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(self, inst);
+		break;
 	case SUB:
 		/* Get value of srcA */
 		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
