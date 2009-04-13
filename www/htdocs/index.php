@@ -18,6 +18,9 @@ copy also here</A>)
 <P>
 <A HREF="reference/ELF_Format.pdf">The ELF file format specification</A>
 </P>
+<P>
+<A HREF="reference/gccsummit-2003-proceedings.pdf">See Tree-Single-Static-Assignment or Tree-SSA for short</A>
+</P>
 </table>
 </table>
 <?php
