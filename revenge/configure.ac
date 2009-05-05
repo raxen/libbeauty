@@ -1,5 +1,5 @@
 AC_INIT
-AM_INIT_AUTOMAKE("revenge",0.1.0)
+AM_INIT_AUTOMAKE("revenge",0.2.0)
 AC_PREREQ(2.53)
 
 dnl The libtool version numbers (LT_*); Don't even think about faking this!
