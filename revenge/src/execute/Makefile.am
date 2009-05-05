@@ -7,8 +7,8 @@ include $(top_srcdir)/misc/Makefile.common
 lib_LTLIBRARIES = librevenge_exe.la
 #bin_PROGRAMS = dis
 
-include_HEADERS = \
-	exe.h
+#include_HEADERS = \
+#	exe.h
 
 #noinst_HEADERS = \
 #	exe.h

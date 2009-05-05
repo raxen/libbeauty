@@ -41,7 +41,7 @@ dnl ------------------------------------
 dnl Flag setup
 dnl ------------------------------------
 
-INCLUDES="-I\$(top_srcdir)/src"
+INCLUDES="-I\$(top_srcdir)/include"
 
 CXXFLAGS="-O2 $wall"
 DEBUG_CXXFLAGS="-g3 -Wall"

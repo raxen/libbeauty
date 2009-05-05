@@ -58,7 +58,7 @@ struct memory_s *search_store(
 struct memory_s *add_new_store(
 	struct memory_s *memory, uint64_t index, int size);
 
-extern instructions_t instructions;
+//extern instructions_t instructions;
 extern uint8_t *inst;
 extern struct rev_eng *handle;
 extern struct disassemble_info disasm_info;

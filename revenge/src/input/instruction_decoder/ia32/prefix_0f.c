@@ -1,10 +1,10 @@
-#include "dis.h"
+#include <dis.h>
 
-int prefix_0f(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset) {
+int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset) {
 	int half;
 	uint8_t reg=0;
 	instruction_t *instruction;
-	switch (base_address[offset + instructions->bytes_used++]) {
+	switch (base_address[offset + dis_instructions->bytes_used++]) {
 	case 0x00:												/* GRP 6 Exxx */
 	case 0x01:												/* Group 7 Ev */
 	case 0x02:												/* LAR Gv,Ev */
@@ -71,8 +71,8 @@ int prefix_0f(struct rev_eng *handle, instructions_t *instructions, uint8_t *bas
 	case 0xb4:												/* LFS Ev */
 	case 0xb5:												/* LGS Ev */
 	case 0xb6:												/* MOVZX Gv,Eb */
-		half = rmb(handle, instructions, base_address, offset, &reg);
-		instruction = &instructions->instruction[instructions->instruction_number];	
+		half = rmb(handle, dis_instructions, base_address, offset, &reg);
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = 0;
@@ -84,11 +84,11 @@ int prefix_0f(struct rev_eng *handle, instructions_t *instructions, uint8_t *bas
 			instruction->srcA.index = REG_TMP1;
 		}
 		instruction->srcA.size = 1;
-		instructions->instruction_number++;
+		dis_instructions->instruction_number++;
 		break;
 	case 0xb7:												/* MOVZX Gv,Ev */
-		half = rmb(handle, instructions, base_address, offset, &reg);
-		instruction = &instructions->instruction[instructions->instruction_number];	
+		half = rmb(handle, dis_instructions, base_address, offset, &reg);
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = 0;
@@ -100,7 +100,7 @@ int prefix_0f(struct rev_eng *handle, instructions_t *instructions, uint8_t *bas
 			instruction->srcA.index = REG_TMP1;
 		}
 		instruction->srcA.size = 2;
-		instructions->instruction_number++;
+		dis_instructions->instruction_number++;
 		break;
 
 

@@ -40,10 +40,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "../input/instruction_decoder/ia32/dis.h"
-#include "../input/binary_file_decoder/libbfd/bfl.h"
-#include "../rev.h"
-#include "exe.h"
+#include <dis.h>
+#include <bfl.h>
+#include <rev.h>
+#include <exe.h>
 #include <dis-asm.h>
 
 

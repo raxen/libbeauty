@@ -4,5 +4,5 @@ SUBDIRS = input execute
 
 noinst_HEADERS = config.h
 
-include_HEADERS = \
-        rev.h
+#include_HEADERS = \
+#       rev.h

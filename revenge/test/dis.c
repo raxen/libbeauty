@@ -42,15 +42,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <revenge/dis.h>
-#include <revenge/bfl.h>
-#include <revenge/exe.h>
-#include "../src/rev.h"
+#include <dis.h>
+#include <bfl.h>
+#include <exe.h>
+#include <rev.h>
 #include <dis-asm.h>
 
 #define EIP_START 0x40000000
 
-instructions_t instructions;
+struct dis_instructions_s dis_instructions;
 uint8_t *inst;
 size_t inst_size = 0;
 uint8_t *data;
@@ -166,7 +166,7 @@ print_inst_exit:
 	return ret;
 }
 
-int print_instructions(void)
+int print_dis_instructions(void)
 {
 	int n;
 	struct instruction_s *instruction;
@@ -448,18 +448,18 @@ int process_block(struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_
 			offset = memory_reg[2].offset_value
 			) {
 	//for (offset = 0; offset < inst_size;
-			//offset += instructions.bytes_used) {
+			//offset += dis_instructions.bytes_used) {
 		offset = memory_reg[2].offset_value;
-		instructions.instruction_number = 0;
-		instructions.bytes_used = 0;
+		dis_instructions.instruction_number = 0;
+		dis_instructions.bytes_used = 0;
 		printf("eip=0x%"PRIx64", offset=0x%"PRIx64"\n",
 			memory_reg[2].offset_value, offset);
-		result = disassemble(handle, &instructions, inst, offset);
-		printf("bytes used = %d\n", instructions.bytes_used);
+		result = disassemble(handle, &dis_instructions, inst, offset);
+		printf("bytes used = %d\n", dis_instructions.bytes_used);
 		/* Memory not used yet */
 		if (0 == memory_used[offset]) {
 			printf("Memory not used yet\n");
-			for (n = 0; n < instructions.bytes_used; n++) {
+			for (n = 0; n < dis_instructions.bytes_used; n++) {
 				memory_used[offset + n] = -n;
 				printf(" 0x%02x", inst[offset + n]);
 			}
@@ -498,25 +498,25 @@ int process_block(struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_
 		printf("disassemble: ");
 		octets = (*disassemble_fn) (offset, &disasm_info);
 		printf("  octets=%d\n", octets);
-		if (instructions.bytes_used != octets) {
-			printf("Unhandled instruction. Length mismatch. Got %d, expected %d, Exiting\n", instructions.bytes_used, octets);
+		if (dis_instructions.bytes_used != octets) {
+			printf("Unhandled instruction. Length mismatch. Got %d, expected %d, Exiting\n", dis_instructions.bytes_used, octets);
 			return 1;
 		}
 		/* Update EIP */
 		memory_reg[2].offset_value += octets;
 
-		printf("Number of RTL instructions=%d\n",
-			instructions.instruction_number);
+		printf("Number of RTL dis_instructions=%d\n",
+			dis_instructions.instruction_number);
 		if (result == 0) {
 			printf("Unhandled instruction. Exiting\n");
 			return 1;
 		}
-		if (instructions.instruction_number == 0) {
+		if (dis_instructions.instruction_number == 0) {
 			printf("NOP instruction. Get next inst\n");
 			continue;
 		}
-		for (n = 0; n < instructions.instruction_number; n++) {
-			instruction = &instructions.instruction[n];
+		for (n = 0; n < dis_instructions.instruction_number; n++) {
+			instruction = &dis_instructions.instruction[n];
 			printf( "Printing inst1111:%d, %d, %"PRId64"\n",instruction_offset, n, inst_log);
 			err = print_inst(instruction, instruction_offset + n + 1);
 			if (err) {
@@ -555,7 +555,7 @@ int process_block(struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_
 				break;
 			}
 		}
-		instruction_offset += instructions.instruction_number;
+		instruction_offset += dis_instructions.instruction_number;
 		if (0 == memory_reg[2].offset_value) {
 			printf("Breaking\n");
 			break;
@@ -846,7 +846,7 @@ int main(int argc, char *argv[])
 	printf("disassemble_fn\n");
 	disassemble_fn = disassembler(handle->bfd);
 	printf("disassemble_fn done %p, %p\n", disassemble_fn, print_insn_i386);
-	instructions.bytes_used = 0;
+	dis_instructions.bytes_used = 0;
 	inst_exe = &inst_log_entry[0];
 	/* EIP is a parameter for process_block */
 	/* Update EIP */
@@ -901,9 +901,9 @@ int main(int argc, char *argv[])
 		inst_log,
 		entry_point_list_length);
 
-	/* Correct inst_log to identify how many instructions there have been */
+	/* Correct inst_log to identify how many dis_instructions there have been */
 	inst_log--;
-	print_instructions();
+	print_dis_instructions();
 	if (entry_point_list_length > 0) {
 		for (n = 0; n < entry_point_list_length; n++ ) {
 			printf("%d, eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
@@ -912,7 +912,7 @@ int main(int argc, char *argv[])
 				entry_point[n].previous_instuction);
 		}
 	}
-	print_instructions();
+	print_dis_instructions();
 	filename = "test.c";
 	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (fd < 0) {

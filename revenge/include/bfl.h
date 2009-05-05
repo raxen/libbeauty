@@ -25,7 +25,7 @@
 
 #include <bfd.h>
 #include <inttypes.h>
-#include <revenge/rev.h>
+#include <rev.h>
 
 const char *bfd_err(void);
 

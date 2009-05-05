@@ -7,9 +7,6 @@ include $(top_srcdir)/misc/Makefile.common
 lib_LTLIBRARIES = libia32_decoder.la
 #bin_PROGRAMS = dis
 
-include_HEADERS = \
-	dis.h opcodes.h
-
 #noinst_HEADERS = \
 #	opcodes.h
 

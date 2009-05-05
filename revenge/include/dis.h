@@ -28,8 +28,8 @@
 
 #include <stdio.h>
 #include <inttypes.h>
-#include <revenge/rev.h>
-#include "opcodes.h"
+#include <rev.h>
+#include <opcodes.h>
 
 typedef struct operand_s operand_t;
 struct operand_s {
@@ -73,8 +73,8 @@ struct instruction_s {
 	operand_t dstA; /* Used */
 } ;
 
-typedef struct instructions_s instructions_t;
-struct instructions_s {
+//typedef struct dis_instructions_s instructions_t;
+struct dis_instructions_s {
 	int bytes_used;
 	uint8_t bytes[16];
 	int instruction_number;
@@ -86,9 +86,9 @@ uint32_t getbyte(uint8_t *base_address, uint64_t offset);
 
 uint32_t getdword(uint8_t *base_address, uint64_t offset);
 
-int prefix_0f(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset);
+int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset);
 
-int rmb(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset, uint8_t *return_reg);
+int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *return_reg);
 
-int disassemble(struct rev_eng *handle, instructions_t *instructions, uint8_t *base_address, uint64_t offset);
+int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset);
 

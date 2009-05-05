@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <inttypes.h>
 
-#include "bfl.h"
+#include <bfl.h>
 
 /* The symbol table.  */
 static asymbol **syms;
