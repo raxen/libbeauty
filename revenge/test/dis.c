@@ -969,9 +969,14 @@ int main(int argc, char *argv[])
 
 	write_offset = 0;
 	for (l = 0; l < handle->symtab_sz; l++) {
-		if (handle->symtab[l]->flags == 0x12) {
+		/* FIXME: value == 0 for the first function in the .o file. */
+		/*        We need to be able to handle more than
+		          one function per .o file. */
+		if ((handle->symtab[l]->flags == 0x12) &&
+		    (handle->symtab[l]->value == 0)) {
 			int commas = 0;
 			printf("int %s()\n{\n", handle->symtab[l]->name);
+			printf("value = %"PRIx64"\n", handle->symtab[l]->value);
 			tmp = snprintf(out_buf, 1024, "int %s(", handle->symtab[l]->name);
 			write_offset += tmp;
 			for (n = 0; n < 100; n++) {
