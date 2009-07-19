@@ -750,7 +750,8 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
  * This most likely means that this is a pointer.
  * FIXME: What to do if the relocation is to the code segment? Pointer to function?
  */
-uint32_t relocated_data(struct rev_eng *handle, uint64_t offset, uint64_t size) {
+uint32_t relocated_data(struct rev_eng *handle, uint64_t offset, uint64_t size)
+{
 	int n;
 	for (n = 0; n < handle->reloc_table_data_sz; n++) {
 		if (handle->reloc_table_data[n].address == offset) {
@@ -760,313 +761,58 @@ uint32_t relocated_data(struct rev_eng *handle, uint64_t offset, uint64_t size) 
 	return 0;
 }
 
-int main(int argc, char *argv[])
+
+uint32_t output_function_name(int fd, char *out_buf,
+		struct external_entry_point_s *external_entry_point,
+		int *param_present, int *param_size)
 {
-	int n = 0;
-	uint64_t offset = 0;
-	int instruction_offset = 0;
-	int octets = 0;
-	int result;
-	char *filename;
-	int fd;
-	int write_offset;
-	int tmp;
-	int err;
-	const char *file = "test.obj";
-	size_t inst_size = 0;
-	uint64_t reloc_size = 0;
-	int l;
-	struct instruction_s *instruction;
-	struct instruction_s *instruction_prev;
-	struct inst_log_entry_s *inst_log1;
-	struct inst_log_entry_s *inst_log1_prev;
-	struct inst_log_entry_s *inst_exe;
-	struct inst_log_entry_s *inst_exe_prev;
-	struct memory_s *value;
-	uint64_t inst_log_prev = 0;
-	int param_present[100];
-	int param_size[100];
-	char *expression;
-	int not_finished;
-	ram_init();
-	reg_init();
-	stack_init();
+	int commas = 0;
+	int tmp, n;
+	int write_offset = 0;
 
-	print_mem(memory_reg, 1);
-
-	expression = malloc(1000); /* Buffer for if expressions */
-
-	handle = bf_test_open_file(file);
-	if (!handle) {
-		printf("Failed to find or recognise file\n");
-		return 1;
-	}
-
-/*
-	printf("symtab_canon2 = %ld\n", handle->symtab_sz);
-	for (l = 0; l < handle->symtab_sz; l++) {
-		printf("%d\n", l);
-		printf("type:0x%02x\n", handle->symtab[l]->flags);
-		printf("name:%s\n", handle->symtab[l]->name);
-		printf("value=0x%02"PRIx64"\n", handle->symtab[l]->value);
-	}
-*/
-	printf("Setup ok\n");
-	inst_size = bf_get_code_size(handle);
-	inst = malloc(inst_size);
-	bf_copy_code_section(handle, inst, inst_size);
-	printf("dis:.text Data at %p, size=%"PRId32"\n", inst, inst_size);
-	for (n = 0; n < inst_size; n++) {
-		printf(" 0x%02x", inst[n]);
-	}
-	printf("\n");
-
-	data_size = bf_get_data_size(handle);
-	data = malloc(data_size);
-	self = malloc(sizeof *self);
-	printf("sizeof struct self_s = %d\n", sizeof *self);
-	self->data_size = data_size;
-	self->data = data;
-	bf_copy_data_section(handle, data, data_size);
-	printf("dis:.data Data at %p, size=%"PRId32"\n", data, data_size);
-	for (n = 0; n < data_size; n++) {
-		printf(" 0x%02x", data[n]);
-	}
-	printf("\n");
-
-	bf_get_reloc_table_code_section(handle);
-	for (n = 0; n < handle->reloc_table_code_sz; n++) {
-		printf("reloc_table_code:addr = 0x%"PRIx64", size = 0x%"PRIx64", section = 0x%"PRIx64"\n",
-			handle->reloc_table_code[n].address,
-			handle->reloc_table_code[n].size,
-			handle->reloc_table_code[n].section);
-	}
-
-	bf_get_reloc_table_data_section(handle);
-	for (n = 0; n < handle->reloc_table_data_sz; n++) {
-		printf("reloc_table_data:addr = 0x%"PRIx64", size = 0x%"PRIx64", section = 0x%"PRIx64"\n",
-			handle->reloc_table_data[n].address,
-			handle->reloc_table_data[n].size,
-			handle->reloc_table_data[n].section);
-	}
-	
-	printf("handle=%p\n", handle);
-	
-	printf("handle=%p\n", handle);
-	init_disassemble_info(&disasm_info, stdout, (fprintf_ftype) fprintf);
-	disasm_info.flavour = bfd_get_flavour(handle->bfd);
-	disasm_info.arch = bfd_get_arch(handle->bfd);
-	disasm_info.mach = bfd_get_mach(handle->bfd);
-	disasm_info.disassembler_options = NULL;
-	disasm_info.octets_per_byte = bfd_octets_per_byte(handle->bfd);
-	disasm_info.skip_zeroes = 8;
-	disasm_info.skip_zeroes_at_end = 3;
-	disasm_info.disassembler_needs_relocs = 0;
-	disasm_info.buffer_length = inst_size;
-	disasm_info.buffer = inst;
-
-	printf("disassemble_fn\n");
-	disassemble_fn = disassembler(handle->bfd);
-	printf("disassemble_fn done %p, %p\n", disassemble_fn, print_insn_i386);
-	dis_instructions.bytes_used = 0;
-	inst_exe = &inst_log_entry[0];
-	/* EIP is a parameter for process_block */
-	/* Update EIP */
-	//memory_reg[2].offset_value = 0;
-	//inst_log_prev = 0;
-	entry_point[0].used = 1;
-	entry_point[0].esp_init_value = memory_reg[0].init_value;
-	entry_point[0].esp_offset_value = memory_reg[0].offset_value;
-	entry_point[0].ebp_init_value = memory_reg[1].init_value;
-	entry_point[0].ebp_offset_value = memory_reg[1].offset_value;
-	entry_point[0].eip_init_value = memory_reg[2].init_value;
-	entry_point[0].eip_offset_value = memory_reg[2].offset_value;
-	entry_point[0].previous_instuction = 0;
-	entry_point_list_length = 100;
-	write_offset = 0;
-	/* Print the symtab */
-	printf("symtab_sz = %lu\n", handle->symtab_sz);
-	n = 0;
-	for (l = 0; l < handle->symtab_sz; l++) {
-		size_t length;
-		/* FIXME: value == 0 for the first function in the .o file. */
-		/*        We need to be able to handle more than
-		          one function per .o file. */
-//		printf("flags = 0x%04x, value = 0x%04"PRIx64"\n",
-//			handle->symtab[l]->flags,
-//			handle->symtab[l]->value);
-		if (handle->symtab[l]->flags & 0x8) {
-			external_entry_points[n].valid = 1;
-			/* 1: Public function entry point
-			 * 2: Private function entry point
-			 * 3: Private label entry point
-			 */
-			external_entry_points[n].type = 1;
-			external_entry_points[n].value = handle->symtab[l]->value;
-			length = strlen(handle->symtab[l]->name);
-			external_entry_points[n].name = malloc(length+1);
-			strncpy(external_entry_points[n].name, handle->symtab[l]->name, length+1);
-			n++;
-		}
-
-	}
-	printf("Number of functions = %d\n", n);
-	for (n = 0; n < 100; n++) {
-		if (external_entry_points[n].valid != 0) {
-		printf("type = %d, &%s() = 0x%04"PRIx64"\n",
-			external_entry_points[n].type,
-			external_entry_points[n].name,
-			external_entry_points[n].value);
-		}
-	}
-			
-	do {
-		not_finished = 0;
-		for (n = 0; n < entry_point_list_length; n++ ) {
-			/* EIP is a parameter for process_block */
-			/* Update EIP */
-			//printf("entry:%d\n",n);
-			if (entry_point[n].used) {
-				memory_reg[0].init_value = entry_point[n].esp_init_value;
-				memory_reg[0].offset_value = entry_point[n].esp_offset_value;
-				memory_reg[1].init_value = entry_point[n].ebp_init_value;
-				memory_reg[1].offset_value = entry_point[n].ebp_offset_value;
-				memory_reg[2].init_value = entry_point[n].eip_init_value;
-				memory_reg[2].offset_value = entry_point[n].eip_offset_value;
-				inst_log_prev = entry_point[n].previous_instuction;
-				not_finished = 1;
-				err = process_block(handle, inst_log_prev, entry_point_list_length, entry_point);
-				/* clear the entry after calling process_block */
-				entry_point[n].used = 0;
-				if (err) {
-					printf("process_block failed\n");
-					return err;
-				}
-			}
-		}
-	} while (not_finished);
-
-/*
-	if (entry_point_list_length > 0) {
-		for (n = 0; n < entry_point_list_length; n++ ) {
-			printf("eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
-				entry_point[n].eip_offset_value,
-				entry_point[n].previous_instuction);
-		}
-	}
-*/
-	//inst_log--;
-	printf("Instructions=%"PRId64", entry_point_list_length=%"PRId64"\n",
-		inst_log,
-		entry_point_list_length);
-
-	/* Correct inst_log to identify how many dis_instructions there have been */
-	inst_log--;
-	print_dis_instructions();
-	if (entry_point_list_length > 0) {
-		for (n = 0; n < entry_point_list_length; n++ ) {
-			printf("%d, eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
-				entry_point[n].used,
-				entry_point[n].eip_offset_value,
-				entry_point[n].previous_instuction);
-		}
-	}
-	print_dis_instructions();
-	filename = "test.c";
-	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-	if (fd < 0) {
-		printf("Failed to open file %s, error=%d\n", filename, fd);
-		return 1;
-	}
-	printf("fd=%d\n", fd);
-	printf("writing out to file\n");
-	/* Output function name */
-	printf("\nPRINTING MEMORY_DATA\n");
-	for (n = 0; n < 4; n++) {
-		if (memory_data[n].valid) {
-			
-			tmp = relocated_data(handle, memory_data[n].start_address, 4);
-			if (tmp) {
-				printf("int *data%04"PRIx64" = &data%04"PRIx64"\n",
-					memory_data[n].start_address,
-					memory_data[n].init_value);
-				tmp = snprintf(out_buf, 1024, "int *data%04"PRIx64" = &data%04"PRIx64";\n",
-					memory_data[n].start_address,
-					memory_data[n].init_value);
-			} else {
-				printf("int data%04"PRIx64" = 0x%04"PRIx64"\n",
-					memory_data[n].start_address,
-					memory_data[n].init_value);
-				tmp = snprintf(out_buf, 1024, "int data%04"PRIx64" = 0x%"PRIx64";\n",
-					memory_data[n].start_address,
-					memory_data[n].init_value);
-			}
-			write(fd, out_buf, tmp);
-		}
-	}
-	tmp = snprintf(out_buf, 1024, "\n");
-	write(fd, out_buf, tmp);
-	printf("\n");
-
-	for (n = 0; n < 100; n++) {
-		param_present[n] = 0;
-	}
-		
-	for (n = 0; n < 10; n++) {
-		if (memory_stack[n].start_address >= 0x10004) {
-			param_present[memory_stack[n].start_address - 0x10000] = 1;
-			param_size[memory_stack[n].start_address - 0x10000] = memory_stack[n].length;
-		}
-	}
+	printf("int %s()\n{\n", external_entry_point->name);
+	printf("value = %"PRIx64"\n", external_entry_point->value);
+	tmp = snprintf(out_buf, 1024, "int %s(", external_entry_point->name);
+	write_offset += tmp;
 	for (n = 0; n < 100; n++) {
 		if (param_present[n]) {
 			printf("param%04x\n", n);
+			if (commas) {
+				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+					", ");
+				write_offset += tmp;
+			}
+			tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+				"param%04"PRIx32"", n);
+			write_offset += tmp;
+			commas = 1;
 			tmp = param_size[n];
 			n += tmp;
 		}
 	}
 
+	tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
+			")\n{\n");
+	write_offset += tmp;
+	out_buf[write_offset] = 0;
+	write(fd, out_buf, write_offset);
 	write_offset = 0;
-	for (l = 0; l < handle->symtab_sz; l++) {
-		/* FIXME: value == 0 for the first function in the .o file. */
-		/*        We need to be able to handle more than
-		          one function per .o file. */
-		if ((handle->symtab[l]->flags & 0x8) &&
-		    (handle->symtab[l]->value == 0)) {
-			int commas = 0;
-			printf("int %s()\n{\n", handle->symtab[l]->name);
-			printf("value = %"PRIx64"\n", handle->symtab[l]->value);
-			tmp = snprintf(out_buf, 1024, "int %s(", handle->symtab[l]->name);
-			write_offset += tmp;
-			for (n = 0; n < 100; n++) {
-				if (param_present[n]) {
-					printf("param%04x\n", n);
-					if (commas) {
-						tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-							", ");
-						write_offset += tmp;
-					}
-					tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-						"param%04"PRIx32"", n);
-					write_offset += tmp;
-					commas = 1;
-					tmp = param_size[n];
-					n += tmp;
-				}
-			}
-	
-			tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-				")\n{\n", handle->symtab[l]->name);
-			write_offset += tmp;
-			out_buf[write_offset] = 0;
-			write(fd, out_buf, write_offset);
-			write_offset = 0;
-		}
-		//printf("type:0x%02x\n", handle->symtab[l]->flags);
-		//printf("name:%s\n", handle->symtab[l]->name);
-		//printf("value=0x%02x\n", handle->symtab[l]->value);
-	}
-	for (n = 1; n <= inst_log; n++) {
+	return 0;
+}
+
+int output_function_body(int fd, char *out_buf, int start, int end)
+{
+	int tmp, n;
+	int err;
+	int write_offset = 0;
+	struct instruction_s *instruction;
+	struct instruction_s *instruction_prev;
+	struct inst_log_entry_s *inst_log1;
+	struct inst_log_entry_s *inst_log1_prev;
+	struct memory_s *value;
+	char *expression;
+
+	for (n = start; n <= end; n++) {
 		write_offset = 0;
 		inst_log1 =  &inst_log_entry[n];
 		inst_log1_prev =  &inst_log_entry[inst_log1->prev[0]];
@@ -1339,9 +1085,295 @@ int main(int argc, char *argv[])
 	write_offset += tmp;
 	write(fd, out_buf, write_offset);
 	write_offset = 0;
-	close(fd);
+
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	int n = 0;
+	uint64_t offset = 0;
+	int instruction_offset = 0;
+	int octets = 0;
+	int result;
+	char *filename;
+	int fd;
+	int write_offset;
+	int tmp;
+	int err;
+	const char *file = "test.obj";
+	size_t inst_size = 0;
+	uint64_t reloc_size = 0;
+	int l;
+	struct instruction_s *instruction;
+	struct instruction_s *instruction_prev;
+	struct inst_log_entry_s *inst_log1;
+	struct inst_log_entry_s *inst_log1_prev;
+	struct inst_log_entry_s *inst_exe;
+	struct inst_log_entry_s *inst_exe_prev;
+	struct memory_s *value;
+	uint64_t inst_log_prev = 0;
+	int param_present[100];
+	int param_size[100];
+	char *expression;
+	int not_finished;
+	ram_init();
+	reg_init();
+	stack_init();
+
 	print_mem(memory_reg, 1);
+
+	expression = malloc(1000); /* Buffer for if expressions */
+
+	handle = bf_test_open_file(file);
+	if (!handle) {
+		printf("Failed to find or recognise file\n");
+		return 1;
+	}
+
+/*
+	printf("symtab_canon2 = %ld\n", handle->symtab_sz);
+	for (l = 0; l < handle->symtab_sz; l++) {
+		printf("%d\n", l);
+		printf("type:0x%02x\n", handle->symtab[l]->flags);
+		printf("name:%s\n", handle->symtab[l]->name);
+		printf("value=0x%02"PRIx64"\n", handle->symtab[l]->value);
+	}
+*/
+	printf("Setup ok\n");
+	inst_size = bf_get_code_size(handle);
+	inst = malloc(inst_size);
+	bf_copy_code_section(handle, inst, inst_size);
+	printf("dis:.text Data at %p, size=%"PRId32"\n", inst, inst_size);
+	for (n = 0; n < inst_size; n++) {
+		printf(" 0x%02x", inst[n]);
+	}
+	printf("\n");
+
+	data_size = bf_get_data_size(handle);
+	data = malloc(data_size);
+	self = malloc(sizeof *self);
+	printf("sizeof struct self_s = %d\n", sizeof *self);
+	self->data_size = data_size;
+	self->data = data;
+	bf_copy_data_section(handle, data, data_size);
+	printf("dis:.data Data at %p, size=%"PRId32"\n", data, data_size);
+	for (n = 0; n < data_size; n++) {
+		printf(" 0x%02x", data[n]);
+	}
+	printf("\n");
+
+	bf_get_reloc_table_code_section(handle);
+	for (n = 0; n < handle->reloc_table_code_sz; n++) {
+		printf("reloc_table_code:addr = 0x%"PRIx64", size = 0x%"PRIx64", section = 0x%"PRIx64"\n",
+			handle->reloc_table_code[n].address,
+			handle->reloc_table_code[n].size,
+			handle->reloc_table_code[n].section);
+	}
+
+	bf_get_reloc_table_data_section(handle);
+	for (n = 0; n < handle->reloc_table_data_sz; n++) {
+		printf("reloc_table_data:addr = 0x%"PRIx64", size = 0x%"PRIx64", section = 0x%"PRIx64"\n",
+			handle->reloc_table_data[n].address,
+			handle->reloc_table_data[n].size,
+			handle->reloc_table_data[n].section);
+	}
+	
+	printf("handle=%p\n", handle);
+	
+	printf("handle=%p\n", handle);
+	init_disassemble_info(&disasm_info, stdout, (fprintf_ftype) fprintf);
+	disasm_info.flavour = bfd_get_flavour(handle->bfd);
+	disasm_info.arch = bfd_get_arch(handle->bfd);
+	disasm_info.mach = bfd_get_mach(handle->bfd);
+	disasm_info.disassembler_options = NULL;
+	disasm_info.octets_per_byte = bfd_octets_per_byte(handle->bfd);
+	disasm_info.skip_zeroes = 8;
+	disasm_info.skip_zeroes_at_end = 3;
+	disasm_info.disassembler_needs_relocs = 0;
+	disasm_info.buffer_length = inst_size;
+	disasm_info.buffer = inst;
+
+	printf("disassemble_fn\n");
+	disassemble_fn = disassembler(handle->bfd);
+	printf("disassemble_fn done %p, %p\n", disassemble_fn, print_insn_i386);
+	dis_instructions.bytes_used = 0;
+	inst_exe = &inst_log_entry[0];
+	/* EIP is a parameter for process_block */
+	/* Update EIP */
+	//memory_reg[2].offset_value = 0;
+	//inst_log_prev = 0;
+	entry_point[0].used = 1;
+	entry_point[0].esp_init_value = memory_reg[0].init_value;
+	entry_point[0].esp_offset_value = memory_reg[0].offset_value;
+	entry_point[0].ebp_init_value = memory_reg[1].init_value;
+	entry_point[0].ebp_offset_value = memory_reg[1].offset_value;
+	entry_point[0].eip_init_value = memory_reg[2].init_value;
+	entry_point[0].eip_offset_value = memory_reg[2].offset_value;
+	entry_point[0].previous_instuction = 0;
+	entry_point_list_length = 100;
+	write_offset = 0;
+	/* Print the symtab */
+	printf("symtab_sz = %lu\n", handle->symtab_sz);
+	if (handle->symtab_sz >= 100) {
+		printf("symtab too big!!! EXITING\n");
+		return 1;
+	}
+	n = 0;
+	for (l = 0; l < handle->symtab_sz; l++) {
+		size_t length;
+		/* FIXME: value == 0 for the first function in the .o file. */
+		/*        We need to be able to handle more than
+		          one function per .o file. */
+//		printf("flags = 0x%04x, value = 0x%04"PRIx64"\n",
+//			handle->symtab[l]->flags,
+//			handle->symtab[l]->value);
+		if (handle->symtab[l]->flags & 0x8) {
+			external_entry_points[n].valid = 1;
+			/* 1: Public function entry point
+			 * 2: Private function entry point
+			 * 3: Private label entry point
+			 */
+			external_entry_points[n].type = 1;
+			external_entry_points[n].value = handle->symtab[l]->value;
+			length = strlen(handle->symtab[l]->name);
+			external_entry_points[n].name = malloc(length+1);
+			strncpy(external_entry_points[n].name, handle->symtab[l]->name, length+1);
+			n++;
+		}
+
+	}
+	printf("Number of functions = %d\n", n);
+	for (n = 0; n < 100; n++) {
+		if (external_entry_points[n].valid != 0) {
+		printf("type = %d, &%s() = 0x%04"PRIx64"\n",
+			external_entry_points[n].type,
+			external_entry_points[n].name,
+			external_entry_points[n].value);
+		}
+	}
+			
+	do {
+		not_finished = 0;
+		for (n = 0; n < entry_point_list_length; n++ ) {
+			/* EIP is a parameter for process_block */
+			/* Update EIP */
+			//printf("entry:%d\n",n);
+			if (entry_point[n].used) {
+				memory_reg[0].init_value = entry_point[n].esp_init_value;
+				memory_reg[0].offset_value = entry_point[n].esp_offset_value;
+				memory_reg[1].init_value = entry_point[n].ebp_init_value;
+				memory_reg[1].offset_value = entry_point[n].ebp_offset_value;
+				memory_reg[2].init_value = entry_point[n].eip_init_value;
+				memory_reg[2].offset_value = entry_point[n].eip_offset_value;
+				inst_log_prev = entry_point[n].previous_instuction;
+				not_finished = 1;
+				err = process_block(handle, inst_log_prev, entry_point_list_length, entry_point);
+				/* clear the entry after calling process_block */
+				entry_point[n].used = 0;
+				if (err) {
+					printf("process_block failed\n");
+					return err;
+				}
+			}
+		}
+	} while (not_finished);
+
+/*
+	if (entry_point_list_length > 0) {
+		for (n = 0; n < entry_point_list_length; n++ ) {
+			printf("eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
+				entry_point[n].eip_offset_value,
+				entry_point[n].previous_instuction);
+		}
+	}
+*/
+	//inst_log--;
+	printf("Instructions=%"PRId64", entry_point_list_length=%"PRId64"\n",
+		inst_log,
+		entry_point_list_length);
+
+	/* Correct inst_log to identify how many dis_instructions there have been */
+	inst_log--;
+	print_dis_instructions();
+	if (entry_point_list_length > 0) {
+		for (n = 0; n < entry_point_list_length; n++ ) {
+			printf("%d, eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
+				entry_point[n].used,
+				entry_point[n].eip_offset_value,
+				entry_point[n].previous_instuction);
+		}
+	}
+	print_dis_instructions();
+	filename = "test.c";
+	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	if (fd < 0) {
+		printf("Failed to open file %s, error=%d\n", filename, fd);
+		return 1;
+	}
+	printf("fd=%d\n", fd);
+	printf("writing out to file\n");
+	/* Output function name */
+	printf("\nPRINTING MEMORY_DATA\n");
+	for (n = 0; n < 4; n++) {
+		if (memory_data[n].valid) {
+			
+			tmp = relocated_data(handle, memory_data[n].start_address, 4);
+			if (tmp) {
+				printf("int *data%04"PRIx64" = &data%04"PRIx64"\n",
+					memory_data[n].start_address,
+					memory_data[n].init_value);
+				tmp = snprintf(out_buf, 1024, "int *data%04"PRIx64" = &data%04"PRIx64";\n",
+					memory_data[n].start_address,
+					memory_data[n].init_value);
+			} else {
+				printf("int data%04"PRIx64" = 0x%04"PRIx64"\n",
+					memory_data[n].start_address,
+					memory_data[n].init_value);
+				tmp = snprintf(out_buf, 1024, "int data%04"PRIx64" = 0x%"PRIx64";\n",
+					memory_data[n].start_address,
+					memory_data[n].init_value);
+			}
+			write(fd, out_buf, tmp);
+		}
+	}
+	tmp = snprintf(out_buf, 1024, "\n");
+	write(fd, out_buf, tmp);
+	printf("\n");
+
+	for (n = 0; n < 100; n++) {
+		param_present[n] = 0;
+	}
+		
+	for (n = 0; n < 10; n++) {
+		if (memory_stack[n].start_address >= 0x10004) {
+			param_present[memory_stack[n].start_address - 0x10000] = 1;
+			param_size[memory_stack[n].start_address - 0x10000] = memory_stack[n].length;
+		}
+	}
+	for (n = 0; n < 100; n++) {
+		if (param_present[n]) {
+			printf("param%04x\n", n);
+			tmp = param_size[n];
+			n += tmp;
+		}
+	}
+
+	write_offset = 0;
+	for (l = 0; l < 100; l++) {
+		/* FIXME: value == 0 for the first function in the .o file. */
+		/*        We need to be able to handle more than
+		          one function per .o file. */
+		if ((external_entry_points[l].valid) &&
+		    (external_entry_points[l].value == 0)) {
+			output_function_name(fd, out_buf, &external_entry_points[l], &param_present[0], &param_size[0]);
+		}
+	}
+	output_function_body(fd, out_buf, 1, inst_log);
+
+	close(fd);
 	bf_test_close_file(handle);
+	print_mem(memory_reg, 1);
 	for (n = 0; n < inst_size; n++) {
 		printf("0x%04x: %d\n", n, memory_used[n]);
 	}
