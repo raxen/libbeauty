@@ -460,6 +460,7 @@ struct rev_eng *bf_test_open_file(const char *fn)
 	number_of_symbols = bfd_canonicalize_symtab(ret->bfd, ret->symtab);
 	ret->symtab_sz = number_of_symbols;
 	printf("symtab_canon = %"PRId64"\n", number_of_symbols);
+#if 0
 	for (l = 0; l < number_of_symbols; l++) {
 		printf("%"PRId64"\n", l);
 		printf("type:0x%02x\n", ret->symtab[l]->flags);
@@ -486,6 +487,7 @@ struct rev_eng *bf_test_open_file(const char *fn)
 #endif
 
 	}
+#endif
         printf("Setup ok\n");
 
 	return ret;

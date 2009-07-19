@@ -67,22 +67,22 @@ struct self_s *self = NULL;
 
 char *condition_table[] = {
 	"Unknown_0",
-	"OVERFLOW_1",
-	"NOT_OVERFLOW_2",
-	"BELOW_3",
-	"NOT_BELOW_4",
-	"EQUAL_5",
-	"NOT_EQUAL_6",
-	"ABOVE_7",
-	"NOT_ABOVE_8",
-	"SIGNED_9",
-	"NO_SIGNED_10",
-	"PARITY_11",
-	"NOT_PARITY_12",
-	"LESS_13",
-	"GREATER_EQUAL_14",
-	"LESS_EQUAL_15",
-	"GREATER_16"
+	"OVERFLOW_1", /* Signed */
+	"NOT_OVERFLOW_2", /* Signed */
+	"BELOW_3",	/* Unsigned */
+	"NOT_BELOW_4",	/* Unsigned */
+	"EQUAL_5",	/* Signed or Unsigned */
+	"NOT_EQUAL_6",	/* Signed or Unsigned */
+	"ABOVE_7",	/* Unsigned */
+	"NOT_ABOVE_8",	/* Unsigned */
+	"SIGNED_9",	/* Signed */
+	"NO_SIGNED_10",	/* Signed */
+	"PARITY_11",	/* Signed or Unsigned */
+	"NOT_PARITY_12",/* Signed or Unsigned */
+	"LESS_13",	/* Signed */
+	"GREATER_EQUAL_14", /* Signed */
+	"LESS_EQUAL_15",    /* Signed */
+	"GREATER_16"	/* Signed */
 };
 
 /* For the .data segment. I.e. Static data */
@@ -90,7 +90,26 @@ struct memory_s memory_data[1000];
 /* For the .text segment. I.e. Instructions. */
 struct memory_s memory_text[1000];
 struct memory_s memory_reg[100];
-struct memory_s memory_stack[100];
+#define MEMORY_STACK_SIZE 100
+struct memory_s memory_stack[MEMORY_STACK_SIZE];
+struct object_entry_point_s {
+	int valid;
+	uint64_t value;
+};
+struct external_entry_point_s {
+	int valid;
+	int type;
+	uint64_t value; /* pointer to original .text entry point */
+	uint64_t inst_log; /* Where the function starts in the inst_log */
+	char *name;
+};
+
+struct object_entry_point_s object_entry_points[100];
+struct external_entry_point_s external_entry_points[100];
+
+struct process_state_s {
+	int test;
+};	
 
 /* Used to store details of each instruction.
  * Linked by prev/next pointers
@@ -398,6 +417,9 @@ int stack_init(void)
 	memory_stack[n].valid = 1;
 	n++;
 #endif
+	for (;n < MEMORY_STACK_SIZE; n++) {
+		memory_stack[n].valid = 0;
+	}
 }
 
 int print_mem(struct memory_s *memory, int location) {
@@ -861,6 +883,43 @@ int main(int argc, char *argv[])
 	entry_point[0].eip_offset_value = memory_reg[2].offset_value;
 	entry_point[0].previous_instuction = 0;
 	entry_point_list_length = 100;
+	write_offset = 0;
+	/* Print the symtab */
+	printf("symtab_sz = %lu\n", handle->symtab_sz);
+	n = 0;
+	for (l = 0; l < handle->symtab_sz; l++) {
+		size_t length;
+		/* FIXME: value == 0 for the first function in the .o file. */
+		/*        We need to be able to handle more than
+		          one function per .o file. */
+//		printf("flags = 0x%04x, value = 0x%04"PRIx64"\n",
+//			handle->symtab[l]->flags,
+//			handle->symtab[l]->value);
+		if (handle->symtab[l]->flags & 0x8) {
+			external_entry_points[n].valid = 1;
+			/* 1: Public function entry point
+			 * 2: Private function entry point
+			 * 3: Private label entry point
+			 */
+			external_entry_points[n].type = 1;
+			external_entry_points[n].value = handle->symtab[l]->value;
+			length = strlen(handle->symtab[l]->name);
+			external_entry_points[n].name = malloc(length+1);
+			strncpy(external_entry_points[n].name, handle->symtab[l]->name, length+1);
+			n++;
+		}
+
+	}
+	printf("Number of functions = %d\n", n);
+	for (n = 0; n < 100; n++) {
+		if (external_entry_points[n].valid != 0) {
+		printf("type = %d, &%s() = 0x%04"PRIx64"\n",
+			external_entry_points[n].type,
+			external_entry_points[n].name,
+			external_entry_points[n].value);
+		}
+	}
+			
 	do {
 		not_finished = 0;
 		for (n = 0; n < entry_point_list_length; n++ ) {
@@ -972,7 +1031,7 @@ int main(int argc, char *argv[])
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
 		          one function per .o file. */
-		if ((handle->symtab[l]->flags == 0x12) &&
+		if ((handle->symtab[l]->flags & 0x8) &&
 		    (handle->symtab[l]->value == 0)) {
 			int commas = 0;
 			printf("int %s()\n{\n", handle->symtab[l]->name);
