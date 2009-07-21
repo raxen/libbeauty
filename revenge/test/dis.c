@@ -38,6 +38,7 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -244,6 +245,7 @@ int print_dis_instructions(void)
 			}
 		}
 	}
+	return 0;
 }
 
 int get_value_from_index(operand_t *operand, uint64_t *index)
@@ -265,7 +267,7 @@ int get_value_from_index(operand_t *operand, uint64_t *index)
 
 int ram_init(void)
 {
-
+	return 0;
 }
 
 int reg_init(void)
@@ -353,6 +355,7 @@ int reg_init(void)
 	memory_reg[2].value_id = 0;
 	/* valid: 0 - entry Not used yet, 1 - entry Used */
 	memory_reg[2].valid = 1;
+	return 0;
 }
 
 int stack_init(void)
@@ -420,6 +423,7 @@ int stack_init(void)
 	for (;n < MEMORY_STACK_SIZE; n++) {
 		memory_stack[n].valid = 0;
 	}
+	return 0;
 }
 
 int print_mem(struct memory_s *memory, int location) {
@@ -668,7 +672,7 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 		case 3: /* Data */
 			/* FIXME: introduce indirect_value_id and indirect_value_scope */
 			/* in order to resolve somewhere */
-			/* It will always be a register, and therefore can re-use the
+			/* It will always be a register, and therefore can re-use the */
 			/* value_id to identify it. */
 			/* It will always be a local and not a param */
 			printf("*local%04"PRIx64";\n", (indirect_value_id));
@@ -689,6 +693,7 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 		printf("Unhandled store1\n");
 		break;
 	}
+	return 0;
 }
 
 int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, char *out_buf, int *write_offset)
@@ -718,6 +723,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 			value_scope = inst_log1_flagged->value2.value_scope;
 			value_id = inst_log1_flagged->value2.value_id;
 			indirect_offset_value = inst_log1_flagged->value2.indirect_offset_value;
+			indirect_value_id = inst_log1_flagged->value2.indirect_value_id;
 			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, out_buf, write_offset);
 			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, " <= "
 				);
@@ -729,6 +735,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 			value_scope = inst_log1_flagged->value1.value_scope;
 			value_id = inst_log1_flagged->value1.value_id;
 			indirect_offset_value = inst_log1_flagged->value1.indirect_offset_value;
+			indirect_value_id = inst_log1_flagged->value1.indirect_value_id;
 			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, out_buf, write_offset);
 			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, ") ");
 			*write_offset += tmp;
@@ -810,7 +817,6 @@ int output_function_body(int fd, char *out_buf, int start, int end)
 	struct inst_log_entry_s *inst_log1;
 	struct inst_log_entry_s *inst_log1_prev;
 	struct memory_s *value;
-	char *expression;
 
 	for (n = start; n <= end; n++) {
 		write_offset = 0;
@@ -1019,11 +1025,7 @@ int output_function_body(int fd, char *out_buf, int start, int end)
 				printf("\t prev=%d, ",inst_log1->prev[0]);
 				printf("\t prev inst=%d, ",instruction_prev->opcode);
 				printf("\t %s", condition_table[instruction->srcA.index]);
-				printf("\t %s", expression);
 				printf("\t LHS=%d, ",inst_log1->prev[0]);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-					"%s", expression);
-				write_offset += tmp;
 				printf("goto label%04"PRIx32";\n", inst_log1->next[1]);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
 					"goto label%04"PRIx32";\n", inst_log1->next[1]);
@@ -1092,10 +1094,10 @@ int output_function_body(int fd, char *out_buf, int start, int end)
 int main(int argc, char *argv[])
 {
 	int n = 0;
-	uint64_t offset = 0;
-	int instruction_offset = 0;
-	int octets = 0;
-	int result;
+//	uint64_t offset = 0;
+//	int instruction_offset = 0;
+//	int octets = 0;
+//	int result;
 	char *filename;
 	int fd;
 	int write_offset;
@@ -1103,15 +1105,14 @@ int main(int argc, char *argv[])
 	int err;
 	const char *file = "test.obj";
 	size_t inst_size = 0;
-	uint64_t reloc_size = 0;
+//	uint64_t reloc_size = 0;
 	int l;
-	struct instruction_s *instruction;
-	struct instruction_s *instruction_prev;
-	struct inst_log_entry_s *inst_log1;
-	struct inst_log_entry_s *inst_log1_prev;
+//	struct instruction_s *instruction;
+//	struct instruction_s *instruction_prev;
+//	struct inst_log_entry_s *inst_log1;
+//	struct inst_log_entry_s *inst_log1_prev;
 	struct inst_log_entry_s *inst_exe;
-	struct inst_log_entry_s *inst_exe_prev;
-	struct memory_s *value;
+//	struct memory_s *value;
 	uint64_t inst_log_prev = 0;
 	int param_present[100];
 	int param_size[100];
