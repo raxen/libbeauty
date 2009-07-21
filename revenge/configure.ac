@@ -43,7 +43,7 @@ dnl ------------------------------------
 
 INCLUDES="-I\$(top_srcdir)/include"
 
-CXXFLAGS="-O2 $wall"
+CXXFLAGS="-O0 -Wall -g3"
 DEBUG_CXXFLAGS="-g3 -Wall"
 
 if test "$CXX" = "cxx"; then

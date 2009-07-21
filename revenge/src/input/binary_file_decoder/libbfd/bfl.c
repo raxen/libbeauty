@@ -30,10 +30,10 @@
 #include <bfl.h>
 
 /* The symbol table.  */
-static asymbol **syms;
+//static asymbol **syms;
 
 /* Number of symbols in `syms'.  */
-static long symcount = 0;
+//static long symcount = 0;
 
 static void insert_section(struct bfd *b, asection *sect, void *obj)
 {
@@ -107,8 +107,6 @@ static void print_sections(struct rev_eng* ret)
 
 static void print_code_section(struct rev_eng* ret)
 {
-  char *comma = "";
-  unsigned int       opb = bfd_octets_per_byte (ret->bfd);
   asection          *section = ret->section[0];
   int                n;
   bfd_byte          *data = NULL;
@@ -130,8 +128,6 @@ static void print_code_section(struct rev_eng* ret)
 int64_t bf_get_code_size(struct rev_eng* ret)
 {
   asection          *section = ret->section[0];
-  int                n;
-  bfd_byte          *data = NULL;
   bfd_size_type      datasize = 0;
   int64_t            code_size = 0;
 
@@ -143,8 +139,6 @@ int64_t bf_get_code_size(struct rev_eng* ret)
 int64_t bf_get_data_size(struct rev_eng* ret)
 {
   asection          *section = ret->section[1];
-  int                n;
-  bfd_byte          *data = NULL;
   bfd_size_type      datasize = 0;
   int64_t            code_size = 0;
 
@@ -191,8 +185,6 @@ dump_reloc_set (bfd *abfd, asection *sec, arelent **relpp, long relcount)
   for (p = relpp; relcount && *p != NULL; p++, relcount--)
     {
       arelent *q = *p;
-      const char *filename, *functionname;
-      unsigned int line;
       const char *sym_name;
       const char *section_name;
 
@@ -370,12 +362,8 @@ struct rev_eng *bf_test_open_file(const char *fn)
 	bfd *b;
 	char **matching;
 	int result;
-	int64_t result2;
-	int64_t val;
 	int64_t storage_needed;
 	int64_t number_of_symbols;
-	int n;
-	int64_t l;
 	//symbol_info sym_info;
 
         printf("Open entered\n");

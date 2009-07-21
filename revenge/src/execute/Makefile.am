@@ -1,7 +1,8 @@
 include $(top_srcdir)/misc/Makefile.common
 
 #AM_CPPFLAGS = -I$(top_srcdir)/src/input
-#CFLAGS = -O0 -g
+AM_CFLAGS = -O0 -g3 -Wall
+#CFLAGS = -O0 -g3 -Wall
 
 #modulesdir = $(pkglibdir)/revenge_exe
 lib_LTLIBRARIES = librevenge_exe.la

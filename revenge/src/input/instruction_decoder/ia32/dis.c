@@ -331,7 +331,6 @@ void dis_Ex_Gx(struct rev_eng *handle, int opcode, struct dis_instructions_s *di
 
 void dis_Gx_Ex(struct rev_eng *handle, int opcode, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half=0;
-	int instruction_number = dis_instructions->instruction_number;
 	instruction_t *instruction;
 
 	half = rmb(handle, dis_instructions, base_address, offset, reg);

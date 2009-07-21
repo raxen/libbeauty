@@ -145,9 +145,9 @@ static int get_value_RTL_instruction(
 	struct memory_s *destination,
 	int info_id )
 {
-	struct memory_s *value;
-	struct memory_s *value_data;
-	struct memory_s *value_stack;
+	struct memory_s *value = NULL;
+	struct memory_s *value_data = NULL;
+	struct memory_s *value_stack = NULL;
 	uint64_t data_index;
 	char *info;
 	if (info_id == 0) info = "srcA";
@@ -208,6 +208,7 @@ static int get_value_RTL_instruction(
 			}
 			if (!value) {
 				printf("GET CASE0:STORE_REG ERROR!\n");
+				return 1;
 				break;
 			}
 			destination->start_address = 0;
@@ -263,12 +264,16 @@ static int get_value_RTL_instruction(
 			}
 			if (!value) {
 				printf("GET CASE2:STORE_REG ERROR!\n");
+				return 1;
 				break;
 			}
 			data_index = value->init_value + value->offset_value;
 			destination->indirect_value_id = value->value_id;
 			break;
 		default:
+			/* Should not get here */
+			printf("FAILED\n");
+			return 1;
 			break;
 		}
 		value_data = search_store(memory_data,
@@ -292,6 +297,7 @@ static int get_value_RTL_instruction(
 			data_index);
 		if (!value_data) {
 			printf("GET CASE2:STORE_REG2 ERROR!\n");
+			return 1;
 			break;
 		}
 		destination->start_address = 0;
@@ -342,6 +348,7 @@ static int get_value_RTL_instruction(
 		}
 		if (!value) {
 			printf("GET CASE2:STORE_REG ERROR!\n");
+			return 1;
 			break;
 		}
 		value_stack = search_store(memory_stack,
@@ -379,6 +386,7 @@ static int get_value_RTL_instruction(
 			value->init_value + value->offset_value);
 		if (!value_stack) {
 			printf("GET CASE2:STORE_REG2 ERROR!\n");
+			return 1;
 			break;
 		}
 		destination->start_address = 0;
@@ -422,7 +430,7 @@ static int put_value_RTL_instruction(
 {
 	struct instruction_s *instruction;
 	struct memory_s *value;
-	struct memory_s *value_mem;
+//	struct memory_s *value_mem;
 	struct memory_s *value_data;
 	struct memory_s *value_stack;
 	uint64_t data_index;
@@ -453,6 +461,7 @@ static int put_value_RTL_instruction(
 			}
 			if (!value) {
 				printf("PUT CASE0:STORE_REG ERROR!\n");
+				return 1;
 				break;
 			}
 			/* eip changing */
@@ -517,11 +526,15 @@ static int put_value_RTL_instruction(
 			}
 			if (!value) {
 				printf("GET CASE2:STORE_REG ERROR!\n");
+				return 1;
 				break;
 			}
 			data_index = value->init_value + value->offset_value;
 			break;
 		default:
+			/* Should not get here */
+			printf("FAILED\n");
+			return 1;
 			break;
 		}
 		value_data = search_store(memory_data,
@@ -535,6 +548,7 @@ static int put_value_RTL_instruction(
 		}
 		if (!value_data) {
 			printf("PUT CASE2:STORE_REG2 ERROR!\n");
+			return 1;
 			break;
 		}
 		/* FIXME: these should always be the same */
@@ -579,6 +593,7 @@ static int put_value_RTL_instruction(
 		}
 		if (!value) {
 			printf("PUT CASE2:STORE_REG ERROR!\n");
+			return 1;
 			break;
 		}
 		value_stack = search_store(memory_stack,
@@ -594,6 +609,7 @@ static int put_value_RTL_instruction(
 		}
 		if (!value_stack) {
 			printf("PUT CASE2:STORE_REG2 ERROR!\n");
+			return 1;
 			break;
 		}
 		/* FIXME: these should always be the same */
@@ -637,8 +653,8 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 {
 	struct instruction_s *instruction;
 	struct memory_s *value;
-	struct memory_s *value_mem;
-	struct memory_s *value_stack;
+//	struct memory_s *value_mem;
+//	struct memory_s *value_stack;
 	int ret;
 
 	instruction = &inst->instruction;
@@ -898,7 +914,7 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 
 int ram_init(void)
 {
-
+	return 0;
 }
 
 int reg_init(void)
@@ -986,6 +1002,7 @@ int reg_init(void)
 	memory_reg[2].value_id = 0;
 	/* valid: 0 - entry Not used yet, 1 - entry Used */
 	memory_reg[2].valid = 1;
+	return 0;
 }
 
 int stack_init(void)
@@ -1050,6 +1067,7 @@ int stack_init(void)
 	memory_stack[n].valid = 1;
 	n++;
 #endif
+	return 0;
 }
 
 
