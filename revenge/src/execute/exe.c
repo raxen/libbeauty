@@ -141,6 +141,7 @@ exit_add_new_store:
 
 static int get_value_RTL_instruction(
 	struct self_s *self,
+	struct process_state_s *process_state,
 	operand_t *source,
 	struct memory_s *destination,
 	int info_id )
@@ -150,6 +151,18 @@ static int get_value_RTL_instruction(
 	struct memory_s *value_stack = NULL;
 	uint64_t data_index;
 	char *info;
+	struct memory_s *memory_text;
+	struct memory_s *memory_stack;
+	struct memory_s *memory_reg;
+	struct memory_s *memory_data;
+	int *memory_used;
+
+	memory_text = process_state->memory_text;
+	memory_stack = process_state->memory_stack;
+	memory_reg = process_state->memory_reg;
+	memory_data = process_state->memory_data;
+	memory_used = process_state->memory_used;
+
 	if (info_id == 0) info = "srcA";
 	if (info_id == 1) info = "dstA";
 	printf ("get_value_RTL_instruction:%p, %p, %i\n", source, destination, info_id);
@@ -426,6 +439,7 @@ static int get_value_RTL_instruction(
 
 static int put_value_RTL_instruction( 
 	struct self_s *self,
+	struct process_state_s *process_state,
 	struct inst_log_entry_s *inst)
 {
 	struct instruction_s *instruction;
@@ -434,6 +448,18 @@ static int put_value_RTL_instruction(
 	struct memory_s *value_data;
 	struct memory_s *value_stack;
 	uint64_t data_index;
+	struct memory_s *memory_text;
+	struct memory_s *memory_stack;
+	struct memory_s *memory_reg;
+	struct memory_s *memory_data;
+	int *memory_used;
+
+	memory_text = process_state->memory_text;
+	memory_stack = process_state->memory_stack;
+	memory_reg = process_state->memory_reg;
+	memory_data = process_state->memory_data;
+	memory_used = process_state->memory_used;
+
 	/* Put result in dstA */
 	instruction = &inst->instruction;
 	switch (instruction->dstA.indirect) {
@@ -649,12 +675,21 @@ static int put_value_RTL_instruction(
 
 
 
-int execute_instruction(void *self, struct inst_log_entry_s *inst)
+int execute_instruction(void *self, struct process_state_s *process_state, struct inst_log_entry_s *inst)
 {
 	struct instruction_s *instruction;
 	struct memory_s *value;
-//	struct memory_s *value_mem;
-//	struct memory_s *value_stack;
+	struct memory_s *memory_text;
+	struct memory_s *memory_stack;
+	struct memory_s *memory_reg;
+	struct memory_s *memory_data;
+	int *memory_used;
+
+	memory_text = process_state->memory_text;
+	memory_stack = process_state->memory_stack;
+	memory_reg = process_state->memory_reg;
+	memory_data = process_state->memory_data;
+	memory_used = process_state->memory_used;
 	int ret;
 
 	instruction = &inst->instruction;
@@ -666,19 +701,19 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 	switch (instruction->opcode) {
 	case NOP:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self, &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self, &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("NOP\n");
-		put_value_RTL_instruction(self, inst);
+		put_value_RTL_instruction(self, process_state, inst);
 		break;
 	case CMP:
 		/* Currently, do the same as NOP */
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("CMP\n");
 		/* A CMP does not save any values */
@@ -686,9 +721,9 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		break;
 	case MOV:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("MOV\n");
 		inst->value3.start_address = inst->value1.start_address;
@@ -726,13 +761,13 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 				inst->value3.offset_value,
 				inst->value3.init_value +
 					inst->value3.offset_value);
-		put_value_RTL_instruction(self, inst);
+		put_value_RTL_instruction(self, process_state, inst);
 		break;
 	case ADD:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("ADD\n");
 		inst->value3.start_address = inst->value2.start_address;
@@ -763,22 +798,22 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 				inst->value3.offset_value,
 				inst->value3.init_value +
 					inst->value3.offset_value);
-		put_value_RTL_instruction(self, inst);
+		put_value_RTL_instruction(self, process_state, inst);
 		break;
 	case ADC:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("ADC\n");
-		put_value_RTL_instruction(self, inst);
+		put_value_RTL_instruction(self, process_state, inst);
 		break;
 	case MUL:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("ADD\n");
 		inst->value3.start_address = inst->value2.start_address;
@@ -811,13 +846,13 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 				inst->value3.offset_value,
 				inst->value3.init_value +
 					inst->value3.offset_value);
-		put_value_RTL_instruction(self, inst);
+		put_value_RTL_instruction(self, process_state, inst);
 		break;
 	case SUB:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("SUB\n");
 		inst->value3.start_address = inst->value2.start_address;
@@ -841,13 +876,13 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 				inst->value3.offset_value,
 				inst->value3.init_value +
 					inst->value3.offset_value);
-		put_value_RTL_instruction(self, inst);
+		put_value_RTL_instruction(self, process_state, inst);
 		break;
 	case IF:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("IF\n");
 		/* Create absolute JMP value in value3 */
@@ -874,7 +909,7 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 		break;
 	case JMP:
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self,  &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
 		//ret = get_value_RTL_instruction(self,  &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
@@ -911,163 +946,4 @@ int execute_instruction(void *self, struct inst_log_entry_s *inst)
 	}
 	return 0;
 }
-
-int ram_init(void)
-{
-	return 0;
-}
-
-int reg_init(void)
-{
-	/* esp */
-	memory_reg[0].start_address = 0x14;
-	/* 4 bytes */
-	memory_reg[0].length = 4;
-	/* 1 - Known */
-	memory_reg[0].init_value_type = 1;
-	/* Initial value when first accessed */
-	memory_reg[0].init_value = 0x10000;
-	/* No offset yet */
-	memory_reg[0].offset_value = 0;
-	/* 0 - unknown,
-	 * 1 - unsigned,
-	 * 2 - signed,
-	 * 3 - pointer,
-	 * 4 - Instruction,
-	 * 5 - Instruction pointer(EIP),
-	 * 6 - Stack pointer.
-	 */
-	memory_reg[0].value_type = 6;
-	memory_reg[0].ref_memory = 0;
-	memory_reg[0].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
-	memory_reg[0].value_scope = 0;
-	/* Each time a new value is assigned, this value_id increases */
-	memory_reg[0].value_id = 0;
-	/* valid: 0 - Entry Not used yet, 1 - Entry Used */
-	memory_reg[0].valid = 1;
-
-	/* ebp */
-	memory_reg[1].start_address = 0x18;
-	/* 4 bytes */
-	memory_reg[1].length = 4;
-	/* 1 - Known */
-	memory_reg[1].init_value_type = 1;
-	/* Initial value when first accessed */
-	memory_reg[1].init_value = 0x20000;
-	/* No offset yet */
-	memory_reg[1].offset_value = 0;
-	/* 0 - unknown,
-	 * 1 - unsigned,
-	 * 2 - signed,
-	 * 3 - pointer,
-	 * 4 - Instruction,
-	 * 5 - Instruction pointer(EIP),
-	 * 6 - Stack pointer.
-	 */
-	memory_reg[1].value_type = 6;
-	memory_reg[1].ref_memory = 0;
-	memory_reg[1].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
-	memory_reg[1].value_scope = 0;
-	/* Each time a new value is assigned, this value_id increases */
-	memory_reg[1].value_id = 0;
-	/* valid: 0 - entry Not used yet, 1 - entry Used */
-	memory_reg[1].valid = 1;
-
-	/* eip */
-	memory_reg[2].start_address = 0x24;
-	/* 4 bytes */
-	memory_reg[2].length = 4;
-	/* 1 - Known */
-	memory_reg[2].init_value_type = 1;
-	/* Initial value when first accessed */
-	memory_reg[2].init_value = 40000000;
-	/* No offset yet */
-	memory_reg[2].offset_value = 0;
-	/* 0 - unknown,
-	 * 1 - unsigned,
-	 * 2 - signed,
-	 * 3 - pointer,
-	 * 4 - Instruction,
-	 * 5 - Instruction pointer(EIP),
-	 * 6 - Stack pointer.
-	 */
-	memory_reg[2].value_type = 5;
-	memory_reg[2].ref_memory = 0;
-	memory_reg[2].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
-	memory_reg[2].value_scope = 3;
-	/* Each time a new value is assigned, this value_id increases */
-	memory_reg[2].value_id = 0;
-	/* valid: 0 - entry Not used yet, 1 - entry Used */
-	memory_reg[2].valid = 1;
-	return 0;
-}
-
-int stack_init(void)
-{
-	int n = 0;
-	/* eip on the stack */
-	memory_stack[n].start_address = 0x10000;
-	/* 4 bytes */
-	memory_stack[n].length = 4;
-	/* 1 - Known */
-	memory_stack[n].init_value_type = 1;
-	/* Initial value when first accessed */
-	memory_stack[n].init_value = 0x0;
-	/* No offset yet */
-	memory_stack[n].offset_value = 0;
-	/* 0 - unknown,
-	 * 1 - unsigned,
-	 * 2 - signed,
-	 * 3 - pointer,
-	 * 4 - Instruction,
-	 * 5 - Instruction pointer(EIP),
-	 * 6 - Stack pointer.
-	 */
-	memory_stack[n].value_type = 5;
-	memory_stack[n].ref_memory = 0;
-	memory_stack[n].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
-	memory_stack[n].value_scope = 0;
-	/* Each time a new value is assigned, this value_id increases */
-	memory_stack[n].value_id = 0;
-	/* valid: 0 - Not used yet, 1 - Used */
-	memory_stack[n].valid = 1;
-	n++;
-
-#if 0
-	/* Param1 */
-	memory_stack[n].start_address = 0x10004;
-	/* 4 bytes */
-	memory_stack[n].length = 4;
-	/* 1 - Known */
-	memory_stack[n].init_value_type = 1;
-	/* Initial value when first accessed */
-	memory_stack[n].init_value = 0x321;
-	/* No offset yet */
-	memory_stack[n].offset_value = 0;
-	/* 0 - unknown,
-	 * 1 - unsigned,
-	 * 2 - signed,
-	 * 3 - pointer,
-	 * 4 - Instruction,
-	 * 5 - Instruction pointer(EIP),
-	 * 6 - Stack pointer.
-	 */
-	memory_stack[n].value_type = 2;
-	memory_stack[n].ref_memory = 0;
-	memory_stack[n].ref_log = 0;
-	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Global */
-	memory_stack[n].value_scope = 0;
-	/* Each time a new value is assigned, this value_id increases */
-	memory_stack[n].value_id = 0;
-	/* valid: 0 - Not used yet, 1 - Used */
-	memory_stack[n].valid = 1;
-	n++;
-#endif
-	return 0;
-}
-
 

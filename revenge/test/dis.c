@@ -86,17 +86,11 @@ char *condition_table[] = {
 	"GREATER_16"	/* Signed */
 };
 
-/* For the .data segment. I.e. Static data */
-struct memory_s memory_data[1000];
-/* For the .text segment. I.e. Instructions. */
-struct memory_s memory_text[1000];
-struct memory_s memory_reg[100];
-#define MEMORY_STACK_SIZE 100
-struct memory_s memory_stack[MEMORY_STACK_SIZE];
 struct object_entry_point_s {
 	int valid;
 	uint64_t value;
 };
+
 struct external_entry_point_s {
 	int valid;
 	int type;
@@ -108,9 +102,13 @@ struct external_entry_point_s {
 struct object_entry_point_s object_entry_points[100];
 struct external_entry_point_s external_entry_points[100];
 
-struct process_state_s {
-	int test;
-};	
+/* For the .text segment. I.e. Instructions. */
+#define MEMORY_TEXT_SIZE 1000
+#define MEMORY_STACK_SIZE 100
+#define MEMORY_REG_SIZE 100
+/* For the .data segment. I.e. Static data */
+#define MEMORY_DATA_SIZE 1000
+#define MEMORY_USED_SIZE 100
 
 /* Used to store details of each instruction.
  * Linked by prev/next pointers
@@ -265,12 +263,12 @@ int get_value_from_index(operand_t *operand, uint64_t *index)
 	return 1;
 }
 
-int ram_init(void)
+int ram_init(struct memory_s *memory_data)
 {
 	return 0;
 }
 
-int reg_init(void)
+int reg_init(struct memory_s *memory_reg)
 {
 	/* esp */
 	memory_reg[0].start_address = REG_SP;
@@ -358,7 +356,7 @@ int reg_init(void)
 	return 0;
 }
 
-int stack_init(void)
+int stack_init(struct memory_s *memory_stack)
 {
 	int n = 0;
 	/* eip on the stack */
@@ -456,7 +454,7 @@ int print_mem(struct memory_s *memory, int location) {
 	return 0;
 }
 
-int process_block(struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry) {
+int process_block(struct process_state_s *process_state, struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry) {
 	uint64_t offset = 0;
 	int result;
 	int n = 0;
@@ -466,6 +464,18 @@ int process_block(struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_
 	struct instruction_s *instruction;
 	int instruction_offset = 0;
 	int octets = 0;
+	struct memory_s *memory_text;
+	struct memory_s *memory_stack;
+	struct memory_s *memory_reg;
+	struct memory_s *memory_data;
+	int *memory_used;
+
+	memory_text = process_state->memory_text;
+	memory_stack = process_state->memory_stack;
+	memory_reg = process_state->memory_reg;
+	memory_data = process_state->memory_data;
+	memory_used = process_state->memory_used;
+
 	printf("process_block entry\n");
 	printf("inst_log=%"PRId64"\n", inst_log);
 	printf("dis:Data at %p, size=%"PRId32"\n", inst, inst_size);
@@ -552,7 +562,7 @@ int process_block(struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_
 			inst_exe_prev = &inst_log_entry[inst_log_prev];
 			inst_exe = &inst_log_entry[inst_log];
 			memcpy(&(inst_exe->instruction), instruction, sizeof(struct instruction_s));
-			err = execute_instruction(self, inst_exe);
+			err = execute_instruction(self, process_state, inst_exe);
 			if (err) {
 				printf("execute_intruction failed err=%d\n", err);
 				return err;
@@ -807,7 +817,8 @@ uint32_t output_function_name(int fd, char *out_buf,
 	return 0;
 }
 
-int output_function_body(int fd, char *out_buf, int start, int end)
+int output_function_body(struct process_state_s *process_state,
+			 int fd, char *out_buf, int start, int end)
 {
 	int tmp, n;
 	int err;
@@ -1060,7 +1071,7 @@ int output_function_body(int fd, char *out_buf, int start, int end)
 			(instruction->dstA.index ==  REG_IP)) {
 			/* FIXME: select correct return variable */
 			/* Search for EAX */
-			value = search_store(memory_reg,
+			value = search_store(process_state->memory_reg,
 					4, 4);
 			/* Catch the rare case of EAX never been used */
 			if (value) {
@@ -1118,9 +1129,27 @@ int main(int argc, char *argv[])
 	int param_size[100];
 	char *expression;
 	int not_finished;
-	ram_init();
-	reg_init();
-	stack_init();
+	struct process_state_s process_state;
+	struct memory_s *memory_text;
+	struct memory_s *memory_stack;
+	struct memory_s *memory_reg;
+	struct memory_s *memory_data;
+	int *memory_used;
+
+	process_state.memory_text = calloc(MEMORY_TEXT_SIZE, sizeof(struct memory_s));
+	process_state.memory_stack = calloc(MEMORY_STACK_SIZE, sizeof(struct memory_s));
+	process_state.memory_reg = calloc(MEMORY_REG_SIZE, sizeof(struct memory_s));
+	process_state.memory_data = calloc(MEMORY_DATA_SIZE, sizeof(struct memory_s));
+	process_state.memory_used = calloc(MEMORY_USED_SIZE, sizeof(int));
+	memory_text = process_state.memory_text;
+	memory_stack = process_state.memory_stack;
+	memory_reg = process_state.memory_reg;
+	memory_data = process_state.memory_data;
+	memory_used = process_state.memory_used;
+
+	ram_init(memory_data);
+	reg_init(memory_reg);
+	stack_init(memory_stack);
 
 	print_mem(memory_reg, 1);
 
@@ -1269,7 +1298,7 @@ int main(int argc, char *argv[])
 				memory_reg[2].offset_value = entry_point[n].eip_offset_value;
 				inst_log_prev = entry_point[n].previous_instuction;
 				not_finished = 1;
-				err = process_block(handle, inst_log_prev, entry_point_list_length, entry_point);
+				err = process_block(&process_state, handle, inst_log_prev, entry_point_list_length, entry_point);
 				/* clear the entry after calling process_block */
 				entry_point[n].used = 0;
 				if (err) {
@@ -1370,7 +1399,7 @@ int main(int argc, char *argv[])
 			output_function_name(fd, out_buf, &external_entry_points[l], &param_present[0], &param_size[0]);
 		}
 	}
-	output_function_body(fd, out_buf, 1, inst_log);
+	output_function_body(&process_state, fd, out_buf, 1, inst_log);
 
 	close(fd);
 	bf_test_close_file(handle);

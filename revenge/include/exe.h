@@ -52,7 +52,7 @@ struct inst_log_entry_s {
 	struct memory_s value3;		/* Result */
 } ;
 
-int execute_instruction(void *self, struct inst_log_entry_s *inst);
+int execute_instruction(void *self, struct process_state_s *process_state, struct inst_log_entry_s *inst);
 struct memory_s *search_store(
         struct memory_s *memory, uint64_t index, int size);
 struct memory_s *add_new_store(
@@ -66,12 +66,4 @@ extern char *dis_flags_table[];
 extern uint64_t inst_log;      /* Pointer to the current free instruction log entry. */
 extern char out_buf[1024];
 extern int local_counter;
-
-/* For the .data segment. I.e. Static data */
-extern struct memory_s memory_data[1000];
-/* For the .text segment. I.e. Instructions. */
-extern struct memory_s memory_text[1000];
-extern struct memory_s memory_reg[100];
-extern struct memory_s memory_stack[100];
-
 

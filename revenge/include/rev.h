@@ -57,4 +57,12 @@ struct rev_eng {
 	uint64_t	reloc_table_data_sz;
 };
 
+struct process_state_s {
+	struct memory_s *memory_text;
+	struct memory_s *memory_stack;
+	struct memory_s *memory_reg;
+	struct memory_s *memory_data;
+	int *memory_used;
+};	
+
 #endif /* __REV__ */
