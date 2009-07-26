@@ -96,6 +96,8 @@ struct external_entry_point_s {
 	int type;
 	uint64_t value; /* pointer to original .text entry point */
 	uint64_t inst_log; /* Where the function starts in the inst_log */
+	uint64_t inst_log_end; /* Where the function ends in inst_log */
+	struct process_state_s process_state;
 	char *name;
 };
 
@@ -479,13 +481,11 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 	printf("process_block entry\n");
 	printf("inst_log=%"PRId64"\n", inst_log);
 	printf("dis:Data at %p, size=%"PRId32"\n", inst, inst_size);
-	for (offset = 0; ;
-			/* Update EIP */
-			offset = memory_reg[2].offset_value
-			) {
+	for (offset = 0; ;) {
 	//for (offset = 0; offset < inst_size;
 			//offset += dis_instructions.bytes_used) {
-		offset = memory_reg[2].offset_value;
+		/* Update EIP */
+		offset = memory_reg[2].init_value + memory_reg[2].offset_value;
 		dis_instructions.instruction_number = 0;
 		dis_instructions.bytes_used = 0;
 		printf("eip=0x%"PRIx64", offset=0x%"PRIx64"\n",
@@ -843,7 +843,8 @@ int output_function_body(struct process_state_s *process_state,
 				"label%04"PRIx32":\n", n);
 			write_offset += tmp;
 		} else {
-			if (inst_log1->prev[0] != (n - 1)) {		
+			if ((inst_log1->prev[0] != (n - 1)) &&
+				(inst_log1->prev[0] != 0)) {		
 				printf("label%04"PRIx32":\n", n);
 				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
 					"label%04"PRIx32":\n", n);
@@ -1094,7 +1095,7 @@ int output_function_body(struct process_state_s *process_state,
 		write_offset = 0;
 	}
 	tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-		"}\n");
+		"}\n\n");
 	write_offset += tmp;
 	write(fd, out_buf, write_offset);
 	write_offset = 0;
@@ -1129,29 +1130,11 @@ int main(int argc, char *argv[])
 	int param_size[100];
 	char *expression;
 	int not_finished;
-	struct process_state_s process_state;
 	struct memory_s *memory_text;
 	struct memory_s *memory_stack;
 	struct memory_s *memory_reg;
 	struct memory_s *memory_data;
 	int *memory_used;
-
-	process_state.memory_text = calloc(MEMORY_TEXT_SIZE, sizeof(struct memory_s));
-	process_state.memory_stack = calloc(MEMORY_STACK_SIZE, sizeof(struct memory_s));
-	process_state.memory_reg = calloc(MEMORY_REG_SIZE, sizeof(struct memory_s));
-	process_state.memory_data = calloc(MEMORY_DATA_SIZE, sizeof(struct memory_s));
-	process_state.memory_used = calloc(MEMORY_USED_SIZE, sizeof(int));
-	memory_text = process_state.memory_text;
-	memory_stack = process_state.memory_stack;
-	memory_reg = process_state.memory_reg;
-	memory_data = process_state.memory_data;
-	memory_used = process_state.memory_used;
-
-	ram_init(memory_data);
-	reg_init(memory_reg);
-	stack_init(memory_stack);
-
-	print_mem(memory_reg, 1);
 
 	expression = malloc(1000); /* Buffer for if expressions */
 
@@ -1229,19 +1212,9 @@ int main(int argc, char *argv[])
 	printf("disassemble_fn done %p, %p\n", disassemble_fn, print_insn_i386);
 	dis_instructions.bytes_used = 0;
 	inst_exe = &inst_log_entry[0];
-	/* EIP is a parameter for process_block */
-	/* Update EIP */
-	//memory_reg[2].offset_value = 0;
-	//inst_log_prev = 0;
-	entry_point[0].used = 1;
-	entry_point[0].esp_init_value = memory_reg[0].init_value;
-	entry_point[0].esp_offset_value = memory_reg[0].offset_value;
-	entry_point[0].ebp_init_value = memory_reg[1].init_value;
-	entry_point[0].ebp_offset_value = memory_reg[1].offset_value;
-	entry_point[0].eip_init_value = memory_reg[2].init_value;
-	entry_point[0].eip_offset_value = memory_reg[2].offset_value;
-	entry_point[0].previous_instuction = 0;
+	/* Where should entry_point_list_length be initialised */
 	entry_point_list_length = 100;
+	/* Where should write_offset be initialised */
 	write_offset = 0;
 	/* Print the symtab */
 	printf("symtab_sz = %lu\n", handle->symtab_sz);
@@ -1269,6 +1242,31 @@ int main(int argc, char *argv[])
 			length = strlen(handle->symtab[l]->name);
 			external_entry_points[n].name = malloc(length+1);
 			strncpy(external_entry_points[n].name, handle->symtab[l]->name, length+1);
+			external_entry_points[n].process_state.memory_text =
+				calloc(MEMORY_TEXT_SIZE, sizeof(struct memory_s));
+			external_entry_points[n].process_state.memory_stack =
+				calloc(MEMORY_STACK_SIZE, sizeof(struct memory_s));
+			external_entry_points[n].process_state.memory_reg =
+				calloc(MEMORY_REG_SIZE, sizeof(struct memory_s));
+			external_entry_points[n].process_state.memory_data =
+				calloc(MEMORY_DATA_SIZE, sizeof(struct memory_s));
+			external_entry_points[n].process_state.memory_used =
+				calloc(MEMORY_USED_SIZE, sizeof(int));
+			memory_text = external_entry_points[n].process_state.memory_text;
+			memory_stack = external_entry_points[n].process_state.memory_stack;
+			memory_reg = external_entry_points[n].process_state.memory_reg;
+			memory_data = external_entry_points[n].process_state.memory_data;
+			memory_used = external_entry_points[n].process_state.memory_used;
+
+			ram_init(memory_data);
+			reg_init(memory_reg);
+			stack_init(memory_stack);
+			/* Set EIP entry point equal to symbol table entry point */
+			memory_reg[2].init_value = external_entry_points[n].value;
+			memory_reg[2].offset_value = 0;
+
+			print_mem(memory_reg, 1);
+
 			n++;
 		}
 
@@ -1283,32 +1281,64 @@ int main(int argc, char *argv[])
 		}
 	}
 			
-	do {
-		not_finished = 0;
-		for (n = 0; n < entry_point_list_length; n++ ) {
+	for (l = 0; l < 100; l++) {
+		if (external_entry_points[l].valid != 0) {
+			struct process_state_s *process_state;
+			
+			process_state = &external_entry_points[l].process_state;
+			memory_text = process_state->memory_text;
+			memory_stack = process_state->memory_stack;
+			memory_reg = process_state->memory_reg;
+			memory_data = process_state->memory_data;
+			memory_used = process_state->memory_used;
+			external_entry_points[l].inst_log = inst_log;
 			/* EIP is a parameter for process_block */
 			/* Update EIP */
-			//printf("entry:%d\n",n);
-			if (entry_point[n].used) {
-				memory_reg[0].init_value = entry_point[n].esp_init_value;
-				memory_reg[0].offset_value = entry_point[n].esp_offset_value;
-				memory_reg[1].init_value = entry_point[n].ebp_init_value;
-				memory_reg[1].offset_value = entry_point[n].ebp_offset_value;
-				memory_reg[2].init_value = entry_point[n].eip_init_value;
-				memory_reg[2].offset_value = entry_point[n].eip_offset_value;
-				inst_log_prev = entry_point[n].previous_instuction;
-				not_finished = 1;
-				err = process_block(&process_state, handle, inst_log_prev, entry_point_list_length, entry_point);
-				/* clear the entry after calling process_block */
-				entry_point[n].used = 0;
-				if (err) {
-					printf("process_block failed\n");
-					return err;
-				}
-			}
-		}
-	} while (not_finished);
+			//memory_reg[2].offset_value = 0;
+			//inst_log_prev = 0;
+			entry_point[0].used = 1;
+			entry_point[0].esp_init_value = memory_reg[0].init_value;
+			entry_point[0].esp_offset_value = memory_reg[0].offset_value;
+			entry_point[0].ebp_init_value = memory_reg[1].init_value;
+			entry_point[0].ebp_offset_value = memory_reg[1].offset_value;
+			entry_point[0].eip_init_value = memory_reg[2].init_value;
+			entry_point[0].eip_offset_value = memory_reg[2].offset_value;
+			entry_point[0].previous_instuction = 0;
+			entry_point_list_length = 100;
 
+			print_mem(memory_reg, 1);
+			printf ("LOGS: inst_log = 0x%"PRIx64"\n", inst_log);
+			do {
+				not_finished = 0;
+				for (n = 0; n < entry_point_list_length; n++ ) {
+					/* EIP is a parameter for process_block */
+					/* Update EIP */
+					//printf("entry:%d\n",n);
+					if (entry_point[n].used) {
+						memory_reg[0].init_value = entry_point[n].esp_init_value;
+						memory_reg[0].offset_value = entry_point[n].esp_offset_value;
+						memory_reg[1].init_value = entry_point[n].ebp_init_value;
+						memory_reg[1].offset_value = entry_point[n].ebp_offset_value;
+						memory_reg[2].init_value = entry_point[n].eip_init_value;
+						memory_reg[2].offset_value = entry_point[n].eip_offset_value;
+						inst_log_prev = entry_point[n].previous_instuction;
+						not_finished = 1;
+						printf ("LOGS: EIP = 0x%"PRIx64"\n", memory_reg[2].init_value);
+						printf ("LOGS: EIP = 0x%"PRIx64"\n", memory_reg[2].offset_value);
+						err = process_block(process_state, handle, inst_log_prev, entry_point_list_length, entry_point);
+						/* clear the entry after calling process_block */
+						entry_point[n].used = 0;
+						if (err) {
+							printf("process_block failed\n");
+							return err;
+						}
+					}
+				}
+			} while (not_finished);	
+			external_entry_points[l].inst_log_end = inst_log - 1;
+			printf ("LOGS: inst_log_end = 0x%"PRIx64"\n", inst_log);
+		}
+	}
 /*
 	if (entry_point_list_length > 0) {
 		for (n = 0; n < entry_point_list_length; n++ ) {
@@ -1334,7 +1364,6 @@ int main(int argc, char *argv[])
 				entry_point[n].previous_instuction);
 		}
 	}
-	print_dis_instructions();
 	filename = "test.c";
 	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (fd < 0) {
@@ -1377,6 +1406,7 @@ int main(int argc, char *argv[])
 		
 	for (n = 0; n < 10; n++) {
 		if (memory_stack[n].start_address >= 0x10004) {
+			/* FIXME: This is just dangerous code */
 			param_present[memory_stack[n].start_address - 0x10000] = 1;
 			param_size[memory_stack[n].start_address - 0x10000] = memory_stack[n].length;
 		}
@@ -1394,12 +1424,19 @@ int main(int argc, char *argv[])
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
 		          one function per .o file. */
-		if ((external_entry_points[l].valid) &&
-		    (external_entry_points[l].value == 0)) {
+		if (external_entry_points[l].valid) {
+			struct process_state_s *process_state;
+			
+			process_state = &external_entry_points[l].process_state;
+
 			output_function_name(fd, out_buf, &external_entry_points[l], &param_present[0], &param_size[0]);
+			output_function_body(process_state,
+				fd,
+				out_buf,
+				external_entry_points[l].inst_log,
+				external_entry_points[l].inst_log_end);
 		}
 	}
-	output_function_body(&process_state, fd, out_buf, 1, inst_log);
 
 	close(fd);
 	bf_test_close_file(handle);
