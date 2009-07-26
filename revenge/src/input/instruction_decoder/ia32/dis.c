@@ -1219,7 +1219,10 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used);
 		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4);
 		if (tmp) {
+			printf("RELOCATED 0x%04"PRIx64"\n", offset + dis_instructions->bytes_used);
 			instruction->srcA.relocated = 1;
+			/* FIXME: Check it works for all related cases. E.g. jmp and call */
+			instruction->srcA.index = offset + dis_instructions->bytes_used;
 		}
 		dis_instructions->bytes_used+=4;
 		instruction->srcA.size = 4;

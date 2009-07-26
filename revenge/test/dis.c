@@ -39,6 +39,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -48,6 +49,7 @@
 #include <exe.h>
 #include <rev.h>
 #include <dis-asm.h>
+#include <assert.h>
 
 #define EIP_START 0x40000000
 
@@ -61,7 +63,7 @@ struct disassemble_info disasm_info;
 disassembler_ftype disassemble_fn;
 char *dis_flags_table[] = { " ", "f" };
 uint64_t inst_log = 1;	/* Pointer to the current free instruction log entry. */
-char out_buf[1024];
+//char out_buf[1024];
 int local_counter = 1;
 struct self_s *self = NULL;
 
@@ -139,50 +141,57 @@ struct entry_point_s {
 struct entry_point_s entry_point[100];
 uint64_t entry_point_list_length = 100;
 
-	
-
-int print_inst(struct instruction_s *instruction, int instruction_number)
+int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_number)
 {
 	int ret = 1; /* Default to failed */
-	printf("Instruction 0x%04x:%s%s",
+	int tmp;
+	tmp = fprintf(fd, "// 0x%04x:%p:%s%s",
 		instruction_number,
+		fd,
 		opcode_table[instruction->opcode],
 		dis_flags_table[instruction->flags]);
 	if (instruction->opcode != IF) {
 		if (instruction->srcA.indirect) {
-			printf(" %s[%s0x%"PRIx64"]%s,",
+			tmp = fprintf(fd, " %s[%s0x%"PRIx64"]%s,",
 				indirect_table[instruction->srcA.indirect],
 				store_table[instruction->srcA.store],
 				instruction->srcA.index,
 				size_table[instruction->srcA.size]);
 		} else {
-			printf(" %s0x%"PRIx64"%s,",
-			store_table[instruction->srcA.store],
-			instruction->srcA.index,
-			size_table[instruction->srcA.size]);
+			tmp = fprintf(fd, " %s0x%"PRIx64"%s,",
+				store_table[instruction->srcA.store],
+				instruction->srcA.index,
+				size_table[instruction->srcA.size]);
 		}
 		if (instruction->dstA.indirect) {
-			printf(" %s[%s0x%"PRIx64"]%s\n",
+			tmp = fprintf(fd, " %s[%s0x%"PRIx64"]%s\n",
 				indirect_table[instruction->dstA.indirect],
 				store_table[instruction->dstA.store],
 				instruction->dstA.index,
 				size_table[instruction->dstA.size]);
 		} else {
-			printf(" %s0x%"PRIx64"%s\n",
-			store_table[instruction->dstA.store],
-			instruction->dstA.index,
-			size_table[instruction->dstA.size]);
+			tmp = fprintf(fd, " %s0x%"PRIx64"%s\n",
+				store_table[instruction->dstA.store],
+				instruction->dstA.index,
+				size_table[instruction->dstA.size]);
 		}
 		ret = 0;
 		goto print_inst_exit;
-	}
-	if (instruction->opcode == IF) {
-		printf(" cond=%"PRIu64"", instruction->srcA.index);
-		printf(" JMP-REL=0x%"PRIx64"\n", instruction->dstA.index);
+	} else { /* IF */
+		tmp = fprintf(fd, " cond=%"PRIu64"", instruction->srcA.index);
+		tmp = fprintf(fd, " JMP-REL=0x%"PRIx64"\n", instruction->dstA.index);
 		ret = 0;
 		goto print_inst_exit;
 	}
 print_inst_exit:
+	return ret;
+}
+
+int print_inst(struct instruction_s *instruction, int instruction_number)
+{
+	int ret;
+
+	ret = write_inst(stdout, instruction, instruction_number);
 	return ret;
 }
 
@@ -485,7 +494,7 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 	//for (offset = 0; offset < inst_size;
 			//offset += dis_instructions.bytes_used) {
 		/* Update EIP */
-		offset = memory_reg[2].init_value + memory_reg[2].offset_value;
+		offset = memory_reg[2].offset_value;
 		dis_instructions.instruction_number = 0;
 		dis_instructions.bytes_used = 0;
 		printf("eip=0x%"PRIx64", offset=0x%"PRIx64"\n",
@@ -637,7 +646,7 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 	return 0;
 }
 
-int output_variable(int store, int indirect, uint64_t index, uint64_t relocated, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, uint64_t indirect_value_id, char *out_buf, int *write_offset) {
+int output_variable(int store, int indirect, uint64_t index, uint64_t relocated, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, uint64_t indirect_value_id, FILE *fd) {
 	int tmp;
 	/* FIXME: May handle by using first switch as switch (indirect) */
 	switch (store) {
@@ -651,33 +660,29 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 		/* relocation table entry == pointer */
 		/* this info should be gathered at disassembly point */
 		if (indirect == IND_MEM) {
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "data%04"PRIx64,
+			tmp = fprintf(fd, "data%04"PRIx64,
 				index);
 		} else if (relocated) {
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "&data%04"PRIx64,
+			tmp = fprintf(fd, "&data%04"PRIx64,
 				index);
 		} else {
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "0x%"PRIx64,
+			tmp = fprintf(fd, "0x%"PRIx64,
 				index);
 		}
-		*write_offset += tmp;
 		break;
 	case STORE_REG:
 		switch (value_scope) {
 		case 1:
 			/* FIXME: Should this be param or instead param_reg, param_stack */
 			printf("param%04"PRIx64";\n", (indirect_offset_value));
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "param%04"PRIx64,
+			tmp = fprintf(fd, "param%04"PRIx64,
 				indirect_offset_value);
-			*write_offset += tmp;
-			printf("write_offset=%d\n", *write_offset);
 			break;
 		case 2:
 			/* FIXME: Should this be local or instead local_reg, local_stack */
 			printf("local%04"PRIx64";\n", (value_id));
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "local%04"PRIx64,
+			tmp = fprintf(fd, "local%04"PRIx64,
 				value_id);
-			*write_offset += tmp;
 			break;
 		case 3: /* Data */
 			/* FIXME: introduce indirect_value_id and indirect_value_scope */
@@ -686,16 +691,13 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 			/* value_id to identify it. */
 			/* It will always be a local and not a param */
 			printf("*local%04"PRIx64";\n", (indirect_value_id));
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "*local%04"PRIx64,
+			tmp = fprintf(fd, "*local%04"PRIx64,
 				indirect_value_id);
-			*write_offset += tmp;
 			break;
 		default:
 			printf("unknown value scope: %04"PRIx64";\n", (value_scope));
-			tmp = snprintf(out_buf + *write_offset, 1024 - *write_offset, "unknown%04"PRIx64,
+			tmp = fprintf(fd, "unknown%04"PRIx64,
 				value_scope);
-			*write_offset += tmp;
-			printf("write_offset=%d\n", *write_offset);
 			break;
 		}
 		break;
@@ -706,7 +708,7 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 	return 0;
 }
 
-int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, char *out_buf, int *write_offset)
+int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, FILE *fd)
 {
 	int opcode = inst_log1_flagged->instruction.opcode;
 	int err = 0;
@@ -724,8 +726,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 	case CMP:
 		switch (condition) {
 		case LESS_EQUAL:
-			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, "(");
-			*write_offset += tmp;
+			tmp = fprintf(fd, "(");
 			store = inst_log1_flagged->instruction.dstA.store;
 			indirect = inst_log1_flagged->instruction.dstA.indirect;
 			index = inst_log1_flagged->instruction.dstA.index;
@@ -734,10 +735,8 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 			value_id = inst_log1_flagged->value2.value_id;
 			indirect_offset_value = inst_log1_flagged->value2.indirect_offset_value;
 			indirect_value_id = inst_log1_flagged->value2.indirect_value_id;
-			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, out_buf, write_offset);
-			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, " <= "
-				);
-			*write_offset += tmp;
+			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, fd);
+			tmp = fprintf(fd, " <= ");
 			store = inst_log1_flagged->instruction.srcA.store;
 			indirect = inst_log1_flagged->instruction.srcA.indirect;
 			index = inst_log1_flagged->instruction.srcA.index;
@@ -746,9 +745,8 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, ch
 			value_id = inst_log1_flagged->value1.value_id;
 			indirect_offset_value = inst_log1_flagged->value1.indirect_offset_value;
 			indirect_value_id = inst_log1_flagged->value1.indirect_value_id;
-			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, out_buf, write_offset);
-			tmp = snprintf(out_buf + *write_offset, 999 - *write_offset, ") ");
-			*write_offset += tmp;
+			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, fd);
+			tmp = fprintf(fd, ") ");
 			break;
 		default:
 			err = 1;
@@ -779,50 +777,38 @@ uint32_t relocated_data(struct rev_eng *handle, uint64_t offset, uint64_t size)
 }
 
 
-uint32_t output_function_name(int fd, char *out_buf,
+uint32_t output_function_name(FILE *fd,
 		struct external_entry_point_s *external_entry_point,
 		int *param_present, int *param_size)
 {
 	int commas = 0;
 	int tmp, n;
-	int write_offset = 0;
 
 	printf("int %s()\n{\n", external_entry_point->name);
 	printf("value = %"PRIx64"\n", external_entry_point->value);
-	tmp = snprintf(out_buf, 1024, "int %s(", external_entry_point->name);
-	write_offset += tmp;
+	tmp = fprintf(fd, "int %s(", external_entry_point->name);
 	for (n = 0; n < 100; n++) {
 		if (param_present[n]) {
 			printf("param%04x\n", n);
 			if (commas) {
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-					", ");
-				write_offset += tmp;
+				tmp = fprintf(fd, ", ");
 			}
-			tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-				"param%04"PRIx32"", n);
-			write_offset += tmp;
+			tmp = fprintf(fd, "param%04"PRIx32"", n);
 			commas = 1;
 			tmp = param_size[n];
 			n += tmp;
 		}
 	}
 
-	tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-			")\n{\n");
-	write_offset += tmp;
-	out_buf[write_offset] = 0;
-	write(fd, out_buf, write_offset);
-	write_offset = 0;
+	tmp = fprintf(fd, ")\n{\n");
 	return 0;
 }
 
 int output_function_body(struct process_state_s *process_state,
-			 int fd, char *out_buf, int start, int end)
+			 FILE *fd, int start, int end)
 {
 	int tmp, n;
 	int err;
-	int write_offset = 0;
 	struct instruction_s *instruction;
 	struct instruction_s *instruction_prev;
 	struct inst_log_entry_s *inst_log1;
@@ -830,25 +816,22 @@ int output_function_body(struct process_state_s *process_state,
 	struct memory_s *value;
 
 	for (n = start; n <= end; n++) {
-		write_offset = 0;
 		inst_log1 =  &inst_log_entry[n];
 		inst_log1_prev =  &inst_log_entry[inst_log1->prev[0]];
 		instruction =  &inst_log1->instruction;
 		instruction_prev =  &inst_log1_prev->instruction;
+
+		write_inst(fd, instruction, n);
 		/* Output labels when this is a join point */
 		/* or when the previous instruction was some sort of jump */
 		if ((inst_log1->prev_size) > 1) {
 			printf("label%04"PRIx32":\n", n);
-			tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-				"label%04"PRIx32":\n", n);
-			write_offset += tmp;
+			tmp = fprintf(fd, "label%04"PRIx32":\n", n);
 		} else {
 			if ((inst_log1->prev[0] != (n - 1)) &&
 				(inst_log1->prev[0] != 0)) {		
 				printf("label%04"PRIx32":\n", n);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-					"label%04"PRIx32":\n", n);
-				write_offset += tmp;
+				tmp = fprintf(fd, "label%04"PRIx32":\n", n);
 			}
 		}
 			
@@ -875,8 +858,7 @@ int output_function_body(struct process_state_s *process_state,
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
-				write_offset += tmp;
+				tmp = fprintf(fd, "\t");
 
 				tmp = output_variable(instruction->dstA.store,
 					instruction->dstA.indirect,
@@ -886,9 +868,8 @@ int output_function_body(struct process_state_s *process_state,
 					inst_log1->value3.value_id,
 					inst_log1->value3.indirect_offset_value,
 					inst_log1->value3.indirect_value_id,
-					out_buf, &write_offset);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " = ");
-				write_offset += tmp;
+					fd);
+				tmp = fprintf(fd, " = ");
 
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = output_variable(instruction->srcA.store,
@@ -899,17 +880,15 @@ int output_function_body(struct process_state_s *process_state,
 					inst_log1->value1.value_id,
 					inst_log1->value1.indirect_offset_value,
 					inst_log1->value1.indirect_value_id,
-					out_buf, &write_offset);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
-				write_offset += tmp;
+					fd);
+				tmp = fprintf(fd, ";\n");
 
 				break;
 			case ADD:
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
-				write_offset += tmp;
+				tmp = fprintf(fd, "\t");
 				tmp = output_variable(instruction->dstA.store,
 					instruction->dstA.indirect,
 					instruction->dstA.index,
@@ -918,9 +897,8 @@ int output_function_body(struct process_state_s *process_state,
 					inst_log1->value3.value_id,
 					inst_log1->value3.indirect_offset_value,
 					inst_log1->value3.indirect_value_id,
-					out_buf, &write_offset);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " += ");
-				write_offset += tmp;
+					fd);
+				tmp = fprintf(fd, " += ");
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = output_variable(instruction->srcA.store,
 					instruction->srcA.indirect,
@@ -930,16 +908,14 @@ int output_function_body(struct process_state_s *process_state,
 					inst_log1->value1.value_id,
 					inst_log1->value1.indirect_offset_value,
 					inst_log1->value1.indirect_value_id,
-					out_buf, &write_offset);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
-				write_offset += tmp;
+					fd);
+				tmp = fprintf(fd, ";\n");
 				break;
 			case MUL:
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
-				write_offset += tmp;
+				tmp = fprintf(fd, "\t");
 				tmp = output_variable(instruction->dstA.store,
 					instruction->dstA.indirect,
 					instruction->dstA.index,
@@ -948,9 +924,8 @@ int output_function_body(struct process_state_s *process_state,
 					inst_log1->value3.value_id,
 					inst_log1->value3.indirect_offset_value,
 					inst_log1->value3.indirect_value_id,
-					out_buf, &write_offset);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " *= ");
-				write_offset += tmp;
+					fd);
+				tmp = fprintf(fd, " *= ");
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = output_variable(instruction->srcA.store,
 					instruction->srcA.indirect,
@@ -960,16 +935,14 @@ int output_function_body(struct process_state_s *process_state,
 					inst_log1->value1.value_id,
 					inst_log1->value1.indirect_offset_value,
 					inst_log1->value1.indirect_value_id,
-					out_buf, &write_offset);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
-				write_offset += tmp;
+					fd);
+				tmp = fprintf(fd, ";\n");
 				break;
 			case SUB:
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
-				write_offset += tmp;
+				tmp = fprintf(fd, "\t");
 				tmp = output_variable(instruction->dstA.store,
 					instruction->dstA.indirect,
 					instruction->dstA.index,
@@ -978,9 +951,8 @@ int output_function_body(struct process_state_s *process_state,
 					inst_log1->value3.value_id,
 					inst_log1->value3.indirect_offset_value,
 					inst_log1->value3.indirect_value_id,
-					out_buf, &write_offset);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, " -= ");
-				write_offset += tmp;
+					fd);
+				tmp = fprintf(fd, " -= ");
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = output_variable(instruction->srcA.store,
 					instruction->srcA.indirect,
@@ -990,33 +962,32 @@ int output_function_body(struct process_state_s *process_state,
 					inst_log1->value1.value_id,
 					inst_log1->value1.indirect_offset_value,
 					inst_log1->value1.indirect_value_id,
-					out_buf, &write_offset);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, ";\n");
-				write_offset += tmp;
+					fd);
+				tmp = fprintf(fd, ";\n");
 				break;
 			case JMP:
 				printf("JMP reached XXXX\n");
 				if (print_inst(instruction, n))
 					return 1;
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
-				write_offset += tmp;
-				printf("goto label%04"PRIx32";\n",
-					inst_log1->next[0]);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-					"goto label%04"PRIx32";\n",
-					inst_log1->next[0]);
-				write_offset += tmp;
+				tmp = fprintf(fd, "\t");
+				if (instruction->srcA.relocated) {
+					printf("goto rel%08"PRIx64";\n", instruction->srcA.index);
+					tmp = fprintf(fd, "goto rel%08"PRIx64";\n",
+						instruction->srcA.index);
+				} else {
+					printf("goto label%04"PRIx32";\n",
+						inst_log1->next[0]);
+					tmp = fprintf(fd, "goto label%04"PRIx32";\n",
+						inst_log1->next[0]);
+				}
 				break;
 			case CMP:
 				/* Don't do anything for this instruction. */
 				/* only does anything if combined with a branch instruction */
 				if (print_inst(instruction, n))
 					return 1;
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
-				write_offset += tmp;
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-					"/* cmp; */\n");
-				write_offset += tmp;
+				tmp = fprintf(fd, "\t");
+				tmp = fprintf(fd, "/* cmp; */\n");
 				printf("/* cmp; */\n");
 				break;
 
@@ -1027,21 +998,16 @@ int output_function_body(struct process_state_s *process_state,
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\t");
-				write_offset += tmp;
+				tmp = fprintf(fd, "\t");
 				printf("if ");
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-					"if ");
-				write_offset += tmp;
-				err = if_expression( instruction->srcA.index, inst_log1_prev, out_buf, &write_offset);
+				tmp = fprintf(fd, "if ");
+				err = if_expression( instruction->srcA.index, inst_log1_prev, fd);
 				printf("\t prev=%d, ",inst_log1->prev[0]);
 				printf("\t prev inst=%d, ",instruction_prev->opcode);
 				printf("\t %s", condition_table[instruction->srcA.index]);
 				printf("\t LHS=%d, ",inst_log1->prev[0]);
 				printf("goto label%04"PRIx32";\n", inst_log1->next[1]);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-					"goto label%04"PRIx32";\n", inst_log1->next[1]);
-				write_offset += tmp;
+				tmp = fprintf(fd, "goto label%04"PRIx32";\n", inst_log1->next[1]);
 				break;
 
 			default:
@@ -1052,12 +1018,6 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 			}
 		}
-		if (write_offset) {
-			out_buf[write_offset] = 0;
-			printf("cmd:%d:%s\n", write_offset, out_buf);
-			write(fd, out_buf, write_offset);
-		}
-		write_offset = 0;
 		printf("GOT HERE1. value_type=%d\n",
 			inst_log1->value3.value_type);
 		printf("GOT HERE2. dstA.indirect=%d\n",
@@ -1077,28 +1037,17 @@ int output_function_body(struct process_state_s *process_state,
 			/* Catch the rare case of EAX never been used */
 			if (value) {
 				printf("\treturn local%04"PRId64";\n}\n", value->value_id);
-				tmp = snprintf(out_buf + write_offset, 1024 - write_offset, "\treturn local%04"PRId64";\n", value->value_id);
-				write_offset += tmp;
-				write(fd, out_buf, write_offset);
-				write_offset = 0;
+				tmp = fprintf(fd, "\treturn local%04"PRId64";\n", value->value_id);
 			}
 		}
-		//tmp = snprintf(out_buf, 1024, "%d\n", l);
+		//tmp = fprintf(fd, "%d\n", l);
 		//write(fd, out_buf, tmp);
 	}
 	if (0 < inst_log1->next_size && inst_log1->next[0]) {		
 		printf("\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
-		tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-			"\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
-		write_offset += tmp;
-		write(fd, out_buf, write_offset);
-		write_offset = 0;
+		tmp = fprintf(fd, "\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
 	}
-	tmp = snprintf(out_buf + write_offset, 1024 - write_offset,
-		"}\n\n");
-	write_offset += tmp;
-	write(fd, out_buf, write_offset);
-	write_offset = 0;
+	tmp = fprintf(fd, "}\n\n");
 
 	return 0;
 }
@@ -1111,8 +1060,7 @@ int main(int argc, char *argv[])
 //	int octets = 0;
 //	int result;
 	char *filename;
-	int fd;
-	int write_offset;
+	FILE *fd;
 	int tmp;
 	int err;
 	const char *file = "test.obj";
@@ -1214,8 +1162,6 @@ int main(int argc, char *argv[])
 	inst_exe = &inst_log_entry[0];
 	/* Where should entry_point_list_length be initialised */
 	entry_point_list_length = 100;
-	/* Where should write_offset be initialised */
-	write_offset = 0;
 	/* Print the symtab */
 	printf("symtab_sz = %lu\n", handle->symtab_sz);
 	if (handle->symtab_sz >= 100) {
@@ -1262,8 +1208,8 @@ int main(int argc, char *argv[])
 			reg_init(memory_reg);
 			stack_init(memory_stack);
 			/* Set EIP entry point equal to symbol table entry point */
-			memory_reg[2].init_value = external_entry_points[n].value;
-			memory_reg[2].offset_value = 0;
+			//memory_reg[2].init_value = EIP_START;
+			memory_reg[2].offset_value = external_entry_points[n].value;
 
 			print_mem(memory_reg, 1);
 
@@ -1323,8 +1269,8 @@ int main(int argc, char *argv[])
 						memory_reg[2].offset_value = entry_point[n].eip_offset_value;
 						inst_log_prev = entry_point[n].previous_instuction;
 						not_finished = 1;
-						printf ("LOGS: EIP = 0x%"PRIx64"\n", memory_reg[2].init_value);
-						printf ("LOGS: EIP = 0x%"PRIx64"\n", memory_reg[2].offset_value);
+						printf ("LOGS: EIPinit = 0x%"PRIx64"\n", memory_reg[2].init_value);
+						printf ("LOGS: EIPoffset = 0x%"PRIx64"\n", memory_reg[2].offset_value);
 						err = process_block(process_state, handle, inst_log_prev, entry_point_list_length, entry_point);
 						/* clear the entry after calling process_block */
 						entry_point[n].used = 0;
@@ -1365,12 +1311,12 @@ int main(int argc, char *argv[])
 		}
 	}
 	filename = "test.c";
-	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-	if (fd < 0) {
-		printf("Failed to open file %s, error=%d\n", filename, fd);
+	fd = fopen(filename, "w");
+	if (!fd) {
+		printf("Failed to open file %s, error=%p\n", filename, fd);
 		return 1;
 	}
-	printf("fd=%d\n", fd);
+	printf(".c fd=%p\n", fd);
 	printf("writing out to file\n");
 	/* Output function name */
 	printf("\nPRINTING MEMORY_DATA\n");
@@ -1382,22 +1328,21 @@ int main(int argc, char *argv[])
 				printf("int *data%04"PRIx64" = &data%04"PRIx64"\n",
 					memory_data[n].start_address,
 					memory_data[n].init_value);
-				tmp = snprintf(out_buf, 1024, "int *data%04"PRIx64" = &data%04"PRIx64";\n",
+				tmp = fprintf(fd, "int *data%04"PRIx64" = &data%04"PRIx64";\n",
 					memory_data[n].start_address,
 					memory_data[n].init_value);
 			} else {
 				printf("int data%04"PRIx64" = 0x%04"PRIx64"\n",
 					memory_data[n].start_address,
 					memory_data[n].init_value);
-				tmp = snprintf(out_buf, 1024, "int data%04"PRIx64" = 0x%"PRIx64";\n",
+				tmp = fprintf(fd, "int data%04"PRIx64" = 0x%"PRIx64";\n",
 					memory_data[n].start_address,
 					memory_data[n].init_value);
 			}
-			write(fd, out_buf, tmp);
+			//write(fd, out_buf, tmp);
 		}
 	}
-	tmp = snprintf(out_buf, 1024, "\n");
-	write(fd, out_buf, tmp);
+	tmp = fprintf(fd, "\n");
 	printf("\n");
 
 	for (n = 0; n < 100; n++) {
@@ -1419,7 +1364,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	write_offset = 0;
 	for (l = 0; l < 100; l++) {
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
@@ -1429,16 +1373,17 @@ int main(int argc, char *argv[])
 			
 			process_state = &external_entry_points[l].process_state;
 
-			output_function_name(fd, out_buf, &external_entry_points[l], &param_present[0], &param_size[0]);
+			output_function_name(fd, &external_entry_points[l], &param_present[0], &param_size[0]);
 			output_function_body(process_state,
 				fd,
-				out_buf,
 				external_entry_points[l].inst_log,
 				external_entry_points[l].inst_log_end);
+			for (n = external_entry_points[l].inst_log; n <= external_entry_points[l].inst_log_end; n++) {
+			}			
 		}
 	}
 
-	close(fd);
+	fclose(fd);
 	bf_test_close_file(handle);
 	print_mem(memory_reg, 1);
 	for (n = 0; n < inst_size; n++) {
