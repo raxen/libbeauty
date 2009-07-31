@@ -41,6 +41,8 @@ char * opcode_table[] = {
 	"CMP",
 	"MUL",
 	"JMP",
+	"CALL",
+	"IF ",
 	"ROL",  /* ROL,ROR etc. might be reduced to simpler equivalents. */
 	"ROR",
 	"RCL",
@@ -49,8 +51,7 @@ char * opcode_table[] = {
 	"SHR",
 	"SAR",
 	"IN ",
-	"OUT",
-	"IF "
+	"OUT"
 };
 
 #define REG_AX 0x04

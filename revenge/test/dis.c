@@ -95,7 +95,10 @@ struct object_entry_point_s {
 
 struct external_entry_point_s {
 	int valid;
-	int type;
+	int type; /* 1: Internal, 2: External */
+	int section_offset;
+	int section_id;
+	int section_index;
 	uint64_t value; /* pointer to original .text entry point */
 	uint64_t inst_log; /* Where the function starts in the inst_log */
 	uint64_t inst_log_end; /* Where the function ends in inst_log */
@@ -1092,15 +1095,31 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-/*
-	printf("symtab_canon2 = %ld\n", handle->symtab_sz);
+
+	printf("symtab_size = %ld\n", handle->symtab_sz);
 	for (l = 0; l < handle->symtab_sz; l++) {
 		printf("%d\n", l);
 		printf("type:0x%02x\n", handle->symtab[l]->flags);
 		printf("name:%s\n", handle->symtab[l]->name);
 		printf("value=0x%02"PRIx64"\n", handle->symtab[l]->value);
+		printf("section=%p\n", handle->symtab[l]->section);
+		printf("section name=%s\n", handle->symtab[l]->section->name);
+		printf("section flags=0x%02x\n", handle->symtab[l]->section->flags);
+		printf("section index=0x%02"PRIx32"\n", handle->symtab[l]->section->index);
+		printf("section id=0x%02"PRIx32"\n", handle->symtab[l]->section->id);
 	}
-*/
+
+	printf("sectiontab_size = %ld\n", handle->section_sz);
+	for (l = 0; l < handle->section_sz; l++) {
+		printf("%d\n", l);
+		printf("flags:0x%02x\n", handle->section[l]->flags);
+		printf("name:%s\n", handle->section[l]->name);
+		printf("index=0x%02"PRIx32"\n", handle->section[l]->index);
+		printf("id=0x%02"PRIx32"\n", handle->section[l]->id);
+		printf("sectio=%p\n", handle->section[l]);
+	}
+
+
 	printf("Setup ok\n");
 	inst_size = bf_get_code_size(handle);
 	inst = malloc(inst_size);
@@ -1174,16 +1193,28 @@ int main(int argc, char *argv[])
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
 		          one function per .o file. */
-//		printf("flags = 0x%04x, value = 0x%04"PRIx64"\n",
-//			handle->symtab[l]->flags,
-//			handle->symtab[l]->value);
-		if (handle->symtab[l]->flags & 0x8) {
+		printf("section_id = %d, section_index = %d, flags = 0x%04x, value = 0x%04"PRIx64"\n",
+			handle->symtab[l]->section->id,
+			handle->symtab[l]->section->index,
+			handle->symtab[l]->flags,
+			handle->symtab[l]->value);
+		if ((handle->symtab[l]->flags & 0x8) ||
+			(handle->symtab[l]->flags == 0)) {
 			external_entry_points[n].valid = 1;
 			/* 1: Public function entry point
 			 * 2: Private function entry point
 			 * 3: Private label entry point
 			 */
-			external_entry_points[n].type = 1;
+			if (handle->symtab[l]->flags & 0x8) {
+				external_entry_points[n].type = 1;
+			} else {
+				external_entry_points[n].type = 2;
+			}
+			external_entry_points[n].section_offset = l;
+			external_entry_points[n].section_id = 
+				handle->symtab[l]->section->id;
+			external_entry_points[n].section_index = 
+				handle->symtab[l]->section->index;
 			external_entry_points[n].value = handle->symtab[l]->value;
 			length = strlen(handle->symtab[l]->name);
 			external_entry_points[n].name = malloc(length+1);
@@ -1220,15 +1251,19 @@ int main(int argc, char *argv[])
 	printf("Number of functions = %d\n", n);
 	for (n = 0; n < 100; n++) {
 		if (external_entry_points[n].valid != 0) {
-		printf("type = %d, &%s() = 0x%04"PRIx64"\n",
+		printf("type = %d, sect_offset = %d, sect_id = %d, sect_index = %d, &%s() = 0x%04"PRIx64"\n",
 			external_entry_points[n].type,
+			external_entry_points[n].section_offset,
+			external_entry_points[n].section_id,
+			external_entry_points[n].section_index,
 			external_entry_points[n].name,
 			external_entry_points[n].value);
 		}
 	}
 			
 	for (l = 0; l < 100; l++) {
-		if (external_entry_points[l].valid != 0) {
+		if ((external_entry_points[l].valid != 0) &&
+			(external_entry_points[l].type == 1)) {
 			struct process_state_s *process_state;
 			
 			process_state = &external_entry_points[l].process_state;

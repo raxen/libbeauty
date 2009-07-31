@@ -332,22 +332,48 @@ int bf_get_reloc_table_data_section(struct rev_eng* ret)
 
 int bf_copy_code_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size)
 {
-  asection          *section = ret->section[0];
-  bfd_size_type      datasize = data_size;
+	asection	*section;
+	bfd_size_type	datasize = data_size;
+	int		n, tmp;
+	int 		result = 0;
 
-  bfd_get_section_contents(ret->bfd, section, data, 0, datasize);
-  printf("Data at %p\n",data);
-  return 1;
+	if (!ret)
+		return 0;
+
+	for( n=0; n < ret->section_sz; n++) {
+		tmp = strncmp( ret->section[n]->name, ".text", 5);
+		if (0 == tmp) {
+			section = ret->section[n];
+			bfd_get_section_contents(ret->bfd, section, data, 0, datasize);
+			printf("Text Data at %p\n",data);
+			result = 1;
+			break;
+		}
+	}
+	return result;
 }
 
 int bf_copy_data_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size)
 {
-  asection          *section = ret->section[1];
-  bfd_size_type      datasize = data_size;
+	asection	*section;
+	bfd_size_type	datasize = data_size;
+	int		n, tmp;
+	int 		result = 0;
 
-  bfd_get_section_contents(ret->bfd, section, data, 0, datasize);
-  printf("Data at %p\n",data);
-  return 1;
+	if (!ret)
+		return 0;
+
+	for( n=0; n < ret->section_sz; n++) {
+		tmp = strncmp( ret->section[n]->name, ".data", 5);
+		if (0 == tmp) {
+			section = ret->section[n];
+			bfd_get_section_contents(ret->bfd, section, data, 0, datasize);
+			printf("Data at %p\n",data);
+			result = 1;
+			break;
+		}
+	}
+	return result;
 }
 
 const char *bfd_err(void)

@@ -52,16 +52,17 @@ enum {
 #define CMP 9
 #define MUL 10
 #define JMP 11 /* Relative */
-#define ROL 12
-#define ROR 13
-#define RCL 14
-#define RCR 15
-#define SHL 16
-#define SHR 17
-#define SAR 18
-#define IN  19
-#define OUT 20
-#define IF  21
+#define CALL 12 /* non-relative */ 
+#define IF  13
+#define ROL 14
+#define ROR 15
+#define RCL 16
+#define RCR 17
+#define SHL 18
+#define SHR 19
+#define SAR 20
+#define IN  21
+#define OUT 22
 
 #define OVERFLOW 1
 #define NOT_OVERFLOW 2

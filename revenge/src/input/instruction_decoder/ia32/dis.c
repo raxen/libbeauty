@@ -1180,6 +1180,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xe7:												/* OUT Ib,eAX */
 		break;
 	case 0xe8:												/* CALL Jw */
+#if 0
                 /* PUSH -> SP=SP-4 (-2 for word); [SP]=IP; */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = SUB;
@@ -1208,7 +1209,32 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->dstA.relocated = 0;
 		instruction->dstA.size = 4;
 		dis_instructions->instruction_number++;
-		/* Fall through to JMP */	
+		/* Fall through to JMP */
+#endif
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = CALL;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		// Means get from rest of instruction
+		instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used);
+		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4);
+		if (tmp) {
+			printf("RELOCATED 0x%04"PRIx64"\n", offset + dis_instructions->bytes_used);
+			instruction->srcA.relocated = 1;
+			/* FIXME: Check it works for all related cases. E.g. jmp and call */
+			instruction->srcA.index = offset + dis_instructions->bytes_used;
+		}
+		dis_instructions->bytes_used+=4;
+		instruction->srcA.size = 4;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.index = REG_IP;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.size = 4;
+		dis_instructions->instruction_number++;
+		result = 1;
+		break;
 	case 0xe9:												/* JMP Jw */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = JMP;
