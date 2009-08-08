@@ -63,7 +63,6 @@ struct disassemble_info disasm_info;
 disassembler_ftype disassemble_fn;
 char *dis_flags_table[] = { " ", "f" };
 uint64_t inst_log = 1;	/* Pointer to the current free instruction log entry. */
-//char out_buf[1024];
 int local_counter = 1;
 struct self_s *self = NULL;
 
@@ -88,9 +87,9 @@ char *condition_table[] = {
 	"GREATER_16"	/* Signed */
 };
 
-struct object_entry_point_s {
-	int valid;
-	uint64_t value;
+struct relocation_s {
+	int type; /* 0 = invalid, 1 = external_entry_point, 2 = data */
+	uint64_t index; /* Index into the external_entry_point or data */
 };
 
 struct external_entry_point_s {
@@ -104,10 +103,13 @@ struct external_entry_point_s {
 	uint64_t inst_log_end; /* Where the function ends in inst_log */
 	struct process_state_s process_state;
 	char *name;
+	/* FIXME: add function return type and param types */
 };
 
-struct object_entry_point_s object_entry_points[100];
-struct external_entry_point_s external_entry_points[100];
+#define RELOCATION_SIZE 100
+#define EXTERNAL_ENTRY_POINTS_SIZE 100
+struct relocation_s relocations[RELOCATION_SIZE];
+struct external_entry_point_s external_entry_points[EXTERNAL_ENTRY_POINTS_SIZE];
 
 /* For the .text segment. I.e. Instructions. */
 #define MEMORY_TEXT_SIZE 1000
@@ -115,18 +117,22 @@ struct external_entry_point_s external_entry_points[100];
 #define MEMORY_REG_SIZE 100
 /* For the .data segment. I.e. Static data */
 #define MEMORY_DATA_SIZE 1000
-#define MEMORY_USED_SIZE 100
+#define MEMORY_USED_SIZE 1000
+#define INST_LOG_ENTRY_SIZE 100
+#define ENTRY_POINTS_SIZE 100
 
 /* Used to store details of each instruction.
  * Linked by prev/next pointers
  * so that a single list can store all program flow.
  */
-struct inst_log_entry_s inst_log_entry[100];
+struct inst_log_entry_s inst_log_entry[INST_LOG_ENTRY_SIZE];
 
 /* Used to keep record of where we have been before.
  * Used to identify program flow, branches, and joins.
  */
-int memory_used[100];
+int memory_used[MEMORY_USED_SIZE];
+/* Used to keep a non bfd version of the relocation entries */
+int memory_relocation[MEMORY_USED_SIZE];
 
 struct entry_point_s {
 	int used;
@@ -141,8 +147,8 @@ struct entry_point_s {
 } ;
 
 /* This is used to hold return values from process block */
-struct entry_point_s entry_point[100];
-uint64_t entry_point_list_length = 100;
+struct entry_point_s entry_point[ENTRY_POINTS_SIZE];
+uint64_t entry_point_list_length = ENTRY_POINTS_SIZE;
 
 int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_number)
 {
@@ -818,9 +824,22 @@ int output_function_body(struct process_state_s *process_state,
 	struct inst_log_entry_s *inst_log1_prev;
 	struct memory_s *value;
 
+	if (!start || !end) {
+		printf("output_function_body:Invalid start or end\n");
+		return 1;
+	}
+
 	for (n = start; n <= end; n++) {
 		inst_log1 =  &inst_log_entry[n];
+		if (!inst_log1) {
+			printf("output_function_body:Invalid inst_log1[0x%x]\n", n);
+			return 1;
+		}
 		inst_log1_prev =  &inst_log_entry[inst_log1->prev[0]];
+		if (!inst_log1_prev) {
+			printf("output_function_body:Invalid inst_log1_prev[0x%x]\n", n);
+			return 1;
+		}
 		instruction =  &inst_log1->instruction;
 		instruction_prev =  &inst_log1_prev->instruction;
 
@@ -984,6 +1003,15 @@ int output_function_body(struct process_state_s *process_state,
 						inst_log1->next[0]);
 				}
 				break;
+			case CALL:
+				/* FIXME: This does nothing at the moment. */
+				if (print_inst(instruction, n))
+					return 1;
+				tmp = fprintf(fd, "\t");
+				tmp = fprintf(fd, "/* call(); */\n");
+				printf("/* call(); */\n");
+				break;
+
 			case CMP:
 				/* Don't do anything for this instruction. */
 				/* only does anything if combined with a branch instruction */
@@ -1044,7 +1072,6 @@ int output_function_body(struct process_state_s *process_state,
 			}
 		}
 		//tmp = fprintf(fd, "%d\n", l);
-		//write(fd, out_buf, tmp);
 	}
 	if (0 < inst_log1->next_size && inst_log1->next[0]) {		
 		printf("\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
@@ -1145,10 +1172,12 @@ int main(int argc, char *argv[])
 
 	bf_get_reloc_table_code_section(handle);
 	for (n = 0; n < handle->reloc_table_code_sz; n++) {
-		printf("reloc_table_code:addr = 0x%"PRIx64", size = 0x%"PRIx64", section = 0x%"PRIx64"\n",
+		printf("reloc_table_code:addr = 0x%"PRIx64", size = 0x%"PRIx64", section_index = 0x%"PRIx64", section_name=%s, symbol_name=%s\n",
 			handle->reloc_table_code[n].address,
 			handle->reloc_table_code[n].size,
-			handle->reloc_table_code[n].section);
+			handle->reloc_table_code[n].section_index,
+			handle->reloc_table_code[n].section_name,
+			handle->reloc_table_code[n].symbol_name);
 	}
 
 	bf_get_reloc_table_data_section(handle);
@@ -1156,7 +1185,7 @@ int main(int argc, char *argv[])
 		printf("reloc_table_data:addr = 0x%"PRIx64", size = 0x%"PRIx64", section = 0x%"PRIx64"\n",
 			handle->reloc_table_data[n].address,
 			handle->reloc_table_data[n].size,
-			handle->reloc_table_data[n].section);
+			handle->reloc_table_data[n].section_index);
 	}
 	
 	printf("handle=%p\n", handle);
@@ -1259,6 +1288,34 @@ int main(int argc, char *argv[])
 			external_entry_points[n].name,
 			external_entry_points[n].value);
 		}
+	}
+	for (n = 0; n < handle->reloc_table_code_sz; n++) {
+		int len, len1;
+
+		len = strlen(handle->reloc_table_code[n].symbol_name);
+		for (l = 0; l < 100; l++) {
+			if (external_entry_points[l].valid != 0) {
+				len1 = strlen(external_entry_points[l].name);
+				if (len != len1) {
+					continue;
+				}
+				tmp = strncmp(external_entry_points[l].name, handle->reloc_table_code[n].symbol_name, len);
+				if (0 == tmp) {
+					handle->reloc_table_code[n].external_functions_index = l;
+					handle->reloc_table_code[n].type =
+						external_entry_points[l].type;
+				}
+			}
+		}
+	}
+	for (n = 0; n < handle->reloc_table_code_sz; n++) {
+		printf("reloc_table_code:addr = 0x%"PRIx64", size = 0x%"PRIx64", type = %d, function_index = 0x%"PRIx64", section_name=%s, symbol_name=%s\n",
+			handle->reloc_table_code[n].address,
+			handle->reloc_table_code[n].size,
+			handle->reloc_table_code[n].type,
+			handle->reloc_table_code[n].external_functions_index,
+			handle->reloc_table_code[n].section_name,
+			handle->reloc_table_code[n].symbol_name);
 	}
 			
 	for (l = 0; l < 100; l++) {
@@ -1374,7 +1431,6 @@ int main(int argc, char *argv[])
 					memory_data[n].start_address,
 					memory_data[n].init_value);
 			}
-			//write(fd, out_buf, tmp);
 		}
 	}
 	tmp = fprintf(fd, "\n");
@@ -1403,7 +1459,12 @@ int main(int argc, char *argv[])
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
 		          one function per .o file. */
-		if (external_entry_points[l].valid) {
+		printf("%d:%s:start=%"PRIu64", end=%"PRIu64"\n", l,
+				external_entry_points[l].name,
+				external_entry_points[l].inst_log,
+				external_entry_points[l].inst_log_end);
+		if (external_entry_points[l].valid &&
+			external_entry_points[l].type == 1) {
 			struct process_state_s *process_state;
 			
 			process_state = &external_entry_points[l].process_state;

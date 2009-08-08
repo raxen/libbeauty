@@ -228,6 +228,7 @@ dump_reloc_set (bfd *abfd, asection *sec, arelent **relpp, long relcount)
 
 int bf_get_reloc_table_code_section(struct rev_eng* ret)
 {
+	/* FIXME: search for .text section instead of selecting 0 */
 	asection	*section = ret->section[0];
 	asection	*sym_sec;
 	bfd_size_type	datasize;
@@ -269,7 +270,9 @@ int bf_get_reloc_table_code_section(struct rev_eng* ret)
 		
 		sym_name = bfd_asymbol_name(*rel->sym_ptr_ptr);
 		sym_sec = bfd_get_section(*rel->sym_ptr_ptr);
-		ret->reloc_table_code[n].section = sym_sec->index;
+		ret->reloc_table_code[n].section_index = sym_sec->index;
+		ret->reloc_table_code[n].section_name = sym_sec->name;
+		ret->reloc_table_code[n].symbol_name = sym_name;
 		
 		//printf (" %i, %s\n",sym_sec->index, sym_name);
 
@@ -321,7 +324,7 @@ int bf_get_reloc_table_data_section(struct rev_eng* ret)
 		
 		sym_name = bfd_asymbol_name(*rel->sym_ptr_ptr);
 		sym_sec = bfd_get_section(*rel->sym_ptr_ptr);
-		ret->reloc_table_data[n].section = sym_sec->index;
+		ret->reloc_table_data[n].section_index = sym_sec->index;
 		
 		//printf (" %i, %s\n",sym_sec->index, sym_name);
 

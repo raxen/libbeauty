@@ -936,8 +936,14 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.value_id = value->value_id;
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
-		/* updaqe EIP */
+		/* update EIP */
 		value->offset_value = inst->value3.offset_value;
+		break;
+	case CALL:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		printf("CALL\n");
+		/* FIXME: Currently this is a NOP. */
 		break;
 
 	default:

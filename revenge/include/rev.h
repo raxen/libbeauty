@@ -36,9 +36,13 @@ struct self_s {
 };
 
 struct reloc_table {
+	int		type;
 	uint64_t	address;
 	uint64_t	size;
-	uint64_t	section;
+	uint64_t	external_functions_index;
+	uint64_t	section_index;
+	const char	*section_name;
+	const char	*symbol_name;
 };
 
 struct rev_eng {
