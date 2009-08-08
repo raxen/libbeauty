@@ -159,7 +159,14 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 		fd,
 		opcode_table[instruction->opcode],
 		dis_flags_table[instruction->flags]);
-	if (instruction->opcode != IF) {
+	switch (instruction->opcode) {
+	case MOV:
+	case ADD:
+	case SUB:
+	case MUL:
+	/* FIXME: Add DIV */
+	//case DIV:
+	case JMP:
 		if (instruction->srcA.indirect) {
 			tmp = fprintf(fd, " %s[%s0x%"PRIx64"]%s,",
 				indirect_table[instruction->srcA.indirect],
@@ -185,14 +192,23 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 				size_table[instruction->dstA.size]);
 		}
 		ret = 0;
-		goto print_inst_exit;
-	} else { /* IF */
+		break;
+	case IF:
 		tmp = fprintf(fd, " cond=%"PRIu64"", instruction->srcA.index);
 		tmp = fprintf(fd, " JMP-REL=0x%"PRIx64"\n", instruction->dstA.index);
 		ret = 0;
-		goto print_inst_exit;
+		break;
+	case CALL:
+		if (instruction->srcA.index < 100) {
+			tmp = fprintf(fd, " %"PRIu64":%s()\n",
+				instruction->srcA.index,
+				external_entry_points[instruction->srcA.index].name);
+		} else {
+			tmp = fprintf(fd, " CALL FAILED\n");
+		}
+		ret = 0;
+		break;
 	}
-print_inst_exit:
 	return ret;
 }
 
@@ -1007,9 +1023,24 @@ int output_function_body(struct process_state_s *process_state,
 				/* FIXME: This does nothing at the moment. */
 				if (print_inst(instruction, n))
 					return 1;
-				tmp = fprintf(fd, "\t");
-				tmp = fprintf(fd, "/* call(); */\n");
-				printf("/* call(); */\n");
+				/* Search for EAX */
+				value = search_store(process_state->memory_reg,
+						4, 4);
+				/* FIXME: Catch the rare case of EAX never been used */
+				if (value) {
+					printf("local%04"PRId64" = ", value->value_id);
+					tmp = fprintf(fd, "\tlocal%04"PRId64" = ", value->value_id);
+				} else {
+					printf("localUNKNOWN = ");
+					tmp = fprintf(fd, "localUNKNOWN = ");
+				}
+
+				tmp = fprintf(fd, "%s();\n", 
+					external_entry_points[instruction->srcA.index].name);
+				printf("%s();\n",
+					external_entry_points[instruction->srcA.index].name);
+//				tmp = fprintf(fd, "/* call(); */\n");
+//				printf("/* call(); */\n");
 				break;
 
 			case CMP:
@@ -1065,10 +1096,13 @@ int output_function_body(struct process_state_s *process_state,
 			/* Search for EAX */
 			value = search_store(process_state->memory_reg,
 					4, 4);
-			/* Catch the rare case of EAX never been used */
+			/* FIXME: Catch the rare case of EAX never been used */
 			if (value) {
 				printf("\treturn local%04"PRId64";\n}\n", value->value_id);
 				tmp = fprintf(fd, "\treturn local%04"PRId64";\n", value->value_id);
+			} else {
+				printf("\treturn UNKNOWN\n");
+				tmp = fprintf(fd, "\treturn UNKNOWN\n");
 			}
 		}
 		//tmp = fprintf(fd, "%d\n", l);
