@@ -514,7 +514,7 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 
 	printf("process_block entry\n");
 	printf("inst_log=%"PRId64"\n", inst_log);
-	printf("dis:Data at %p, size=%"PRId32"\n", inst, inst_size);
+	printf("dis:Data at %p, size=%"PRId64"\n", inst, inst_size);
 	for (offset = 0; ;) {
 	//for (offset = 0; offset < inst_size;
 			//offset += dis_instructions.bytes_used) {
@@ -1185,7 +1185,7 @@ int main(int argc, char *argv[])
 	inst_size = bf_get_code_size(handle);
 	inst = malloc(inst_size);
 	bf_copy_code_section(handle, inst, inst_size);
-	printf("dis:.text Data at %p, size=%"PRId32"\n", inst, inst_size);
+	printf("dis:.text Data at %p, size=%"PRId64"\n", inst, inst_size);
 	for (n = 0; n < inst_size; n++) {
 		printf(" 0x%02x", inst[n]);
 	}
@@ -1194,11 +1194,11 @@ int main(int argc, char *argv[])
 	data_size = bf_get_data_size(handle);
 	data = malloc(data_size);
 	self = malloc(sizeof *self);
-	printf("sizeof struct self_s = %d\n", sizeof *self);
+	printf("sizeof struct self_s = %"PRId64"\n", sizeof *self);
 	self->data_size = data_size;
 	self->data = data;
 	bf_copy_data_section(handle, data, data_size);
-	printf("dis:.data Data at %p, size=%"PRId32"\n", data, data_size);
+	printf("dis:.data Data at %p, size=%"PRId64"\n", data, data_size);
 	for (n = 0; n < data_size; n++) {
 		printf(" 0x%02x", data[n]);
 	}

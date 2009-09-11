@@ -194,7 +194,7 @@ static int get_value_RTL_instruction(
 			/* 1 - Entry Used */
 			destination->value_id = 1;
 			destination->valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
+			printf("value=0x%"PRIu64"+0x%"PRIu64"=0x%"PRIu64"\n",
 				destination->init_value,
 				destination->offset_value,
 				destination->init_value +
@@ -239,7 +239,7 @@ static int get_value_RTL_instruction(
 			destination->value_id = value->value_id;
 			/* 1 - Entry Used */
 			destination->valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
+			printf("value=0x%"PRIu64"+0x%"PRIu64"=0x%"PRIu64"\n",
 				destination->init_value,
 				destination->offset_value,
 				destination->init_value +
@@ -334,7 +334,7 @@ static int get_value_RTL_instruction(
 			destination->value_id);
 		/* 1 - Entry Used */
 		destination->valid = 1;
-		printf("value=0x%llx+0x%llx=0x%llx\n",
+		printf("value=0x%"PRIu64"+0x%"PRIu64"=0x%"PRIu64"\n",
 			destination->init_value,
 			destination->offset_value,
 			destination->init_value +
@@ -423,7 +423,7 @@ static int get_value_RTL_instruction(
 			destination->value_id);
 		/* 1 - Entry Used */
 		destination->valid = 1;
-		printf("value=0x%llx+0x%llx=0x%llx\n",
+		printf("value=0x%"PRIu64"+0x%"PRIu64"=0x%"PRIu64"\n",
 			destination->init_value,
 			destination->offset_value,
 			destination->init_value +
@@ -514,7 +514,7 @@ static int put_value_RTL_instruction(
 			printf("Saving to reg value_id of %"PRIu64"\n", value->value_id);
 			/* 1 - Entry Used */
 			value->valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
+			printf("value=0x%"PRIu64"+0x%"PRIu64"=0x%"PRIu64"\n",
 				value->init_value,
 				value->offset_value,
 				value->init_value + value->offset_value);
@@ -756,7 +756,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		//}
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
+			printf("value=0x%"PRIu64"+0x%"PRIu64"=0x%"PRIu64"\n",
 				inst->value3.init_value,
 				inst->value3.offset_value,
 				inst->value3.init_value +
@@ -793,7 +793,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.value_id = inst->value2.value_id;
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
+			printf("value=0x%"PRIu64"+0x%"PRIu64"=0x%"PRIu64"\n",
 				inst->value3.init_value,
 				inst->value3.offset_value,
 				inst->value3.init_value +
@@ -841,7 +841,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.value_id = inst->value2.value_id;
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
+			printf("value=0x%"PRIu64"+0x%"PRIu64"=0x%"PRIu64"\n",
 				inst->value3.init_value,
 				inst->value3.offset_value,
 				inst->value3.init_value +
@@ -871,7 +871,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.value_id = inst->value2.value_id;
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;
-			printf("value=0x%llx+0x%llx=0x%llx\n",
+			printf("value=0x%"PRIu64"+0x%"PRIu64"=0x%"PRIu64"\n",
 				inst->value3.init_value,
 				inst->value3.offset_value,
 				inst->value3.init_value +

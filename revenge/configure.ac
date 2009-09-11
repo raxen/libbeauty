@@ -105,6 +105,7 @@ src/input/instruction_decoder/Makefile
 src/input/instruction_decoder/ia32/Makefile
 src/execute/Makefile
 test/Makefile
+include/Makefile
 ])
 AC_OUTPUT
 
