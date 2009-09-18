@@ -101,7 +101,7 @@ int shift2_table[] = {
 };
 
 char *store_table[] = { "i", "r", "m", "s" };
-char *size_table[] = { "/0", "/8", "/16", "/24", "/32" };
+char *size_table[] = { "/0", "/8", "/16", "/24", "/32", "/40", "/48", "/56", "/64" };
 char *indirect_table[] = { "", "m", "s", "p" };
 
 

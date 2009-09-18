@@ -4,6 +4,7 @@
 int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset) {
 	int half;
 	uint8_t reg=0;
+	uint64_t size = 8;
 	instruction_t *instruction;
 	switch (base_address[offset + dis_instructions->bytes_used++]) {
 	case 0x00:												/* GRP 6 Exxx */
@@ -72,13 +73,13 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 	case 0xb4:												/* LFS Ev */
 	case 0xb5:												/* LGS Ev */
 	case 0xb6:												/* MOVZX Gv,Eb */
-		half = rmb(handle, dis_instructions, base_address, offset, &reg);
+		half = rmb(handle, dis_instructions, base_address, offset, size, &reg);
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = 0;
 		instruction->dstA.index = reg_table[reg].offset;
-		instruction->dstA.size = 4;
+		instruction->dstA.size = size;
 		if (!half) {
 			instruction->srcA.store = STORE_REG;
 			instruction->srcA.indirect = 1;
@@ -88,13 +89,13 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		dis_instructions->instruction_number++;
 		break;
 	case 0xb7:												/* MOVZX Gv,Ev */
-		half = rmb(handle, dis_instructions, base_address, offset, &reg);
+		half = rmb(handle, dis_instructions, base_address, offset, size, &reg);
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = 0;
 		instruction->dstA.index = reg_table[reg].offset;
-		instruction->dstA.size = 4;
+		instruction->dstA.size = size;
 		if (!half) {
 			instruction->srcA.store = STORE_REG;
 			instruction->srcA.indirect = 1;

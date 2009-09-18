@@ -404,7 +404,9 @@ struct rev_eng *bf_test_open_file(const char *fn)
 		return NULL;
 	}
 	result = bfd_check_format_matches (b, bfd_object, &matching);
-	printf("check format result=%d\n",result);
+	printf("check format result=%d, file format=%s\n",result, b->xvec->name);
+	printf("format:%"PRIu32", %"PRIu64"\n",bfd_get_arch(b), bfd_get_mach(b));
+	printf("arch:%"PRIu32", mach64:%"PRIu32", mach32:%"PRIu32"\n",bfd_arch_i386, bfd_mach_x86_64, bfd_mach_i386_i386);
 
 	if (bfd_get_error () == bfd_error_file_ambiguously_recognized)
 	{
