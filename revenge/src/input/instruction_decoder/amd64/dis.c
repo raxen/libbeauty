@@ -273,7 +273,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		instruction->srcA.indirect = IND_DIRECT;
 		if (mod == 1) {
 			printf("Got here4 size = 1\n");
-			instruction->srcA.size = 1;
+			instruction->srcA.size = 8;
 			instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
 			instruction->srcA.relocated = 0;
 			/* if the offset is negative,
@@ -299,7 +299,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		instruction->dstA.indirect = IND_DIRECT;
 		instruction->dstA.index = REG_TMP1;
 		instruction->dstA.relocated = 0;
-		instruction->dstA.size = size;
+		instruction->dstA.size = 8;
 		dis_instructions->instruction_number++;
 	}
 	return 0;

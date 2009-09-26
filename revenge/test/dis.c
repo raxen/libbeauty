@@ -309,7 +309,7 @@ int reg_init(struct memory_s *memory_reg)
 	/* esp */
 	memory_reg[0].start_address = REG_SP;
 	/* 4 bytes */
-	memory_reg[0].length = 4;
+	memory_reg[0].length = 8;
 	/* 1 - Known */
 	memory_reg[0].init_value_type = 1;
 	/* Initial value when first accessed */
@@ -337,7 +337,7 @@ int reg_init(struct memory_s *memory_reg)
 	/* ebp */
 	memory_reg[1].start_address = REG_BP;
 	/* 4 bytes */
-	memory_reg[1].length = 4;
+	memory_reg[1].length = 8;
 	/* 1 - Known */
 	memory_reg[1].init_value_type = 1;
 	/* Initial value when first accessed */
@@ -365,7 +365,7 @@ int reg_init(struct memory_s *memory_reg)
 	/* eip */
 	memory_reg[2].start_address = REG_IP;
 	/* 4 bytes */
-	memory_reg[2].length = 4;
+	memory_reg[2].length = 8;
 	/* 1 - Known */
 	memory_reg[2].init_value_type = 1;
 	/* Initial value when first accessed */
@@ -398,7 +398,7 @@ int stack_init(struct memory_s *memory_stack)
 	/* eip on the stack */
 	memory_stack[n].start_address = 0x10000;
 	/* 4 bytes */
-	memory_stack[n].length = 4;
+	memory_stack[n].length = 8;
 	/* 1 - Known */
 	memory_stack[n].init_value_type = 1;
 	/* Initial value when first accessed */
@@ -490,7 +490,7 @@ int print_mem(struct memory_s *memory, int location) {
 	return 0;
 }
 
-int process_block(struct process_state_s *process_state, struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry) {
+int process_block(struct process_state_s *process_state, struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry, uint64_t eip_offset_limit) {
 	uint64_t offset = 0;
 	int result;
 	int n = 0;
@@ -514,12 +514,17 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 
 	printf("process_block entry\n");
 	printf("inst_log=%"PRId64"\n", inst_log);
-	printf("dis:Data at %p, size=%"PRId64"\n", inst, inst_size);
+	printf("dis:Data at %p, size=0x%"PRIx64"\n", inst, inst_size);
 	for (offset = 0; ;) {
 	//for (offset = 0; offset < inst_size;
 			//offset += dis_instructions.bytes_used) {
 		/* Update EIP */
 		offset = memory_reg[2].offset_value;
+		if (offset >= eip_offset_limit) {
+			printf("Over ran offset=0x%"PRIx64" >= eip_offset_limit=0x%"PRIx64" \n",
+				offset, eip_offset_limit);
+			return 1;
+		}
 		dis_instructions.instruction_number = 0;
 		dis_instructions.bytes_used = 0;
 		printf("eip=0x%"PRIx64", offset=0x%"PRIx64"\n",
@@ -1185,7 +1190,7 @@ int main(int argc, char *argv[])
 	inst_size = bf_get_code_size(handle);
 	inst = malloc(inst_size);
 	bf_copy_code_section(handle, inst, inst_size);
-	printf("dis:.text Data at %p, size=%"PRId64"\n", inst, inst_size);
+	printf("dis:.text Data at %p, size=0x%"PRIx64"\n", inst, inst_size);
 	for (n = 0; n < inst_size; n++) {
 		printf(" 0x%02x", inst[n]);
 	}
@@ -1194,11 +1199,11 @@ int main(int argc, char *argv[])
 	data_size = bf_get_data_size(handle);
 	data = malloc(data_size);
 	self = malloc(sizeof *self);
-	printf("sizeof struct self_s = %"PRId64"\n", sizeof *self);
+	printf("sizeof struct self_s = 0x%"PRIx64"\n", sizeof *self);
 	self->data_size = data_size;
 	self->data = data;
 	bf_copy_data_section(handle, data, data_size);
-	printf("dis:.data Data at %p, size=%"PRId64"\n", data, data_size);
+	printf("dis:.data Data at %p, size=0x%"PRIx64"\n", data, data_size);
 	for (n = 0; n < data_size; n++) {
 		printf(" 0x%02x", data[n]);
 	}
@@ -1397,7 +1402,7 @@ int main(int argc, char *argv[])
 						not_finished = 1;
 						printf ("LOGS: EIPinit = 0x%"PRIx64"\n", memory_reg[2].init_value);
 						printf ("LOGS: EIPoffset = 0x%"PRIx64"\n", memory_reg[2].offset_value);
-						err = process_block(process_state, handle, inst_log_prev, entry_point_list_length, entry_point);
+						err = process_block(process_state, handle, inst_log_prev, entry_point_list_length, entry_point, inst_size);
 						/* clear the entry after calling process_block */
 						entry_point[n].used = 0;
 						if (err) {
@@ -1475,10 +1480,16 @@ int main(int argc, char *argv[])
 	}
 		
 	for (n = 0; n < 10; n++) {
-		if (memory_stack[n].start_address >= 0x10004) {
-			/* FIXME: This is just dangerous code */
-			param_present[memory_stack[n].start_address - 0x10000] = 1;
-			param_size[memory_stack[n].start_address - 0x10000] = memory_stack[n].length;
+		if (memory_stack[n].start_address > 0x10000) {
+			uint64_t present_index;
+			present_index = memory_stack[n].start_address - 0x10000;
+			if (present_index >= 100) {
+				printf("param limit reached:memory_stack[%d].start_address == 0x%"PRIx64"\n",
+					n, memory_stack[n].start_address);
+				continue;
+			}
+			param_present[present_index] = 1;
+			param_size[present_index] = memory_stack[n].length;
 		}
 	}
 	for (n = 0; n < 100; n++) {
@@ -1533,13 +1544,20 @@ int main(int argc, char *argv[])
 		param_present[n] = 0;
 	}
 		
-	tmp = 0x10004;
 	for (n = 0; n < 10; n++) {
 		if (memory_stack[n].start_address >= tmp) {
-			param_present[memory_stack[n].start_address - 0x10000] = 1;
-			param_size[memory_stack[n].start_address - 0x10000] = memory_stack[n].length;
+			uint64_t present_index;
+			present_index = memory_stack[n].start_address - 0x10000;
+			if (present_index >= 100) {
+				printf("param limit reached:memory_stack[%d].start_address == 0x%"PRIx64"\n",
+					n, memory_stack[n].start_address);
+				continue;
+			}
+			param_present[present_index] = 1;
+			param_size[present_index] = memory_stack[n].length;
 		}
 	}
+
 	for (n = 0; n < 100; n++) {
 		if (param_present[n]) {
 			printf("param%04x\n", n);
