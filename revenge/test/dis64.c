@@ -172,24 +172,24 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 				indirect_table[instruction->srcA.indirect],
 				store_table[instruction->srcA.store],
 				instruction->srcA.index,
-				size_table[instruction->srcA.size]);
+				size_table[instruction->srcA.value_size]);
 		} else {
 			tmp = fprintf(fd, " %s0x%"PRIx64"%s,",
 				store_table[instruction->srcA.store],
 				instruction->srcA.index,
-				size_table[instruction->srcA.size]);
+				size_table[instruction->srcA.value_size]);
 		}
 		if (instruction->dstA.indirect) {
 			tmp = fprintf(fd, " %s[%s0x%"PRIx64"]%s\n",
 				indirect_table[instruction->dstA.indirect],
 				store_table[instruction->dstA.store],
 				instruction->dstA.index,
-				size_table[instruction->dstA.size]);
+				size_table[instruction->dstA.value_size]);
 		} else {
 			tmp = fprintf(fd, " %s0x%"PRIx64"%s\n",
 				store_table[instruction->dstA.store],
 				instruction->dstA.index,
-				size_table[instruction->dstA.size]);
+				size_table[instruction->dstA.value_size]);
 		}
 		ret = 0;
 		break;
@@ -286,13 +286,13 @@ int get_value_from_index(operand_t *operand, uint64_t *index)
 {
 	if (operand->indirect) {
 		printf(" %s%s[%s0x%"PRIx64"],",
-			size_table[operand->size],
+			size_table[operand->value_size],
 			indirect_table[operand->indirect],
 			store_table[operand->store],
 			operand->index);
 	} else {
 		printf(" %s%s0x%"PRIx64",",
-		size_table[operand->size],
+		size_table[operand->value_size],
 		store_table[operand->store],
 		operand->index);
 	}
@@ -704,15 +704,31 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 		switch (value_scope) {
 		case 1:
 			/* FIXME: Should this be param or instead param_reg, param_stack */
-			printf("param%04"PRIx64";\n", (indirect_offset_value));
-			tmp = fprintf(fd, "param%04"PRIx64,
-				indirect_offset_value);
+			if (IND_STACK == indirect) {
+				printf("param_stack%04"PRIx64",%04"PRIx64",%04d",
+					index, indirect_offset_value, indirect);
+				tmp = fprintf(fd, "param_stack%04"PRIx64",%04"PRIx64",%04d",
+					index, indirect_offset_value, indirect);
+			} else if (0 == indirect) {
+				printf("param_reg%04"PRIx64,
+					index);
+				tmp = fprintf(fd, "param_reg%04"PRIx64,
+					index);
+			}
 			break;
 		case 2:
 			/* FIXME: Should this be local or instead local_reg, local_stack */
-			printf("local%04"PRIx64";\n", (value_id));
-			tmp = fprintf(fd, "local%04"PRIx64,
-				value_id);
+			if (IND_STACK == indirect) {
+				printf("local_stack%04"PRIx64,
+					value_id);
+				tmp = fprintf(fd, "local_stack%04"PRIx64,
+					value_id);
+			} else if (0 == indirect) {
+				printf("local_reg%04"PRIx64,
+					value_id);
+				tmp = fprintf(fd, "local_reg%04"PRIx64,
+					value_id);
+			}
 			break;
 		case 3: /* Data */
 			/* FIXME: introduce indirect_value_id and indirect_value_scope */
@@ -720,8 +736,8 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 			/* It will always be a register, and therefore can re-use the */
 			/* value_id to identify it. */
 			/* It will always be a local and not a param */
-			printf("*local%04"PRIx64";\n", (indirect_value_id));
-			tmp = fprintf(fd, "*local%04"PRIx64,
+			printf("*local_mem%04"PRIx64";\n", (indirect_value_id));
+			tmp = fprintf(fd, "*local_mem%04"PRIx64,
 				indirect_value_id);
 			break;
 		default:
@@ -1103,8 +1119,8 @@ int output_function_body(struct process_state_s *process_state,
 					4, 4);
 			/* FIXME: Catch the rare case of EAX never been used */
 			if (value) {
-				printf("\treturn local%04"PRId64";\n}\n", value->value_id);
-				tmp = fprintf(fd, "\treturn local%04"PRId64";\n", value->value_id);
+				printf("\treturn local_reg%04"PRId64";\n}\n", value->value_id);
+				tmp = fprintf(fd, "\treturn local_reg%04"PRId64";\n", value->value_id);
 			} else {
 				printf("\treturn UNKNOWN\n");
 				tmp = fprintf(fd, "\treturn UNKNOWN\n");

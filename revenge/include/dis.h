@@ -49,6 +49,8 @@ struct operand_s {
          * 1 = absolute
          */
 	int indirect;
+	/* number of bytes in the indirect value. */
+	int indirect_size;
 	/* value depends on store */
 	/* For IF srcA, this is the condition statement */
 	/* For IF dstA, this is the IP memory index. */
@@ -58,7 +60,7 @@ struct operand_s {
 	uint64_t value;
 	/* number of bytes in value. */
 	/* For IF dstA, this will be a 4 bytes. */
-	int size;
+	int value_size;
 } ;
 
 /* A single RTL instruction */

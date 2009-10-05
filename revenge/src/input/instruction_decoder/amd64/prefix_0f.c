@@ -78,14 +78,16 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		instruction->opcode = MOV;
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = 0;
+		instruction->dstA.indirect_size = 8;
 		instruction->dstA.index = reg_table[reg].offset;
-		instruction->dstA.size = size;
+		instruction->dstA.value_size = size;
 		if (!half) {
 			instruction->srcA.store = STORE_REG;
 			instruction->srcA.indirect = 1;
+			instruction->srcA.indirect_size = 8;
 			instruction->srcA.index = REG_TMP1;
 		}
-		instruction->srcA.size = 1;
+		instruction->srcA.value_size = 1;
 		dis_instructions->instruction_number++;
 		break;
 	case 0xb7:												/* MOVZX Gv,Ev */
@@ -94,14 +96,16 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		instruction->opcode = MOV;
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = 0;
+		instruction->dstA.indirect_size = 8;
 		instruction->dstA.index = reg_table[reg].offset;
-		instruction->dstA.size = size;
+		instruction->dstA.value_size = size;
 		if (!half) {
 			instruction->srcA.store = STORE_REG;
 			instruction->srcA.indirect = 1;
+			instruction->srcA.indirect_size = 8;
 			instruction->srcA.index = REG_TMP1;
 		}
-		instruction->srcA.size = 2;
+		instruction->srcA.value_size = 2;
 		dis_instructions->instruction_number++;
 		break;
 

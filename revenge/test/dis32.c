@@ -172,24 +172,24 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 				indirect_table[instruction->srcA.indirect],
 				store_table[instruction->srcA.store],
 				instruction->srcA.index,
-				size_table[instruction->srcA.size]);
+				size_table[instruction->srcA.value_size]);
 		} else {
 			tmp = fprintf(fd, " %s0x%"PRIx64"%s,",
 				store_table[instruction->srcA.store],
 				instruction->srcA.index,
-				size_table[instruction->srcA.size]);
+				size_table[instruction->srcA.value_size]);
 		}
 		if (instruction->dstA.indirect) {
 			tmp = fprintf(fd, " %s[%s0x%"PRIx64"]%s\n",
 				indirect_table[instruction->dstA.indirect],
 				store_table[instruction->dstA.store],
 				instruction->dstA.index,
-				size_table[instruction->dstA.size]);
+				size_table[instruction->dstA.value_size]);
 		} else {
 			tmp = fprintf(fd, " %s0x%"PRIx64"%s\n",
 				store_table[instruction->dstA.store],
 				instruction->dstA.index,
-				size_table[instruction->dstA.size]);
+				size_table[instruction->dstA.value_size]);
 		}
 		ret = 0;
 		break;
@@ -286,13 +286,13 @@ int get_value_from_index(operand_t *operand, uint64_t *index)
 {
 	if (operand->indirect) {
 		printf(" %s%s[%s0x%"PRIx64"],",
-			size_table[operand->size],
+			size_table[operand->value_size],
 			indirect_table[operand->indirect],
 			store_table[operand->store],
 			operand->index);
 	} else {
 		printf(" %s%s0x%"PRIx64",",
-		size_table[operand->size],
+		size_table[operand->value_size],
 		store_table[operand->store],
 		operand->index);
 	}
