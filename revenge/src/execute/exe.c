@@ -227,7 +227,7 @@ static int get_value_RTL_instruction(
 				return 1;
 				break;
 			}
-			destination->start_address = 0;
+			destination->start_address = value->start_address;
 			destination->length = value->length;
 			destination->init_value_type = value->init_value_type;
 			destination->init_value = value->init_value;
@@ -317,7 +317,7 @@ static int get_value_RTL_instruction(
 			return 1;
 			break;
 		}
-		destination->start_address = 0;
+		destination->start_address = value_data->start_address;
 		destination->length = value_data->length;
 		destination->init_value_type = value_data->init_value_type;
 		destination->init_value = value_data->init_value;
@@ -499,12 +499,20 @@ static int put_value_RTL_instruction(
 			/* Make the constant 0x24 configurable
 			 * depending on CPU type.
 			 */
+			printf("STORE_REG: index=0x%"PRIx64", start_address=0x%"PRIx64"\n",
+				instruction->dstA.index, value->start_address);
+			if (value->start_address != instruction->dstA.index) {
+				printf("STORE failure\n");
+				return 1;
+				break;
+			}
 			if (value->start_address == 0x24) {
 				printf("A JUMP or RET has occured\n");
 			}
 
 			/* FIXME: these should always be the same */
 			/* value->length = inst->value3.length; */
+			value->start_address = inst->value3.start_address;
 			value->init_value_type = inst->value3.init_value_type;
 			value->init_value = inst->value3.init_value;
 			value->offset_value = inst->value3.offset_value;
@@ -560,6 +568,11 @@ static int put_value_RTL_instruction(
 				return 1;
 				break;
 			}
+			if (value->start_address != instruction->dstA.index) {
+				printf("STORE failure\n");
+				return 1;
+				break;
+			}
 			data_index = value->init_value + value->offset_value;
 			break;
 		default:
@@ -579,6 +592,11 @@ static int put_value_RTL_instruction(
 		}
 		if (!value_data) {
 			printf("PUT CASE2:STORE_REG2 ERROR!\n");
+			return 1;
+			break;
+		}
+		if (value_data->start_address != data_index) {
+			printf("STORE DATA failure\n");
 			return 1;
 			break;
 		}
@@ -624,6 +642,11 @@ static int put_value_RTL_instruction(
 		}
 		if (!value) {
 			printf("PUT CASE2:STORE_REG ERROR!\n");
+			return 1;
+			break;
+		}
+		if (value->start_address != instruction->dstA.index) {
+			printf("STORE failure\n");
 			return 1;
 			break;
 		}
@@ -731,7 +754,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("MOV\n");
-		inst->value3.start_address = inst->value1.start_address;
+		inst->value3.start_address = inst->value2.start_address;
 		inst->value3.length = inst->value1.length;
 		inst->value3.init_value_type = inst->value1.init_value_type;
 		inst->value3.init_value = inst->value1.init_value;

@@ -230,6 +230,10 @@ int print_dis_instructions(void)
 		instruction =  &inst_log1->instruction;
 		if (print_inst(instruction, n))
 			return 1;
+		printf("start_address:%"PRIx64", %"PRIx64" -> %"PRIx64"\n",
+			inst_log1->value1.start_address,
+			inst_log1->value2.start_address,
+			inst_log1->value3.start_address);
 		printf("init:%"PRIx64", %"PRIx64" -> %"PRIx64"\n",
 			inst_log1->value1.init_value,
 			inst_log1->value2.init_value,

@@ -340,8 +340,8 @@ void dis_Ex_Gx(struct rev_eng *handle, int opcode, struct dis_instructions_s *di
 		instruction->dstA.indirect = IND_MEM;
 		instruction->dstA.indirect_size = 8;
 		instruction->dstA.store = STORE_REG;
-		if ((dis_instructions->instruction[0].srcA.index >= 0x14) && 
-		    (dis_instructions->instruction[0].srcA.index <= 0x18) ) {
+		if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+		    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
 			instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 			instruction->dstA.indirect_size = 8;
 		}
@@ -371,8 +371,8 @@ void dis_Gx_Ex(struct rev_eng *handle, int opcode, struct dis_instructions_s *di
 		instruction->srcA.indirect = IND_MEM;
 		instruction->srcA.indirect_size = 8;
 		instruction->srcA.store = STORE_REG;
-		if ((dis_instructions->instruction[0].srcA.index >= 0x14) && 
-		    (dis_instructions->instruction[0].srcA.index <= 0x18) ) {
+		if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+		    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
 			instruction->srcA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 			instruction->srcA.indirect_size = 8;
 		}
@@ -411,8 +411,8 @@ void dis_Ex_Ix(struct rev_eng *handle, int opcode, struct dis_instructions_s *di
 		instruction->dstA.indirect = IND_MEM;
 		instruction->dstA.indirect_size = 8;
 		instruction->dstA.store = STORE_REG;
-		if ((dis_instructions->instruction[0].srcA.index >= 0x14) && 
-			(dis_instructions->instruction[0].srcA.index <= 0x18) ) {
+		if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			(dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
 			instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 			instruction->dstA.indirect_size = 8;
 		}
@@ -826,8 +826,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
     			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.indirect_size = 8;
 			instruction->dstA.store = STORE_REG;
-			if ((dis_instructions->instruction[0].srcA.index >= 0x14) && 
-			    (dis_instructions->instruction[0].srcA.index <= 0x18) ) {
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
 				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 				instruction->dstA.indirect_size = 8;
 			}
@@ -857,8 +857,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
     			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.indirect_size = 8;
 			instruction->dstA.store = STORE_REG;
-			if ((dis_instructions->instruction[0].srcA.index >= 0x14) && 
-			    (dis_instructions->instruction[0].srcA.index <= 0x18) ) {
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
 				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 				instruction->dstA.indirect_size = 8;
 			}
@@ -910,8 +910,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			instruction->srcA.indirect = IND_MEM;
 			instruction->srcA.indirect_size = 8;
 			instruction->srcA.store = STORE_REG;
-			if ((dis_instructions->instruction[0].srcA.index >= 0x14) && 
-			    (dis_instructions->instruction[0].srcA.index <= 0x18) ) {
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
 				instruction->srcA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 				instruction->srcA.indirect_size = 8;
 			}
@@ -1100,8 +1100,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
     			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.indirect_size = 8;
 			instruction->dstA.store = STORE_REG;
-			if ((dis_instructions->instruction[0].srcA.index >= 0x14) && 
-			    (dis_instructions->instruction[0].srcA.index <= 0x18) ) {
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
 				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
 				instruction->dstA.indirect_size = 8;
 			}
@@ -1476,8 +1476,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			instruction->dstA.store = STORE_REG;
 			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.indirect_size = 8;
-			if ((dis_instructions->instruction[0].srcA.index >= 0x14) && 
-			    (dis_instructions->instruction[0].srcA.index <= 0x18) ) {
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
 				/* SP and BP use STACK memory and not DATA memory. */
 				instruction->dstA.indirect = IND_STACK;
 				instruction->dstA.indirect_size = 8;
@@ -1499,8 +1499,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			instruction->dstA.store = STORE_REG;
 			instruction->dstA.indirect = IND_MEM;
 			instruction->dstA.indirect_size = 8;
-			if ((dis_instructions->instruction[0].srcA.index >= 0x14) && 
-			    (dis_instructions->instruction[0].srcA.index <= 0x18) ) {
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
 				/* SP and BP use STACK memory and not DATA memory. */
 				instruction->dstA.indirect = IND_STACK;
 				instruction->dstA.indirect_size = 8;
