@@ -81,8 +81,11 @@ struct memory_s *search_store(
 		printf("looping\n");
 		memory_start = memory[n].start_address;
 		memory_end = memory[n].start_address + memory[n].length;
-		if ((start >= memory_start) &&
+		/* FIXME: for now ignore size */
+/*		if ((start >= memory_start) &&
 			(end <= memory_end)) {
+*/
+		if (start == memory_start) {
 			result = &memory[n];
 			printf("Found entry %d in table %p, %p\n", n, memory, result);
 			break;
@@ -107,8 +110,11 @@ struct memory_s *add_new_store(
 		printf("looping\n");
 		memory_start = memory[n].start_address;
 		memory_end = memory[n].start_address + memory[n].length;
-		if ((start >= memory_start) &&
+		/* FIXME: for now ignore size */
+/*		if ((start >= memory_start) &&
 			(end <= memory_end)) {
+*/
+		if (start == memory_start) {
 			result = NULL;
 			/* Store already existed, so exit */
 			goto exit_add_new_store;
@@ -780,7 +786,9 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		/* Counter */
 		//if (inst->value3.value_scope == 2) {
 			/* Only value_id preserves the value2 values */
-		inst->value3.value_id = inst->value2.value_id;
+		//inst->value3.value_id = inst->value2.value_id;
+		inst->value3.value_id = local_counter;
+		local_counter++;
 		//}
 		/* 1 - Entry Used */
 		inst->value3.valid = 1;

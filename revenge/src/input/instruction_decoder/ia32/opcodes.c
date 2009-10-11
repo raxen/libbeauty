@@ -55,6 +55,7 @@ char * opcode_table[] = {
 	"OUT"
 };
 
+/*
 #define REG_AX 0x04
 #define REG_CX 0x08
 #define REG_DX 0x0c
@@ -66,7 +67,7 @@ char * opcode_table[] = {
 #define REG_IP 0x24
 #define REG_TMP1 0x28
 #define REG_TMP2 0x2c
-
+*/
 
 reg_t reg_table[] = {
     { REG_AX,4 },

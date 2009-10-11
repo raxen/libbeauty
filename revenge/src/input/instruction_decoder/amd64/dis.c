@@ -140,7 +140,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 			instruction->dstA.indirect_size = 8;
 			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.relocated = 0;
-			instruction->dstA.value_size = size;
+			instruction->dstA.value_size = 8;
 			dis_instructions->instruction_number++;
 			/* Skip * 1 */
 			if (mul > 0) {
@@ -158,7 +158,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 				instruction->dstA.indirect_size = 8;
 				instruction->dstA.index = REG_TMP1;
 				instruction->dstA.relocated = 0;
-				instruction->dstA.value_size = size;
+				instruction->dstA.value_size = 8;
 				dis_instructions->instruction_number++;
 			}
 		}
@@ -197,7 +197,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 			instruction->dstA.indirect_size = 8;
 			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.relocated = 0;
-			instruction->dstA.value_size = size;
+			instruction->dstA.value_size = 8;
 			dis_instructions->instruction_number++;
 		} else {
 			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
@@ -220,7 +220,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 			instruction->dstA.indirect_size = 8;
 			instruction->dstA.index = REG_TMP1;
 			instruction->dstA.relocated = 0;
-			instruction->dstA.value_size = size;
+			instruction->dstA.value_size = 8;
 			dis_instructions->instruction_number++;
 		}
 	} else if ((reg_mem == 5) && (mod == 0)) {
@@ -248,7 +248,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		instruction->dstA.indirect_size = 8;
 		instruction->dstA.index = REG_TMP1;
 		instruction->dstA.relocated = 0;
-		instruction->dstA.value_size = size;
+		instruction->dstA.value_size = 8;
 		dis_instructions->instruction_number++;
 	} else {
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
@@ -945,7 +945,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			instruction->srcA.indirect = IND_DIRECT;
 			instruction->srcA.indirect_size = 8;
 			instruction->srcA.index = REG_TMP1;
-			instruction->srcA.value_size = width;
+			instruction->srcA.value_size = 8;
 		}
 		dis_instructions->instruction_number++;
 		result = 1;

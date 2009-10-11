@@ -1120,11 +1120,11 @@ int output_function_body(struct process_state_s *process_state,
 			/* FIXME: select correct return variable */
 			/* Search for EAX */
 			value = search_store(process_state->memory_reg,
-					4, 4);
+					REG_AX, 8);
 			/* FIXME: Catch the rare case of EAX never been used */
 			if (value) {
-				printf("\treturn local_reg%04"PRId64";\n}\n", value->value_id);
-				tmp = fprintf(fd, "\treturn local_reg%04"PRId64";\n", value->value_id);
+				printf("\treturn local_reg%04"PRIx64";\n}\n", value->value_id);
+				tmp = fprintf(fd, "\treturn local_reg%04"PRIx64";\n", value->value_id);
 			} else {
 				printf("\treturn UNKNOWN\n");
 				tmp = fprintf(fd, "\treturn UNKNOWN\n");
