@@ -164,6 +164,7 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	case ADD:
 	case SUB:
 	case MUL:
+	case CMP:
 	/* FIXME: Add DIV */
 	//case DIV:
 	case JMP:
