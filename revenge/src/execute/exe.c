@@ -198,7 +198,8 @@ static int get_value_RTL_instruction(
 			/* unknown */
 			destination->value_scope = 0;
 			/* 1 - Entry Used */
-			destination->value_id = 1;
+			destination->value_id = local_counter;
+			local_counter++;
 			destination->valid = 1;
 			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
 				destination->init_value,
@@ -314,7 +315,8 @@ static int get_value_RTL_instruction(
 			value_data->value_scope = 3;
 			/* Param number */
 			value_data->value_id =
-				data_index;
+				local_counter;
+			local_counter++;
 		}
 		printf("variable on data:0x%"PRIx64"\n",
 			data_index);
@@ -788,6 +790,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 			/* Only value_id preserves the value2 values */
 		//inst->value3.value_id = inst->value2.value_id;
 		inst->value3.value_id = local_counter;
+		inst->value2.value_id = local_counter;
 		local_counter++;
 		//}
 		/* 1 - Entry Used */

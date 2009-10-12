@@ -150,6 +150,25 @@ struct entry_point_s {
 struct entry_point_s entry_point[ENTRY_POINTS_SIZE];
 uint64_t entry_point_list_length = ENTRY_POINTS_SIZE;
 
+/* redirect is used for SSA correction, when one needs to rename a variable */
+/* renaming the variable within the log entries would take too long. */
+/* so use log entry value_id -> redirect -> label_s */
+struct label_redirect_s {
+	uint64_t redirect;
+} ;
+
+struct label_s {
+	/* local = 1, param = 2, data = 3, mem = 4 */
+	uint64_t scope;
+	/* For local or param: reg = 1, stack = 2 */
+	/* For data: data = 1, &data = 2, value = 3 */
+	uint64_t type;
+	/* value */
+	uint64_t value;
+	/* human readable name */
+	char *name;
+} ;
+
 int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_number)
 {
 	int ret = 1; /* Default to failed */
@@ -681,6 +700,173 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 	return 0;
 }
 
+int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, uint64_t indirect_value_id, struct label_s *label) {
+	int tmp;
+	/* FIXME: May handle by using first switch as switch (indirect) */
+	switch (store) {
+	case STORE_DIRECT:
+		/* FIXME: Handle the case of an immediate value being &data */
+		/* but it is very difficult to know if the value is a pointer (&data) */
+		/* or an offset (data[x]) */
+		/* need to use the relocation table to find out */
+		/* no relocation table entry == offset */
+		/* relocation table entry == pointer */
+		/* this info should be gathered at disassembly point */
+		/* FIXME: relocation table not present in 16bit x86 mode, so another method will need to be found */
+		if (indirect == IND_MEM) {
+			label->scope = 3;
+			label->type = 1;
+			label->value = index;
+		} else if (relocated) {
+			label->scope = 3;
+			label->type = 2;
+			label->value = index;
+		} else {
+			label->scope = 3;
+			label->type = 3;
+			label->value = index;
+		}
+		break;
+	case STORE_REG:
+		switch (value_scope) {
+		case 1:
+			if (IND_STACK == indirect) {
+				label->scope = 2;
+				label->type = 2;
+				label->value = index;
+			} else if (0 == indirect) {
+				label->scope = 2;
+				label->type = 1;
+				label->value = index;
+			}
+			break;
+		case 2:
+			if (IND_STACK == indirect) {
+				label->scope = 1;
+				label->type = 2;
+				label->value = value_id;
+			} else if (0 == indirect) {
+				label->scope = 1;
+				label->type = 1;
+				label->value = value_id;
+			}
+			break;
+		case 3: /* Data */
+			/* FIXME: introduce indirect_value_id and indirect_value_scope */
+			/* in order to resolve somewhere */
+			/* It will always be a register, and therefore can re-use the */
+			/* value_id to identify it. */
+			/* It will always be a local and not a param */
+			label->scope = 4;
+			label->type = 1;
+			label->value = indirect_value_id;
+			break;
+		default:
+			label->scope = 0;
+			label->type = value_scope;
+			label->value = 0;
+			printf("unknown value scope: %04"PRIx64";\n", (value_scope));
+			break;
+		}
+		break;
+	default:
+		printf("Unhandled store1\n");
+		break;
+	}
+	return 0;
+}
+
+int output_label(struct label_s *label, FILE *fd) {
+	int tmp;
+
+	switch (label->scope) {
+	case 3:
+		printf("%"PRIx64";\n", label->value);
+		/* FIXME: Handle the case of an immediate value being &data */
+		/* but it is very difficult to know if the value is a pointer (&data) */
+		/* or an offset (data[x]) */
+		/* need to use the relocation table to find out */
+		/* no relocation table entry == offset */
+		/* relocation table entry == pointer */
+		/* this info should be gathered at disassembly point */
+		switch (label->type) {
+		case 1:
+			tmp = fprintf(fd, "data%04"PRIx64,
+				label->value);
+			break;
+		case 2:
+			tmp = fprintf(fd, "&data%04"PRIx64,
+				label->value);
+			break;
+		case 3:
+			tmp = fprintf(fd, "0x%"PRIx64,
+				label->value);
+			break;
+		default:
+			printf("output_label error\n");
+			return 1;
+			break;
+		}
+		break;
+	case 2:
+		switch (label->type) {
+		case 2:
+			printf("param_stack%04"PRIx64,
+				label->value);
+			tmp = fprintf(fd, "param_stack%04"PRIx64,
+				label->value);
+			break;
+		case 1:
+			printf("param_reg%04"PRIx64,
+				label->value);
+			tmp = fprintf(fd, "param_reg%04"PRIx64,
+				label->value);
+			break;
+		default:
+			printf("output_label error\n");
+			return 1;
+			break;
+		}
+		break;
+	case 1:
+		switch (label->type) {
+		case 2:
+			printf("local_stack%04"PRIx64,
+				label->value);
+			tmp = fprintf(fd, "local_stack%04"PRIx64,
+				label->value);
+			break;
+		case 1:
+			printf("local_reg%04"PRIx64,
+				label->value);
+			tmp = fprintf(fd, "local_reg%04"PRIx64,
+				label->value);
+			break;
+		default:
+			printf("output_label error\n");
+			return 1;
+			break;
+		}
+		break;
+	case 4:
+		/* FIXME: introduce indirect_value_id and indirect_value_scope */
+		/* in order to resolve somewhere */
+		/* It will always be a register, and therefore can re-use the */
+		/* value_id to identify it. */
+		/* It will always be a local and not a param */
+		printf("*local_mem%04"PRIx64";\n", label->value);
+		tmp = fprintf(fd, "*local_mem%04"PRIx64,
+			label->value);
+		break;
+	default:
+		printf("unknown label scope: %04"PRIx64";\n", label->scope);
+		tmp = fprintf(fd, "unknown%04"PRIx64,
+			label->scope);
+		break;
+	}
+	return 0;
+}
+
 int output_variable(int store, int indirect, uint64_t index, uint64_t relocated, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, uint64_t indirect_value_id, FILE *fd) {
 	int tmp;
 	/* FIXME: May handle by using first switch as switch (indirect) */
@@ -759,7 +945,8 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 	return 0;
 }
 
-int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, FILE *fd)
+int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
+	struct label_redirect_s *label_redirect, struct label_s *labels, FILE *fd)
 {
 	int opcode = inst_log1_flagged->instruction.opcode;
 	int err = 0;
@@ -772,31 +959,20 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged, FI
 	uint64_t value_id;
 	uint64_t indirect_offset_value;
 	uint64_t indirect_value_id;
+	struct label_s *label;
 
 	switch (opcode) {
 	case CMP:
 		switch (condition) {
 		case LESS_EQUAL:
 			tmp = fprintf(fd, "(");
-			store = inst_log1_flagged->instruction.dstA.store;
-			indirect = inst_log1_flagged->instruction.dstA.indirect;
-			index = inst_log1_flagged->instruction.dstA.index;
-			relocated = inst_log1_flagged->instruction.dstA.relocated;
-			value_scope = inst_log1_flagged->value2.value_scope;
-			value_id = inst_log1_flagged->value2.value_id;
-			indirect_offset_value = inst_log1_flagged->value2.indirect_offset_value;
-			indirect_value_id = inst_log1_flagged->value2.indirect_value_id;
-			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, fd);
+			tmp = label_redirect[inst_log1_flagged->value2.value_id].redirect;
+			label = &labels[tmp];
+			tmp = output_label(label, fd);
 			tmp = fprintf(fd, " <= ");
-			store = inst_log1_flagged->instruction.srcA.store;
-			indirect = inst_log1_flagged->instruction.srcA.indirect;
-			index = inst_log1_flagged->instruction.srcA.index;
-			relocated = inst_log1_flagged->instruction.srcA.relocated;
-			value_scope = inst_log1_flagged->value1.value_scope;
-			value_id = inst_log1_flagged->value1.value_id;
-			indirect_offset_value = inst_log1_flagged->value1.indirect_offset_value;
-			indirect_value_id = inst_log1_flagged->value1.indirect_value_id;
-			tmp = output_variable(store, indirect, index, relocated, value_scope, value_id, indirect_offset_value, indirect_value_id, fd);
+			tmp = label_redirect[inst_log1_flagged->value1.value_id].redirect;
+			label = &labels[tmp];
+			tmp = output_label(label, fd);
 			tmp = fprintf(fd, ") ");
 			break;
 		default:
@@ -856,7 +1032,7 @@ uint32_t output_function_name(FILE *fd,
 }
 
 int output_function_body(struct process_state_s *process_state,
-			 FILE *fd, int start, int end)
+			 FILE *fd, int start, int end, struct label_redirect_s *label_redirect, struct label_s *labels)
 {
 	int tmp, n;
 	int err;
@@ -865,6 +1041,7 @@ int output_function_body(struct process_state_s *process_state,
 	struct inst_log_entry_s *inst_log1;
 	struct inst_log_entry_s *inst_log1_prev;
 	struct memory_s *value;
+	struct label_s *label;
 
 	if (!start || !end) {
 		printf("output_function_body:Invalid start or end\n");
@@ -923,28 +1100,16 @@ int output_function_body(struct process_state_s *process_state,
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
-
-				tmp = output_variable(instruction->dstA.store,
-					instruction->dstA.indirect,
-					instruction->dstA.index,
-					instruction->dstA.relocated,
-					inst_log1->value3.value_scope,
-					inst_log1->value3.value_id,
-					inst_log1->value3.indirect_offset_value,
-					inst_log1->value3.indirect_value_id,
-					fd);
+				/* FIXME: Check limits */
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
 				tmp = fprintf(fd, " = ");
 
 				printf("\nstore=%d\n", instruction->srcA.store);
-				tmp = output_variable(instruction->srcA.store,
-					instruction->srcA.indirect,
-					instruction->srcA.index,
-					instruction->srcA.relocated,
-					inst_log1->value1.value_scope,
-					inst_log1->value1.value_id,
-					inst_log1->value1.indirect_offset_value,
-					inst_log1->value1.indirect_value_id,
-					fd);
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
 				tmp = fprintf(fd, ";\n");
 
 				break;
@@ -953,26 +1118,14 @@ int output_function_body(struct process_state_s *process_state,
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
-				tmp = output_variable(instruction->dstA.store,
-					instruction->dstA.indirect,
-					instruction->dstA.index,
-					instruction->dstA.relocated,
-					inst_log1->value3.value_scope,
-					inst_log1->value3.value_id,
-					inst_log1->value3.indirect_offset_value,
-					inst_log1->value3.indirect_value_id,
-					fd);
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
 				tmp = fprintf(fd, " += ");
 				printf("\nstore=%d\n", instruction->srcA.store);
-				tmp = output_variable(instruction->srcA.store,
-					instruction->srcA.indirect,
-					instruction->srcA.index,
-					instruction->srcA.relocated,
-					inst_log1->value1.value_scope,
-					inst_log1->value1.value_id,
-					inst_log1->value1.indirect_offset_value,
-					inst_log1->value1.indirect_value_id,
-					fd);
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
 				tmp = fprintf(fd, ";\n");
 				break;
 			case MUL:
@@ -980,26 +1133,14 @@ int output_function_body(struct process_state_s *process_state,
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
-				tmp = output_variable(instruction->dstA.store,
-					instruction->dstA.indirect,
-					instruction->dstA.index,
-					instruction->dstA.relocated,
-					inst_log1->value3.value_scope,
-					inst_log1->value3.value_id,
-					inst_log1->value3.indirect_offset_value,
-					inst_log1->value3.indirect_value_id,
-					fd);
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
 				tmp = fprintf(fd, " *= ");
 				printf("\nstore=%d\n", instruction->srcA.store);
-				tmp = output_variable(instruction->srcA.store,
-					instruction->srcA.indirect,
-					instruction->srcA.index,
-					instruction->srcA.relocated,
-					inst_log1->value1.value_scope,
-					inst_log1->value1.value_id,
-					inst_log1->value1.indirect_offset_value,
-					inst_log1->value1.indirect_value_id,
-					fd);
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
 				tmp = fprintf(fd, ";\n");
 				break;
 			case SUB:
@@ -1007,26 +1148,14 @@ int output_function_body(struct process_state_s *process_state,
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
-				tmp = output_variable(instruction->dstA.store,
-					instruction->dstA.indirect,
-					instruction->dstA.index,
-					instruction->dstA.relocated,
-					inst_log1->value3.value_scope,
-					inst_log1->value3.value_id,
-					inst_log1->value3.indirect_offset_value,
-					inst_log1->value3.indirect_value_id,
-					fd);
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
 				tmp = fprintf(fd, " -= ");
 				printf("\nstore=%d\n", instruction->srcA.store);
-				tmp = output_variable(instruction->srcA.store,
-					instruction->srcA.indirect,
-					instruction->srcA.index,
-					instruction->srcA.relocated,
-					inst_log1->value1.value_scope,
-					inst_log1->value1.value_id,
-					inst_log1->value1.indirect_offset_value,
-					inst_log1->value1.indirect_value_id,
-					fd);
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
 				tmp = fprintf(fd, ";\n");
 				break;
 			case JMP:
@@ -1089,7 +1218,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, "\t");
 				printf("if ");
 				tmp = fprintf(fd, "if ");
-				err = if_expression( instruction->srcA.index, inst_log1_prev, fd);
+				err = if_expression( instruction->srcA.index, inst_log1_prev, label_redirect, labels, fd);
 				printf("\t prev=%d, ",inst_log1->prev[0]);
 				printf("\t prev inst=%d, ",instruction_prev->opcode);
 				printf("\t %s", condition_table[instruction->srcA.index]);
@@ -1157,9 +1286,9 @@ int main(int argc, char *argv[])
 	size_t inst_size = 0;
 //	uint64_t reloc_size = 0;
 	int l;
-//	struct instruction_s *instruction;
+	struct instruction_s *instruction;
 //	struct instruction_s *instruction_prev;
-//	struct inst_log_entry_s *inst_log1;
+	struct inst_log_entry_s *inst_log1;
 //	struct inst_log_entry_s *inst_log1_prev;
 	struct inst_log_entry_s *inst_exe;
 //	struct memory_s *value;
@@ -1173,6 +1302,8 @@ int main(int argc, char *argv[])
 	struct memory_s *memory_reg;
 	struct memory_s *memory_data;
 	int *memory_used;
+	struct label_redirect_s *label_redirect;
+	struct label_s *labels;
 
 	expression = malloc(1000); /* Buffer for if expressions */
 
@@ -1462,6 +1593,81 @@ int main(int argc, char *argv[])
 				entry_point[n].previous_instuction);
 		}
 	}
+	/************************************************************
+	 * This section deals with correcting SSA for branches/joins.
+	 ************************************************************/
+	printf("Number of labels = 0x%x\n", local_counter);
+	label_redirect = calloc(local_counter, sizeof(struct label_redirect_s));
+	labels = calloc(local_counter, sizeof(struct label_s));
+
+	for (n = 0; n < inst_log; n++) {
+		struct label_s label;
+		uint64_t value_id;
+
+		inst_log1 =  &inst_log_entry[n];
+		instruction =  &inst_log1->instruction;
+		value_id = inst_log1->value3.value_id;
+		switch (instruction->opcode) {
+		case MOV:
+		case ADD:
+		case ADC:
+		case MUL:
+		case CMP:
+			if (value_id > local_counter) {
+				printf("SSA Failed at inst_log 0x%x\n", n);
+				return 1;
+			}
+			tmp = log_to_label(instruction->dstA.store,
+				instruction->dstA.indirect,
+				instruction->dstA.index,
+				instruction->dstA.relocated,
+				inst_log1->value2.value_scope,
+				inst_log1->value2.value_id,
+				inst_log1->value2.indirect_offset_value,
+				inst_log1->value2.indirect_value_id,
+				&label);
+			if (value_id > 0) {
+				label_redirect[value_id].redirect = value_id;
+				labels[value_id].scope = label.scope;
+				labels[value_id].type = label.type;
+				labels[value_id].value = label.value;
+			}
+
+			value_id = inst_log1->value1.value_id;
+			if (value_id > local_counter) {
+				printf("SSA Failed at inst_log 0x%x\n", n);
+				return 1;
+			}
+			tmp = log_to_label(instruction->srcA.store,
+				instruction->srcA.indirect,
+				instruction->srcA.index,
+				instruction->srcA.relocated,
+				inst_log1->value1.value_scope,
+				inst_log1->value1.value_id,
+				inst_log1->value1.indirect_offset_value,
+				inst_log1->value1.indirect_value_id,
+				&label);
+			if (value_id > 0) {
+				label_redirect[value_id].redirect = value_id;
+				labels[value_id].scope = label.scope;
+				labels[value_id].type = label.type;
+				labels[value_id].value = label.value;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	for (n = 0; n < local_counter; n++) {
+		printf("labels 0x%x: redirect=0x%"PRIx64", scope=0x%"PRIx64", type=0x%"PRIx64", value=0x%"PRIx64"\n",
+			n, label_redirect[n].redirect, labels[n].scope, labels[n].type, labels[n].value);
+	}
+	
+
+
+	/***************************************************
+	 * This section deals with outputting the .c file.
+	 ***************************************************/
 	filename = "test.c";
 	fd = fopen(filename, "w");
 	if (!fd) {
@@ -1539,7 +1745,9 @@ int main(int argc, char *argv[])
 			output_function_body(process_state,
 				fd,
 				external_entry_points[l].inst_log,
-				external_entry_points[l].inst_log_end);
+				external_entry_points[l].inst_log_end,
+				label_redirect,
+				labels);
 			for (n = external_entry_points[l].inst_log; n <= external_entry_points[l].inst_log_end; n++) {
 			}			
 		}
