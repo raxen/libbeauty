@@ -18,11 +18,15 @@ include 'header.php'
 </P>
 <P> Extra processing then takes place, resulting in the final step of creating a C source code representation of the binary program.
 </P>
-<P> Currently, the test programs test1.c, test2.c, test3.c and test4.c work. We can compile them, run revenge on the test4.o file and output a test.c file.
+<P> Currently, the test programs test1.c, test2.c, ..., and test14.c work. We can compile them, run revenge on the test4.o file and output a test.c file.
 </P>
-<P> TODO: We do not currently handle jump or conditional jump instructions. This will be implemented next.
+<P> We can now handle jump or conditional jump instructions.
 </P>
-<P> This page was last updated on 13th April 2009
+<P> 64bit amd64 .o files are now supported in addition to 32bit ia32.
+</P>
+<P> Currently, SSA form is being introduced. The difficult part of handling the renaming of labels has been started.
+</P>
+<P> This page was last updated on 10th October 2009
 </P>
 </table>
 </table>
