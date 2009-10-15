@@ -1,15 +1,15 @@
 #!/bin/sh
 #
-# Copyright (C) 2000-2005 the revenge project
+# Copyright (C) 2000-2005 the libbeauty project
 #
-# This file is part of revenge, a unix video player.
+# This file is part of libbeauty, a unix decompiler.
 # 
-# revenge is free software; you can redistribute it and/or modify
+# libbeauty is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 # 
-# revenge is distributed in the hope that it will be useful,
+# libbeauty is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -20,11 +20,11 @@
 #
 # $Id: autogen.sh,v 1.14 2004/06/21 07:40:10 athp Exp $
 #
-# Maintained by Stephen Torri <storri@users.sourceforge.net>
+# Maintained by James Courtier-Dutton <James@superbug.co.uk>
 #
 # run this to generate all the initial makefiles, etc.
 
-PROG=revenge-lib
+PROG=libbeauty
 
 # Minimum value required to build
 WANT_AUTOMAKE_1_6=1 export WANT_AUTOMAKE_1_6

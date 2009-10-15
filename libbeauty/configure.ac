@@ -1,5 +1,5 @@
 AC_INIT
-AM_INIT_AUTOMAKE("revenge",0.2.0)
+AM_INIT_AUTOMAKE("libbeauty",0.2.0)
 AC_PREREQ(2.53)
 
 dnl The libtool version numbers (LT_*); Don't even think about faking this!
@@ -75,7 +75,7 @@ fi
 dnl ------------------------------------
 dnl    Module install path
 dnl ------------------------------------
-AC_ARG_WITH(modules-path,[  --with-modules-path     where librevenge modules are installed],modules_path="$withval",modules_path="$libdir/revenge")
+AC_ARG_WITH(modules-path,[  --with-modules-path     where libbeauty modules are installed],modules_path="$withval",modules_path="$libdir/beauty")
 ac_modules_path=`eval echo "$modules_path"`
 AC_DEFINE_UNQUOTED(MOD_PATH,"$ac_modules_path",[Define the path of the librevenge modules])
 MOD_PATH="$ac_modules_path"
@@ -84,9 +84,9 @@ AC_SUBST(MOD_PATH)
 dnl ------------------------------------
 dnl    include install path
 dnl ------------------------------------
-AC_ARG_WITH(include-path,[  --with-include-path     where librevenge include files are installed],include_path="$withval",include_path="$includedir/revenge")
+AC_ARG_WITH(include-path,[  --with-include-path     where librevenge include files are installed],include_path="$withval",include_path="$includedir/beauty")
 ac_include_path=`eval echo "$include_path"`
-AC_DEFINE_UNQUOTED(INCLUDE_PATH,"$ac_include_path",[Define the path of the librevenge include files])
+AC_DEFINE_UNQUOTED(INCLUDE_PATH,"$ac_include_path",[Define the path of the libbeauty include files])
 INCLUDE_PATH="$ac_include_path"
 AC_SUBST(INCLUDE_PATH)
 

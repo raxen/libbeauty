@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004  The revenge Team
+ *  Copyright (C) 2004-2009 The libbeauty Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@
  * 11-9-2004 Initial work.
  *   Copyright (C) 2004 James Courtier-Dutton James@superbug.co.uk
  * 10-11-2007 Updates.
+ *   Copyright (C) 2007 James Courtier-Dutton James@superbug.co.uk
+ * 10-10-2009 Updates.
  *   Copyright (C) 2007 James Courtier-Dutton James@superbug.co.uk
  */
 

@@ -5,7 +5,7 @@ In the tree root, do:
 make
 make install
 
-That will build and install the libs in /usr/local/lib/revenge
+That will build and install the libs in /usr/local/lib/libbeauty
 then:
 
 cd test

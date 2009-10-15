@@ -4,8 +4,8 @@ include $(top_srcdir)/misc/Makefile.common
 AM_CFLAGS = -O0 -g3 -Wall
 #CFLAGS = -O0 -g3 -Wall
 
-#modulesdir = $(pkglibdir)/revenge_exe
-lib_LTLIBRARIES = librevenge_exe.la
+#modulesdir = $(pkglibdir)/beauty_exe
+lib_LTLIBRARIES = libbeauty_exe.la
 #bin_PROGRAMS = dis
 
 #include_HEADERS = \
@@ -14,8 +14,8 @@ lib_LTLIBRARIES = librevenge_exe.la
 #noinst_HEADERS = \
 #	exe.h
 
-librevenge_exe_la_SOURCES = \
+libbeauty_exe_la_SOURCES = \
 	exe.c
 
-librevenge_exe_la_LDFLAGS = \
+libbeauty_exe_la_LDFLAGS = \
 	 -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
