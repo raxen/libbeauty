@@ -39,6 +39,14 @@ struct memory_s {
 	uint64_t value_id;
 	/* valid: 0 - Entry Not used yet, 1 - Entry Used */
 	uint64_t valid;
+	/* The instruction that assigned the value within SSA scope */
+	/* If size > 1 there is more than one path between there and here */
+	int prev_size;
+	int *prev;
+	/* The instruction that uses the value within SSA scope */
+	/* If size > 1 there is more than one path between there and here */
+	int next_size;
+	int *next;
 } ;
 
 struct inst_log_entry_s {
