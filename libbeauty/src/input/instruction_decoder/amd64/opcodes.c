@@ -52,7 +52,8 @@ char * opcode_table[] = {
 	"SHR",
 	"SAR",
 	"IN ",
-	"OUT"
+	"OUT",
+	"RET"
 };
 /* FIXME: The values are currently set to 64bit, so can handle 64bit and 32bit, but not 128bit regs. */
 #define REG_AX 0x08

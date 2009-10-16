@@ -744,7 +744,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("NOP\n");
-		put_value_RTL_instruction(self, process_state, inst);
+		//put_value_RTL_instruction(self, process_state, inst);
 		break;
 	case CMP:
 		/* Currently, do the same as NOP */

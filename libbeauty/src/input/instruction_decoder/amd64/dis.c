@@ -1149,6 +1149,22 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		dis_instructions->instruction_number++;
 
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = NOP;
+		instruction->flags = 0;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.index = REG_AX;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 8;
+		instruction->srcA.store = STORE_REG;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = REG_AX;
+		instruction->srcA.value_size = 8;
+		dis_instructions->instruction_number++;
+
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->flags = 0;
 		instruction->dstA.store = STORE_REG;
@@ -1163,6 +1179,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->srcA.index = REG_TMP1;
 		instruction->srcA.value_size = 8;
 		dis_instructions->instruction_number++;
+
 		result = 1;
 		break;
 	case 0xc4:												/* LES */

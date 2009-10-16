@@ -63,6 +63,7 @@ enum {
 #define SAR 20
 #define IN  21
 #define OUT 22
+#define RET 23 /* Special instruction for helping to print the "return local_regNNNN;" */
 
 #define OVERFLOW 1
 #define NOT_OVERFLOW 2

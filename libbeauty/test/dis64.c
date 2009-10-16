@@ -228,6 +228,14 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 		}
 		ret = 0;
 		break;
+	case NOP:
+		tmp = fprintf(fd, "\n");
+		ret = 0;
+		break;
+	case RET:
+		tmp = fprintf(fd, "\n");
+		ret = 0;
+		break;
 	}
 	return ret;
 }
@@ -651,6 +659,9 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 			inst_log++;
 			if (0 == memory_reg[2].offset_value) {
 				printf("Function exited\n");
+				if (inst_exe_prev->instruction.opcode == NOP) {
+					inst_exe_prev->instruction.opcode = RET;
+				}
 				break;
 			}
 		}
@@ -1047,6 +1058,7 @@ int output_function_body(struct process_state_s *process_state,
 		printf("output_function_body:Invalid start or end\n");
 		return 1;
 	}
+	printf("output_function_body:start=0x%x, end=0x%x\n", start, end);
 
 	for (n = start; n <= end; n++) {
 		inst_log1 =  &inst_log_entry[n];
@@ -1227,6 +1239,22 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, "goto label%04"PRIx32";\n", inst_log1->next[1]);
 				break;
 
+			case NOP:
+				if (print_inst(instruction, n))
+					return 1;
+				break;
+			case RET:
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				printf("return\n");
+				tmp = fprintf(fd, "return ");
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				tmp = fprintf(fd, ";\n");
+				break;
 			default:
 				printf("Unhandled output instruction1\n");
 				if (print_inst(instruction, n))
@@ -1235,32 +1263,6 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 			}
 		}
-		printf("GOT HERE1. value_type=%d\n",
-			inst_log1->value3.value_type);
-		printf("GOT HERE2. dstA.indirect=%d\n",
-			instruction->dstA.indirect);
-		printf("GOT HERE3. dstA.store=%x cmp %x\n",
-			instruction->dstA.store, STORE_REG);
-		printf("GOT HERE4. dstA.index=%"PRIx64" cmp %x\n",
-			instruction->dstA.index, REG_IP);
-		if ((5 == inst_log1->value3.value_type) &&
-			(!instruction->dstA.indirect) &&
-			(instruction->dstA.store == STORE_REG) &&
-			(instruction->dstA.index ==  REG_IP)) {
-			/* FIXME: select correct return variable */
-			/* Search for EAX */
-			value = search_store(process_state->memory_reg,
-					REG_AX, 8);
-			/* FIXME: Catch the rare case of EAX never been used */
-			if (value) {
-				printf("\treturn local_reg%04"PRIx64";\n}\n", value->value_id);
-				tmp = fprintf(fd, "\treturn local_reg%04"PRIx64";\n", value->value_id);
-			} else {
-				printf("\treturn UNKNOWN\n");
-				tmp = fprintf(fd, "\treturn UNKNOWN\n");
-			}
-		}
-		//tmp = fprintf(fd, "%d\n", l);
 	}
 	if (0 < inst_log1->next_size && inst_log1->next[0]) {		
 		printf("\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
