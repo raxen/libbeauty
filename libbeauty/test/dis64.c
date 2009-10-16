@@ -865,8 +865,8 @@ int output_label(struct label_s *label, FILE *fd) {
 		/* It will always be a register, and therefore can re-use the */
 		/* value_id to identify it. */
 		/* It will always be a local and not a param */
-		printf("*local_mem%04"PRIx64";\n", label->value);
-		tmp = fprintf(fd, "*local_mem%04"PRIx64,
+		printf("*local_reg%04"PRIx64";\n", label->value);
+		tmp = fprintf(fd, "*local_reg%04"PRIx64,
 			label->value);
 		break;
 	default:
