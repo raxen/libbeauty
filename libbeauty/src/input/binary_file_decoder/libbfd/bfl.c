@@ -386,6 +386,22 @@ const char *bfd_err(void)
 	return bfd_errmsg(bfd_get_error());
 }
 
+int bf_get_arch_mach(struct rev_eng *handle, uint32_t *arch, uint64_t *mach)
+{
+	bfd *b;
+
+	if (!handle) {
+		return 1;
+	}
+	
+	b = handle->bfd;
+	printf("format:%"PRIu32", %"PRIu64"\n",bfd_get_arch(b), bfd_get_mach(b));
+	*arch = bfd_get_arch(b);
+	*mach = bfd_get_mach(b);
+	return 0;
+}
+
+
 struct rev_eng *bf_test_open_file(const char *fn)
 {
 	struct rev_eng *ret;

@@ -30,6 +30,7 @@
 const char *bfd_err(void);
 
 struct rev_eng *bf_test_open_file(const char *fn);
+int bf_get_arch_mach(struct rev_eng *handle, uint32_t *arch, uint64_t *mach);
 void bf_test_close_file(struct rev_eng *r);
 int64_t bf_get_code_size(struct rev_eng* ret);
 int bf_copy_code_section(struct rev_eng* ret, uint8_t *data, uint64_t data_size);

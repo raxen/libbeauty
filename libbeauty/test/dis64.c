@@ -1408,6 +1408,8 @@ int main(int argc, char *argv[])
 //	int octets = 0;
 //	int result;
 	char *filename;
+	uint32_t arch;
+	uint64_t mach;
 	FILE *fd;
 	int tmp;
 	int err;
@@ -1441,7 +1443,12 @@ int main(int argc, char *argv[])
 		printf("Failed to find or recognise file\n");
 		return 1;
 	}
-
+	tmp = bf_get_arch_mach(handle, &arch, &mach);
+	if ((arch != 9) ||
+		(mach != 64)) {
+		printf("File not the correct arch and mach\n");
+		return 1;
+	}
 
 	printf("symtab_size = %ld\n", handle->symtab_sz);
 	for (l = 0; l < handle->symtab_sz; l++) {
