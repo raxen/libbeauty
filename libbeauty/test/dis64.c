@@ -1293,6 +1293,7 @@ int search_back_local_stack(int start_location, uint64_t indirect_init_value, ui
 	struct mid_start_s *mid_start;
 
 	*size = 0;
+	/* FIXME: This could be optimized out if the "seen" value just increased on each call */
 	for (n = 0; n < INST_LOG_ENTRY_SIZE; n++) {
 		search_back_seen[n] = 0;
 	}
@@ -1314,6 +1315,7 @@ int search_back_local_stack(int start_location, uint64_t indirect_init_value, ui
 		for (n = 0; n < inst_log1->prev_size; n++) {
 			mid_start[n].mid_start = inst_log1->prev[n];
 			mid_start[n].valid = 1;
+			printf("mid_start added 0x%"PRIx64" at 0x%x\n", mid_start[n].mid_start, n);
 		}
 	}
 	do {
@@ -1323,10 +1325,12 @@ int search_back_local_stack(int start_location, uint64_t indirect_init_value, ui
 				inst_num = mid_start[n].mid_start;
 				mid_start[n].valid = 0;
 				found = 1;
+				printf("mid_start removed 0x%"PRIx64" at 0x%x, size=0x%"PRIx64"\n", mid_start[n].mid_start, n, mid_start_size);
 				break;
 			}
 		}
 		if (!found) {
+			printf("mid_start not found, exiting\n");
 			goto search_back_exit_free;
 		}
 		if (search_back_seen[inst_num]) {
@@ -1336,6 +1340,7 @@ int search_back_local_stack(int start_location, uint64_t indirect_init_value, ui
 		inst_log1 =  &inst_log_entry[inst_num];
 		instruction =  &inst_log1->instruction;
 		value_id = inst_log1->value3.value_id;
+		printf("inst_num:0x%"PRIx64"\n", inst_num);
 		if ((instruction->dstA.store == STORE_REG) &&
 			(inst_log1->value3.value_scope == 2) &&
 			(instruction->dstA.indirect == IND_STACK) &&
@@ -1352,7 +1357,8 @@ int search_back_local_stack(int start_location, uint64_t indirect_init_value, ui
 				(*inst_list)[tmp - 1] = inst_num;
 			}
 		} else {
-			if (inst_log1->prev_size > 0) {
+			if ((inst_log1->prev_size > 0) &&
+				(inst_log1->prev[0] != 0)) {
 				int prev_index;
 				found = 0;
 				prev_index = 0;
@@ -1361,6 +1367,7 @@ int search_back_local_stack(int start_location, uint64_t indirect_init_value, ui
 						mid_start[n].mid_start = inst_log1->prev[prev_index];
 						prev_index++;
 						mid_start[n].valid = 1;
+						printf("mid_start added 0x%"PRIx64" at 0x%x\n", mid_start[n].mid_start, n);
 						found = 1;
 					}
 					if (prev_index >= inst_log1->prev_size) {
@@ -1374,17 +1381,21 @@ int search_back_local_stack(int start_location, uint64_t indirect_init_value, ui
 					for(n = mid_start_size; n < mid_next; n++) {
 						mid_start[n].mid_start = inst_log1->prev[prev_index];
 						prev_index++;
+						printf("mid_start realloc added 0x%"PRIx64" at 0x%x\n", mid_start[n].mid_start, n);
 						mid_start[n].valid = 1;
 					}
 					mid_start_size = mid_next;
 				}
 				
 				if (!found) {
+					printf("not found\n");
 					goto search_back_exit_free;
 				}
 			}
 		}
-	} while (0 != inst_num);
+	/* FIXME: There must be deterministic exit point */
+	} while (1);
+	printf("end of loop, exiting\n");
 
 search_back_exit_free:
 	free(mid_start);
@@ -1721,8 +1732,8 @@ int main(int argc, char *argv[])
 	printf("Number of labels = 0x%x\n", local_counter);
 	label_redirect = calloc(local_counter, sizeof(struct label_redirect_s));
 	labels = calloc(local_counter, sizeof(struct label_s));
-
-	for (n = 0; n < inst_log; n++) {
+	/* n <= inst_log verified to be correct limit */
+	for (n = 0; n <= inst_log; n++) {
 		struct label_s label;
 		uint64_t value_id;
 
@@ -1856,7 +1867,7 @@ int main(int argc, char *argv[])
 				printf("SSA inst:0x%x:size=0x%"PRIx64"\n", n, size);
 				/* FIXME: This if statement is really doing to much */
 				if (size > 0) {
-					uint64_t value_id_highest = 0;
+					uint64_t value_id_highest = value_id;
 					inst_log1->value1.prev = calloc(size, sizeof(inst_log1->value1.prev));
 					inst_log1->value1.prev_size = size;
 					for (l = 0; l < size; l++) {
@@ -1873,7 +1884,12 @@ int main(int argc, char *argv[])
 						printf("rel inst:0x%"PRIx64"\n", inst_list[l]);
 					}
 					/* Renaming is only needed if there are more than one label present */
-					if (size > 1) {
+					if (size > 0) {
+						printf("Renaming label 0x%"PRIx64" to 0x%"PRIx64"\n",
+							label_redirect[value_id1].redirect,
+							value_id_highest);
+						label_redirect[value_id1].redirect =
+								value_id_highest;
 						for (l = 0; l < size; l++) {
 							struct inst_log_entry_s *inst_log_l;
 							inst_log_l = &inst_log_entry[inst_list[l]];
