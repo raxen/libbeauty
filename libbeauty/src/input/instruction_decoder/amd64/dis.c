@@ -1338,9 +1338,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = IND_DIRECT;
 		instruction->dstA.indirect_size = 8;
-		instruction->dstA.index = REG_IP;
+		instruction->dstA.index = REG_AX;
 		instruction->dstA.relocated = 0;
-		instruction->dstA.value_size = 4;
+		instruction->dstA.value_size = 8;
 		dis_instructions->instruction_number++;
 		result = 1;
 		break;

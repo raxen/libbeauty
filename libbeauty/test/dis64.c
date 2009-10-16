@@ -1191,16 +1191,13 @@ int output_function_body(struct process_state_s *process_state,
 				if (print_inst(instruction, n))
 					return 1;
 				/* Search for EAX */
-				value = search_store(process_state->memory_reg,
-						4, 4);
-				/* FIXME: Catch the rare case of EAX never been used */
-				if (value) {
-					printf("local%04"PRId64" = ", value->value_id);
-					tmp = fprintf(fd, "\tlocal%04"PRId64" = ", value->value_id);
-				} else {
-					printf("localUNKNOWN = ");
-					tmp = fprintf(fd, "localUNKNOWN = ");
-				}
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				printf(" = ");
+				tmp = fprintf(fd, " = ");
 
 				tmp = fprintf(fd, "%s();\n", 
 					external_entry_points[instruction->srcA.index].name);
@@ -1779,6 +1776,28 @@ int main(int argc, char *argv[])
 				inst_log1->value1.value_id,
 				inst_log1->value1.indirect_offset_value,
 				inst_log1->value1.indirect_value_id,
+				&label);
+			if (value_id > 0) {
+				label_redirect[value_id].redirect = value_id;
+				labels[value_id].scope = label.scope;
+				labels[value_id].type = label.type;
+				labels[value_id].value = label.value;
+			}
+			break;
+		case CALL:
+			printf("SSA CALL inst_log 0x%x\n", n);
+			if (value_id > local_counter) {
+				printf("SSA Failed at inst_log 0x%x\n", n);
+				return 1;
+			}
+			tmp = log_to_label(instruction->dstA.store,
+				instruction->dstA.indirect,
+				instruction->dstA.index,
+				instruction->dstA.relocated,
+				inst_log1->value2.value_scope,
+				inst_log1->value2.value_id,
+				inst_log1->value2.indirect_offset_value,
+				inst_log1->value2.indirect_value_id,
 				&label);
 			if (value_id > 0) {
 				label_redirect[value_id].redirect = value_id;
