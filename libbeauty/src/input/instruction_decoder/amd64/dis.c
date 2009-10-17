@@ -330,6 +330,9 @@ void dis_Ex_Gx(struct rev_eng *handle, int opcode, struct dis_instructions_s *di
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
+	if (opcode == MOV) {
+		instruction->flags = 0;
+	}
 	instruction->srcA.store = STORE_REG;
 	instruction->srcA.indirect = IND_DIRECT;
 	instruction->srcA.indirect_size = 8;
@@ -471,7 +474,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x05:												/* ADD eAX,Iv */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = ADD;
-		instruction->flags = 0;
+		instruction->flags = 1;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 8;
@@ -592,7 +595,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x2d:												/* SUB eAX,Iv */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = SUB;
-		instruction->flags = 0;
+		instruction->flags = 1;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 8;
