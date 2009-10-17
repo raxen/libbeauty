@@ -52,7 +52,8 @@ char * opcode_table[] = {
 	"SHR",
 	"SAR",
 	"IN ",
-	"OUT"
+	"OUT",
+	"RET"
 };
 
 /*
