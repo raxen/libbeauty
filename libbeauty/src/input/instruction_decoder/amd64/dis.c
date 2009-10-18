@@ -60,30 +60,44 @@ uint32_t relocated_code(struct rev_eng *handle, uint8_t *base_address, uint64_t 
 	return 1;
 }
 
-void split_ModRM(uint8_t byte, uint8_t *reg,  uint8_t *reg_mem, uint8_t *mod) {
-  *reg = (byte >> 3) & 0x7; //bits 3-5
-  *reg_mem = (byte & 0x7); //bits 0-2
-  *mod = (byte >> 6); //bit 6-7
-  printf("byte=%02x, reg=%02x, reg_mem=%02x, mod=%02x\n",
-    byte,
-    *reg,
-    *reg_mem,
-    *mod);
-}
-void split_SIB(uint8_t byte, uint8_t *mul,  uint8_t *index, uint8_t *base) {
-  *index = (byte >> 3) & 0x7; //bits 3-5
-  *base = (byte & 0x7); //bits 0-2
-  *mul = (byte >> 6); //bit 6-7
-// do the *2 etc. later
-//  *mul = 1 << *mul; // convert bits to *1, *2, *4, *8
-  printf("byte=%02x, mul=%02x, index=%02x, base=%02x\n",
-    byte,
-    *mul,
-    *index,
-    *base);
+void split_ModRM(uint8_t byte, uint8_t rex, uint8_t *reg,  uint8_t *reg_mem, uint8_t *mod) {
+	*reg = (byte >> 3) & 0x7; //bits 3-5
+	*reg_mem = (byte & 0x7); //bits 0-2
+	*mod = (byte >> 6); //bit 6-7
+	if (rex & 0x4) {
+		*reg = *reg | 0x8;
+	}
+	if (rex & 0x1) {
+		*reg_mem = *reg_mem | 0x8;
+	}
+	printf("byte=%02x, reg=%02x, reg_mem=%02x, mod=%02x\n",
+		byte,
+		*reg,
+		*reg_mem,
+		*mod);
+	}
+
+void split_SIB(uint8_t byte, uint8_t rex, uint8_t *mul,  uint8_t *index, uint8_t *base) {
+	*index = (byte >> 3) & 0x7; //bits 3-5
+	*base = (byte & 0x7); //bits 0-2
+	*mul = (byte >> 6); //bit 6-7
+	if (rex & 0x2) {
+		*index = *index | 0x8;
+	}
+	if (rex & 0x1) {
+		*base = *base | 0x8;
+	}
+
+	// do the *2 etc. later
+	//  *mul = 1 << *mul; // convert bits to *1, *2, *4, *8
+	printf("byte=%02x, mul=%02x, index=%02x, base=%02x\n",
+		byte,
+		*mul,
+		*index,
+		*base);
 }
 
-int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint64_t size, uint8_t *return_reg) {
+int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint64_t size, uint8_t rex, uint8_t *return_reg) {
 	uint8_t reg;
 	uint8_t reg_mem;
 	uint8_t mod;
@@ -96,7 +110,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 	 * inserts an RTL dis_instructions before calling here
 	 */
 	int number = dis_instructions->instruction_number;
-	split_ModRM(getbyte(base_address, offset + dis_instructions->bytes_used), &reg, &reg_mem, &mod);
+	split_ModRM(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &reg, &reg_mem, &mod);
 	dis_instructions->bytes_used++;
 	*return_reg = reg;
 	if (mod == 3) {  // Special case Reg to Reg transfer
@@ -120,7 +134,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 	}
 	/* FIXME: Case where mod == 3 is not handled yet */
 	if ((reg_mem == 4) && (mod != 3)) {
-		split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), &mul, &index, &base);
+		split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
 		dis_instructions->bytes_used++;
 		/* FIXME: index == 4 not explicitly handled */
 		if (index != 4) {
@@ -322,11 +336,11 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 	return 0;
 }
 
-void dis_Ex_Gx(struct rev_eng *handle, int opcode, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
+void dis_Ex_Gx(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half;
 	instruction_t *instruction;
 
-	half = rmb(handle, dis_instructions, base_address, offset, size, reg);
+	half = rmb(handle, dis_instructions, base_address, offset, size, rex, reg);
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
@@ -355,11 +369,11 @@ void dis_Ex_Gx(struct rev_eng *handle, int opcode, struct dis_instructions_s *di
 	dis_instructions->instruction_number++;
 }
 
-void dis_Gx_Ex(struct rev_eng *handle, int opcode, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
+void dis_Gx_Ex(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half=0;
 	instruction_t *instruction;
 
-	half = rmb(handle, dis_instructions, base_address, offset, size, reg);
+	half = rmb(handle, dis_instructions, base_address, offset, size, rex, reg);
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
@@ -386,13 +400,13 @@ void dis_Gx_Ex(struct rev_eng *handle, int opcode, struct dis_instructions_s *di
 	dis_instructions->instruction_number++;
 }
 
-void dis_Ex_Ix(struct rev_eng *handle, int opcode, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
+void dis_Ex_Ix(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half;
 	int tmp;
 	uint64_t extern_index;
 	instruction_t *instruction;
 
-	half = rmb(handle, dis_instructions, base_address, offset, size, reg);
+	half = rmb(handle, dis_instructions, base_address, offset, size, rex, reg);
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
@@ -435,6 +449,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	int tmp;
 	uint64_t extern_index;
 	uint64_t width = 4;
+	uint8_t rex = 0;
 	instruction_t *instruction;
 
 	printf("inst[0]=0x%x\n",base_address[offset + 0]);
@@ -444,29 +459,33 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	byte = base_address[offset];
 	dis_instructions->bytes_used++;
 	printf("BYTE=%02x\n", byte);
-	if (0x48 == byte) {
-		width = 8;
-	//	offset++;
+	if ((byte & 0xf0 ) == 0x40) {
+		/* Detect REX. */
+		rex = byte & 0xf;
 		dis_instructions->bytes_used++;
 		byte = base_address[offset + 1];
 		printf("BYTE=%02x\n", byte);
 	}
 
+	if (rex & 0x8) {
+		width = 8;
+	}
+
 	switch(byte) {
 	case 0x00:												/* ADD Eb,Gb */
-		dis_Ex_Gx(handle, ADD, dis_instructions, base_address, offset, &reg, 1);
+		dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x01:												/* ADD Ev,Gv */
-		dis_Ex_Gx(handle, ADD, dis_instructions, base_address, offset, &reg, 4);
+		dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x02:												/* ADD Gb,Eb */
-		dis_Gx_Ex(handle, ADD, dis_instructions, base_address, offset, &reg, 1);
+		dis_Gx_Ex(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x03:												/* ADD Gv,Ev */
-		dis_Gx_Ex(handle, ADD, dis_instructions, base_address, offset, &reg, 4);
+		dis_Gx_Ex(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x04:												/* ADD AL,Ib */
@@ -502,19 +521,19 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
                 /* POP -> ES=[SP]; SP=SP+4 (+2 for word); */
 		break;
 	case 0x08:												/* OR Eb,Gb */
-		dis_Ex_Gx(handle, OR, dis_instructions, base_address, offset, &reg, 1);
+		dis_Ex_Gx(handle, OR, rex, dis_instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x09:												/* OR Ev,Gv */
-		dis_Ex_Gx(handle, OR, dis_instructions, base_address, offset, &reg, 4);
+		dis_Ex_Gx(handle, OR, rex, dis_instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x0a:												/* OR Gb,Eb */
-		dis_Gx_Ex(handle, OR, dis_instructions, base_address, offset, &reg, 1);
+		dis_Gx_Ex(handle, OR, rex, dis_instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x0b:												/* OR Gv,Ev */
-		dis_Gx_Ex(handle, OR, dis_instructions, base_address, offset, &reg, 4);
+		dis_Gx_Ex(handle, OR, rex, dis_instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x0c:												/* OR AL,Ib */
@@ -575,19 +594,19 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x27:												/* DAA */
 		break;
 	case 0x28:												/* SUB Eb,Gb */
-		dis_Ex_Gx(handle, SUB, dis_instructions, base_address, offset, &reg, 1);
+		dis_Ex_Gx(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x29:												/* SUB Ev,Gv */
-		dis_Ex_Gx(handle, SUB, dis_instructions, base_address, offset, &reg, 4);
+		dis_Ex_Gx(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x2a:												/* SUB Gb,Eb */
-		dis_Gx_Ex(handle, SUB, dis_instructions, base_address, offset, &reg, 1);
+		dis_Gx_Ex(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x2b:												/* SUB Gv,Ev */
-		dis_Gx_Ex(handle, SUB, dis_instructions, base_address, offset, &reg, 4);
+		dis_Gx_Ex(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0x2c:												/* SUB AL,Ib */
@@ -808,7 +827,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x80:												/* Grpl Eb,Ib */
 		break;
 	case 0x81:												/* Grpl Ev,Iv */
-		half = rmb(handle, dis_instructions, base_address, offset, width, &reg);
+		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
 		instruction->opcode = immed_table[reg];
 		instruction->flags = 1;
@@ -844,7 +863,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x82:												/* Grpl Eb,Ib Mirror instruction */
 		break;
 	case 0x83:												/* Grpl Ev,Ix */
-		half = rmb(handle, dis_instructions, base_address, offset, width, &reg);
+		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = immed_table[reg];
 		instruction->flags = 1;
@@ -880,15 +899,15 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x87:												/* XCHG Ev,Gv */
 		break;
 	case 0x88:												/* MOV Eb,Gb */
-		dis_Ex_Gx(handle, MOV, dis_instructions, base_address, offset, &reg, 1);
+		dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x89:												/* MOV Ev,Gv */
-		dis_Ex_Gx(handle, MOV, dis_instructions, base_address, offset, &reg, width);
+		dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
 		result = 1;
 		break;
 	case 0x8a:												/* MOV Gb,Eb */
-		dis_Gx_Ex(handle, MOV, dis_instructions, base_address, offset, &reg, 1);
+		dis_Gx_Ex(handle, MOV, rex, dis_instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x8b:
@@ -896,7 +915,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		/* FIXME: Cannot handle 8b 15 00 00 00 00 */
 		/* FIXME: Cannot handle 8b 45 fc */
 		//dis_Gx_Ex(handle, MOV, dis_instructions, base_address, offset, &reg, 4);
-		half = rmb(handle, dis_instructions, base_address, offset, width, &reg);
+		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->flags = 0;
@@ -933,7 +952,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x8c:												/* Mov Ew,Sw */
 		break;
 	case 0x8d:												/* LEA Gv */
-		half = rmb(handle, dis_instructions, base_address, offset, width, &reg);
+		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->flags = 0;
@@ -954,7 +973,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0x8e:												/* MOV Sw,Ew */
+		break;
 	case 0x8f:												/* POP Ev */
+		break;
 	case 0x90:												/* NOP */
 		result = 1;
 		break;
@@ -1089,7 +1110,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xc0:												/* GRP2 Eb,Ib */
 		break;
 	case 0xc1:												/* GRP2 Ev,Ib */
-		half = rmb(handle, dis_instructions, base_address, offset, width, &reg);
+		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = shift2_table[reg];
 		instruction->flags = 1;
@@ -1190,7 +1211,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xc6:												/* MOV Eb,Ib */
 	case 0xc7:												/* MOV EW,Iv */
 		/* JCD: Work in progress */
-		dis_Ex_Ix(handle, MOV, dis_instructions, base_address, offset, &reg, 4);
+		dis_Ex_Ix(handle, MOV, rex, dis_instructions, base_address, offset, &reg, 4);
 		result = 1;
 		break;
 	case 0xc8:												/* ENTER Iv,Ib */
@@ -1480,7 +1501,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			dis_instructions->instruction_number++;
 
 		}
-		half = rmb(handle, dis_instructions, base_address, offset, width, &reg);
+		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
 		printf("Unfinished section 0xff\n");
 		printf("half=0x%x, reg=0x%x\n",half, reg);
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];

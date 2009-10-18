@@ -55,18 +55,6 @@ char * opcode_table[] = {
 	"OUT",
 	"RET"
 };
-/* FIXME: The values are currently set to 64bit, so can handle 64bit and 32bit, but not 128bit regs. */
-#define REG_AX 0x08
-#define REG_CX 0x10
-#define REG_DX 0x18
-#define REG_BX 0x20
-#define REG_SP 0x28
-#define REG_BP 0x30
-#define REG_SI 0x38
-#define REG_DI 0x40
-#define REG_IP 0x48
-#define REG_TMP1 0x50
-#define REG_TMP2 0x58
 
 reg_t reg_table[] = {
     { REG_AX,8 },
@@ -76,8 +64,17 @@ reg_t reg_table[] = {
     { REG_SP,8 },
     { REG_BP,8 },
     { REG_SI,8 },
-    { REG_DI,8 }
+    { REG_DI,8 },
+    { REG_08,8 },
+    { REG_09,8 },
+    { REG_10,8 },
+    { REG_11,8 },
+    { REG_12,8 },
+    { REG_13,8 },
+    { REG_14,8 },
+    { REG_15,8 }
 };
+
 int immed_table[] = {
 	ADD,
 	OR,

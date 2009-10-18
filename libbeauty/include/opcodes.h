@@ -94,8 +94,16 @@ extern char * opcode_table[];
 #define REG_SI 0x38
 #define REG_DI 0x40
 #define REG_IP 0x48
-#define REG_TMP1 0x50
-#define REG_TMP2 0x58
+#define REG_08 0x50
+#define REG_09 0x58
+#define REG_10 0x60
+#define REG_11 0x68
+#define REG_12 0x70
+#define REG_13 0x78
+#define REG_14 0x80
+#define REG_15 0x88
+#define REG_TMP1 0x90
+#define REG_TMP2 0x98
 
 typedef struct reg_s reg_t;
 
