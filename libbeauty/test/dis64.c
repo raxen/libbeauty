@@ -103,6 +103,13 @@ struct external_entry_point_s {
 	uint64_t inst_log_end; /* Where the function ends in inst_log */
 	struct process_state_s process_state;
 	char *name;
+	/* FIXME: Handle variable amount of params */
+	int params_size;
+	int *params;
+	int *params_order;
+	int locals_size;
+	int *locals;
+	int *locals_order;
 	/* FIXME: add function return type and param types */
 };
 
@@ -166,6 +173,14 @@ struct label_s {
 	uint64_t type;
 	/* value */
 	uint64_t value;
+	/* size in bits */
+	uint64_t size_bits;
+	/* is it a pointer */
+	uint64_t lab_pointer;
+	/* is it a signed */
+	uint64_t lab_signed;
+	/* is it a unsigned */
+	uint64_t lab_unsigned;
 	/* human readable name */
 	char *name;
 } ;
@@ -768,6 +783,7 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 			/* It will always be a register, and therefore can re-use the */
 			/* value_id to identify it. */
 			/* It will always be a local and not a param */
+			/* FIXME: This should be handled scope = 1, type = 1 above. */
 			label->scope = 4;
 			label->type = 1;
 			label->value = indirect_value_id;
@@ -865,6 +881,9 @@ int output_label(struct label_s *label, FILE *fd) {
 		/* It will always be a register, and therefore can re-use the */
 		/* value_id to identify it. */
 		/* It will always be a local and not a param */
+		/* FIXME: local_reg should be handled in case 1.1 above and
+		 *        not be a separate label
+		 */
 		printf("*local_reg%04"PRIx64";\n", label->value);
 		tmp = fprintf(fd, "*local_reg%04"PRIx64,
 			label->value);
@@ -1089,11 +1108,11 @@ int output_function_body(struct process_state_s *process_state,
 		}
 			
 		/* Test to see if we have an instruction to output */
-		printf("Inst 0x%04x: %d: value_scope = %d, %d, %d\n", n,
+		printf("Inst 0x%04x: %d: value_type = %d, %d, %d\n", n,
 			instruction->opcode,
-			inst_log1->value1.value_scope,
-			inst_log1->value2.value_scope,
-			inst_log1->value3.value_scope);
+			inst_log1->value1.value_type,
+			inst_log1->value2.value_type,
+			inst_log1->value3.value_type);
 		if ((0 == inst_log1->value3.value_type) ||
 			(1 == inst_log1->value3.value_type) ||
 			(2 == inst_log1->value3.value_type) ||
@@ -1101,13 +1120,14 @@ int output_function_body(struct process_state_s *process_state,
 			(5 == inst_log1->value3.value_type)) {
 			switch (instruction->opcode) {
 			case MOV:
-				if (inst_log1->value1.value_type == 6)
+				if (inst_log1->value1.value_type == 6) {
+					printf("ERROR1\n");
 					break;
-				/* FIXME: This might need adding back in when
-				 *        complex EIP jumps happen
-				 */
-				if (inst_log1->value1.value_type == 5)
+				}
+				if (inst_log1->value1.value_type == 5) {
+					printf("ERROR2\n");
 					break;
+				}
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
@@ -1266,7 +1286,184 @@ int output_function_body(struct process_state_s *process_state,
 		tmp = fprintf(fd, "\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
 	}
 	tmp = fprintf(fd, "}\n\n");
+	return 0;
+}
 
+int register_label(struct external_entry_point_s *entry_point, 
+	struct memory_s *value, struct label_redirect_s *label_redirect, struct label_s *labels)
+{
+	int n;
+	int found;
+	struct label_s *label;
+	int label_offset;
+	label_offset = label_redirect[value->value_id].redirect;
+	label = &labels[label_offset];
+	label->size_bits = value->length * 8;
+	printf("Registering label: 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
+		label->scope,
+		label->type,
+		label->value,
+		label->size_bits,
+		label->lab_pointer,
+		label->lab_signed,
+		label->lab_unsigned);
+	//int params_size;
+	//int *params;
+	//int *params_order;
+	//int locals_size;
+	//int *locals;
+	//int *locals_order;
+	found = 0;
+	switch (label->scope) {
+	case 2:
+		printf("PARAM\n");
+		for(n = 0; n < entry_point->params_size; n++) {
+			printf("looping 0x%x\n", n);
+			if (entry_point->params[n] == label_offset) {
+				printf("Duplicate\n");
+				found = 1;
+				break;
+			}
+		}
+		if (found) {
+			break;
+		}
+		(entry_point->params_size)++;
+		entry_point->params = realloc(entry_point->params, entry_point->params_size * sizeof(int));
+		entry_point->params[entry_point->params_size - 1] = label_offset;
+		break;
+	case 1:
+		printf("LOCAL\n");
+		for(n = 0; n < entry_point->locals_size; n++) {
+			printf("looping 0x%x\n", n);
+			if (entry_point->locals[n] == label_offset) {
+				printf("Duplicate\n");
+				found = 1;
+				break;
+			}
+		}
+		if (found) {
+			break;
+		}
+		(entry_point->locals_size)++;
+		entry_point->locals = realloc(entry_point->locals, entry_point->locals_size * sizeof(int));
+		entry_point->locals[entry_point->locals_size - 1] = label_offset;
+	case 3:
+		printf("HEX VALUE\n");
+		break;
+	default:
+		printf("VALUE unhandled 0x%"PRIx64"\n", label->scope);
+	}
+	printf("params_size = 0x%x, locals_size = 0x%x\n",
+		entry_point->params_size,
+		entry_point->locals_size);
+
+	printf("value: 0x%"PRIx64", 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%x, 0x%x, 0x%"PRIx64"\n",
+		value->start_address,
+		value->length,
+		value->init_value,
+		value->offset_value,
+		value->value_type,
+		value->value_scope,
+		value->value_id);
+	//tmp = register_label(label, &(inst_log1->value3));
+	return 0;
+}
+
+int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
+			 int start, int end, struct label_redirect_s *label_redirect, struct label_s *labels)
+{
+	int tmp, n;
+	int err;
+	struct instruction_s *instruction;
+	struct instruction_s *instruction_prev;
+	struct inst_log_entry_s *inst_log1;
+	struct inst_log_entry_s *inst_log1_prev;
+	struct memory_s *value;
+	struct label_s *label;
+
+	if (!start || !end) {
+		printf("scan_for_labels_in_function:Invalid start or end\n");
+		return 1;
+	}
+	printf("scan_for_labels:start=0x%x, end=0x%x\n", start, end);
+
+	for (n = start; n <= end; n++) {
+		inst_log1 =  &inst_log_entry[n];
+		if (!inst_log1) {
+			printf("scan_for_labels:Invalid inst_log1[0x%x]\n", n);
+			return 1;
+		}
+		/* FIXME: need to search for previous instruction with the "f" flag */
+		/* This will get complex if there is a join before the first "f" instruction */
+		/* For now, just use immediately preceeding instruction */
+		inst_log1_prev =  &inst_log_entry[inst_log1->prev[0]];
+		if (!inst_log1_prev) {
+			printf("scan_for_labels:Invalid inst_log1_prev[0x%x]\n", n);
+			return 1;
+		}
+		instruction =  &inst_log1->instruction;
+		instruction_prev =  &inst_log1_prev->instruction;
+
+		/* Test to see if we have an instruction to output */
+		printf("Inst 0x%04x: %d: value_type = %d, %d, %d\n", n,
+			instruction->opcode,
+			inst_log1->value1.value_type,
+			inst_log1->value2.value_type,
+			inst_log1->value3.value_type);
+		if ((0 == inst_log1->value3.value_type) ||
+			(1 == inst_log1->value3.value_type) ||
+			(2 == inst_log1->value3.value_type) ||
+			(3 == inst_log1->value3.value_type) ||
+			(5 == inst_log1->value3.value_type)) {
+			switch (instruction->opcode) {
+			case MOV:
+				if (inst_log1->value1.value_type == 6) {
+					printf("ERROR1\n");
+					break;
+				}
+				if (inst_log1->value1.value_type == 5) {
+					printf("ERROR2\n");
+					break;
+				}
+				tmp = register_label(entry_point, &(inst_log1->value3), label_redirect, labels);
+				tmp = register_label(entry_point, &(inst_log1->value1), label_redirect, labels);
+
+				break;
+			case ADD:
+			case MUL:
+			case SUB:
+				tmp = register_label(entry_point, &(inst_log1->value3), label_redirect, labels);
+				tmp = register_label(entry_point, &(inst_log1->value1), label_redirect, labels);
+				break;
+			case JMP:
+				break;
+			case CALL:
+				break;
+
+			case CMP:
+				tmp = register_label(entry_point, &(inst_log1->value2), label_redirect, labels);
+				tmp = register_label(entry_point, &(inst_log1->value1), label_redirect, labels);
+				break;
+
+			case IF:
+				printf("IF: This might give signed or unsigned info to labels\n");
+				break;
+
+			case NOP:
+				break;
+			case RET:
+				tmp = register_label(entry_point, &(inst_log1->value1), label_redirect, labels);
+				break;
+			default:
+				printf("Unhandled scan instruction1\n");
+				if (print_inst(instruction, n))
+					return 1;
+				return 1;
+				break;
+			}
+		}
+	}
 	return 0;
 }
 /***********************************************************************************
@@ -1935,7 +2132,24 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-
+	/***************************************************
+	 * Register labels in order to print:
+	 * 	Function params,
+	 *	local vars.
+	 ***************************************************/
+	for (l = 0; l < 100; l++) {
+		if (external_entry_points[l].valid &&
+			external_entry_points[l].type == 1) {
+		tmp = scan_for_labels_in_function_body(&external_entry_points[l],
+				external_entry_points[l].inst_log,
+				external_entry_points[l].inst_log_end,
+				label_redirect,
+				labels);
+		printf("scanned: params = 0x%x, locals = 0x%x\n",
+			external_entry_points[l].params_size,
+			external_entry_points[l].locals_size);
+		}
+	}
 	/***************************************************
 	 * This section deals with outputting the .c file.
 	 ***************************************************/
@@ -2013,6 +2227,28 @@ int main(int argc, char *argv[])
 			process_state = &external_entry_points[l].process_state;
 
 			output_function_name(fd, &external_entry_points[l], &param_present[0], &param_size[0]);
+			fprintf(fd, "\n");
+			for (n = 0; n < external_entry_points[l].params_size; n++) {
+				struct label_s *label;
+				if (n > 0) {
+					fprintf(fd, ", ");
+				}
+				label = &labels[external_entry_points[l].params[n]];
+				fprintf(fd, "\tint%"PRId64"_t ",
+					label->size_bits);
+				tmp = output_label(label, fd);
+			}
+			fprintf(fd, "\n");
+			for (n = 0; n < external_entry_points[l].locals_size; n++) {
+				struct label_s *label;
+				label = &labels[external_entry_points[l].locals[n]];
+				fprintf(fd, "\tint%"PRId64"_t ",
+					label->size_bits);
+				tmp = output_label(label, fd);
+				fprintf(fd, ";\n");
+			}
+			fprintf(fd, "\n");
+					
 			output_function_body(process_state,
 				fd,
 				external_entry_points[l].inst_log,
