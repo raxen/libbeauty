@@ -27,6 +27,7 @@
 */
 
 #include <dis.h>
+#include "internal.h"
 
 /* Little endian */
 uint32_t getbyte(uint8_t *base_address, uint64_t offset) {
@@ -445,6 +446,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	int half = 0;
 	int result = 0;
 	int8_t relative = 0;
+	int64_t long_signed;
 	uint8_t byte;
 	int tmp;
 	uint64_t extern_index;
@@ -543,7 +545,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x0e:												/* PUSH CS */		
 		break;
 	case 0x0f:												/* 2 byte opcodes*/
-		prefix_0f(handle, dis_instructions, base_address, offset);
+		result = prefix_0f(handle, dis_instructions, base_address, offset, width, rex);
 		break;
 	case 0x10:												/* ADC Eb,Gb */
 		break;
@@ -870,7 +872,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 8;
-		instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+		relative = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+		long_signed = relative;
+		instruction->srcA.index = long_signed;
 		instruction->srcA.relocated = 0;
 		dis_instructions->bytes_used++;
 		instruction->srcA.value_size = width;

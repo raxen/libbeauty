@@ -198,6 +198,7 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	case ADD:
 	case SUB:
 	case MUL:
+	case OR:
 	case CMP:
 	/* FIXME: Add DIV */
 	//case DIV:
@@ -729,6 +730,16 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, uint64_t indirect_value_id, struct label_s *label) {
 	int tmp;
 	/* FIXME: May handle by using first switch as switch (indirect) */
+	printf("value in log_to_label: 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
+				indirect,
+				index,
+				relocated,
+				value_scope,
+				value_id,
+				indirect_offset_value,
+				indirect_value_id);
+
+
 	switch (store) {
 	case STORE_DIRECT:
 		/* FIXME: Handle the case of an immediate value being &data */
@@ -756,17 +767,21 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 	case STORE_REG:
 		switch (value_scope) {
 		case 1:
+			/* params */
 			if (IND_STACK == indirect) {
 				label->scope = 2;
 				label->type = 2;
-				label->value = index;
+				label->value = indirect_offset_value;
+				printf("PARAM_STACK^\n"); 
 			} else if (0 == indirect) {
 				label->scope = 2;
 				label->type = 1;
 				label->value = index;
+				printf("PARAM_REG^\n"); 
 			}
 			break;
 		case 2:
+			/* locals */
 			if (IND_STACK == indirect) {
 				label->scope = 1;
 				label->type = 2;
@@ -801,6 +816,15 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 		break;
 	}
 	return 0;
+}
+
+int output_label_redirect(int offset, struct label_s *labels, struct label_redirect_s *label_redirect, FILE *fd) {
+	int tmp;
+	struct label_s *label;
+
+	tmp = label_redirect[offset].redirect;
+	label = &labels[tmp];
+	tmp = output_label(label, fd);
 }
 
 int output_label(struct label_s *label, FILE *fd) {
@@ -1035,8 +1059,7 @@ uint32_t relocated_data(struct rev_eng *handle, uint64_t offset, uint64_t size)
 
 
 uint32_t output_function_name(FILE *fd,
-		struct external_entry_point_s *external_entry_point,
-		int *param_present, int *param_size)
+		struct external_entry_point_s *external_entry_point)
 {
 	int commas = 0;
 	int tmp, n;
@@ -1044,20 +1067,6 @@ uint32_t output_function_name(FILE *fd,
 	printf("int %s()\n{\n", external_entry_point->name);
 	printf("value = %"PRIx64"\n", external_entry_point->value);
 	tmp = fprintf(fd, "int %s(", external_entry_point->name);
-	for (n = 0; n < 100; n++) {
-		if (param_present[n]) {
-			printf("param%04x\n", n);
-			if (commas) {
-				tmp = fprintf(fd, ", ");
-			}
-			tmp = fprintf(fd, "param%04"PRIx32"", n);
-			commas = 1;
-			tmp = param_size[n];
-			n += tmp;
-		}
-	}
-
-	tmp = fprintf(fd, ")\n{\n");
 	return 0;
 }
 
@@ -1136,12 +1145,14 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = label_redirect[inst_log1->value3.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " = ");
 
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = label_redirect[inst_log1->value1.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
 
 				break;
@@ -1153,11 +1164,13 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = label_redirect[inst_log1->value3.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " += ");
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = label_redirect[inst_log1->value1.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
 				break;
 			case MUL:
@@ -1168,11 +1181,13 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = label_redirect[inst_log1->value3.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " *= ");
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = label_redirect[inst_log1->value1.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
 				break;
 			case SUB:
@@ -1183,11 +1198,13 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = label_redirect[inst_log1->value3.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " -= ");
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = label_redirect[inst_log1->value1.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
 				break;
 			case JMP:
@@ -1270,6 +1287,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = label_redirect[inst_log1->value1.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
 				break;
 			default:
@@ -1941,6 +1959,16 @@ int main(int argc, char *argv[])
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
 		value_id = inst_log1->value3.value_id;
+		printf("value to log_to_label:0x%x: 0x%x, 0x%"PRIx64", 0x%x, 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
+				n,
+				instruction->srcA.indirect,
+				instruction->srcA.index,
+				instruction->srcA.relocated,
+				inst_log1->value1.value_scope,
+				inst_log1->value1.value_id,
+				inst_log1->value1.indirect_offset_value,
+				inst_log1->value1.indirect_value_id);
+
 		switch (instruction->opcode) {
 		case MOV:
 		case ADD:
@@ -2132,6 +2160,34 @@ int main(int argc, char *argv[])
 		}
 	}
 	
+	/********************************************************
+	 * This section filters out duplicate param_reg entries.
+         * from the labels table: FIXME: THIS IS NOT NEEDED NOW
+	 ********************************************************/
+#if 0
+	for (n = 0; n < (local_counter - 1); n++) {
+		int tmp1;
+		tmp1 = label_redirect[n].redirect;
+		printf("param_reg:scanning base label 0x%x\n", n);
+		if ((tmp1 == n) &&
+			(labels[tmp1].scope == 2) &&
+			(labels[tmp1].type == 1)) {
+			int tmp2;
+			/* This is a param_stack */
+			for (l = n + 1; l < local_counter; l++) {
+				printf("param_reg:scanning label 0x%x\n", l);
+				tmp2 = label_redirect[l].redirect;
+				if ((tmp2 == n) &&
+					(labels[tmp2].scope == 2) &&
+					(labels[tmp2].type == 1) &&
+					(labels[tmp1].value == labels[tmp2].value) ) {
+					printf("param_stack:found duplicate\n");
+					label_redirect[l].redirect = n;
+				}
+			}
+		}
+	}
+#endif
 	/***************************************************
 	 * Register labels in order to print:
 	 * 	Function params,
@@ -2145,6 +2201,9 @@ int main(int argc, char *argv[])
 				external_entry_points[l].inst_log_end,
 				label_redirect,
 				labels);
+		/* Expected param order: %rdi, %rsi, %rdx, %rcx, %r08, %r09 
+		                         0x40, 0x38, 0x18, 0x10, 0x50, 0x58, then stack */
+		
 		printf("scanned: params = 0x%x, locals = 0x%x\n",
 			external_entry_points[l].params_size,
 			external_entry_points[l].locals_size);
@@ -2186,7 +2245,7 @@ int main(int argc, char *argv[])
 	}
 	tmp = fprintf(fd, "\n");
 	printf("\n");
-
+#if 0
 	for (n = 0; n < 100; n++) {
 		param_present[n] = 0;
 	}
@@ -2211,6 +2270,7 @@ int main(int argc, char *argv[])
 			n += tmp;
 		}
 	}
+#endif
 
 	for (l = 0; l < 100; l++) {
 		/* FIXME: value == 0 for the first function in the .o file. */
@@ -2226,19 +2286,19 @@ int main(int argc, char *argv[])
 			
 			process_state = &external_entry_points[l].process_state;
 
-			output_function_name(fd, &external_entry_points[l], &param_present[0], &param_size[0]);
-			fprintf(fd, "\n");
+			tmp = fprintf(fd, "#include <stdint.h>\n\n");
+			output_function_name(fd, &external_entry_points[l]);
 			for (n = 0; n < external_entry_points[l].params_size; n++) {
 				struct label_s *label;
 				if (n > 0) {
 					fprintf(fd, ", ");
 				}
 				label = &labels[external_entry_points[l].params[n]];
-				fprintf(fd, "\tint%"PRId64"_t ",
+				fprintf(fd, "int%"PRId64"_t ",
 					label->size_bits);
 				tmp = output_label(label, fd);
 			}
-			fprintf(fd, "\n");
+			tmp = fprintf(fd, ")\n{\n");
 			for (n = 0; n < external_entry_points[l].locals_size; n++) {
 				struct label_s *label;
 				label = &labels[external_entry_points[l].locals[n]];

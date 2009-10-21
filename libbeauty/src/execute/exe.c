@@ -399,7 +399,8 @@ static int get_value_RTL_instruction(
 				/* Param */
 				value_stack->value_scope = 1;
 				/* Param number */
-				value_stack->value_id = 1;
+				value_stack->value_id = local_counter;
+				local_counter++;
 			} else {
 				printf("LOCAL\n");
 				/* Local */
@@ -784,9 +785,14 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		/* FIXME Maybe Exception is the MOV instruction */
 		inst->value3.value_scope = inst->value2.value_scope;
 		/* MOV param to local */
-		/* FIXME: What about mov local -> param */
-		//if (inst->value3.value_scope == 1)
-		//	inst->value3.value_scope = 2;
+		/* When the destination is a param_reg,
+		 * Change it to a local_reg */
+		if ((inst->value3.value_scope == 1) &&
+			(STORE_REG == instruction->dstA.store) &&
+			(1 == inst->value2.value_scope) &&
+			(0 == instruction->dstA.indirect)) {
+			inst->value3.value_scope = 2;
+		}
 		/* Counter */
 		//if (inst->value3.value_scope == 2) {
 			/* Only value_id preserves the value2 values */
@@ -899,6 +905,37 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.init_value_type = inst->value2.init_value_type;
 		inst->value3.init_value = inst->value2.init_value;
 		inst->value3.offset_value = inst->value2.offset_value -
+			inst->value1.init_value;
+		inst->value3.value_type = inst->value2.value_type;
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(self, process_state, inst);
+		break;
+	case OR:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("SUB\n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = 0;
+		inst->value3.offset_value = (inst->value2.offset_value +
+			inst->value2.init_value) |
 			inst->value1.init_value;
 		inst->value3.value_type = inst->value2.value_type;
 		inst->value3.ref_memory =
