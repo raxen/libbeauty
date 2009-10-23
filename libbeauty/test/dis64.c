@@ -2235,26 +2235,34 @@ int main(int argc, char *argv[])
 	}
 	printf(".c fd=%p\n", fd);
 	printf("writing out to file\n");
-	/* Output function name */
+	tmp = fprintf(fd, "#include <stdint.h>\n\n");
 	printf("\nPRINTING MEMORY_DATA\n");
-	for (n = 0; n < 4; n++) {
-		if (memory_data[n].valid) {
-			
-			tmp = relocated_data(handle, memory_data[n].start_address, 4);
-			if (tmp) {
-				printf("int *data%04"PRIx64" = &data%04"PRIx64"\n",
-					memory_data[n].start_address,
-					memory_data[n].init_value);
-				tmp = fprintf(fd, "int *data%04"PRIx64" = &data%04"PRIx64";\n",
-					memory_data[n].start_address,
-					memory_data[n].init_value);
-			} else {
-				printf("int data%04"PRIx64" = 0x%04"PRIx64"\n",
-					memory_data[n].start_address,
-					memory_data[n].init_value);
-				tmp = fprintf(fd, "int data%04"PRIx64" = 0x%"PRIx64";\n",
-					memory_data[n].start_address,
-					memory_data[n].init_value);
+	for (l = 0; l < 100; l++) {
+		struct process_state_s *process_state;
+		if (external_entry_points[l].valid) {
+			process_state = &external_entry_points[l].process_state;
+			memory_data = process_state->memory_data;
+			for (n = 0; n < 4; n++) {
+				printf("memory_data:0x%x: 0x%"PRIx64"\n", n, memory_data[n].valid);
+				if (memory_data[n].valid) {
+	
+					tmp = relocated_data(handle, memory_data[n].start_address, 4);
+					if (tmp) {
+						printf("int *data%04"PRIx64" = &data%04"PRIx64"\n",
+							memory_data[n].start_address,
+							memory_data[n].init_value);
+						tmp = fprintf(fd, "int *data%04"PRIx64" = &data%04"PRIx64";\n",
+							memory_data[n].start_address,
+							memory_data[n].init_value);
+					} else {
+						printf("int data%04"PRIx64" = 0x%04"PRIx64"\n",
+							memory_data[n].start_address,
+							memory_data[n].init_value);
+						tmp = fprintf(fd, "int data%04"PRIx64" = 0x%"PRIx64";\n",
+							memory_data[n].start_address,
+							memory_data[n].init_value);
+					}
+				}
 			}
 		}
 	}
