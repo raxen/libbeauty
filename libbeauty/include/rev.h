@@ -39,6 +39,7 @@ struct reloc_table {
 	int		type;
 	uint64_t	address;
 	uint64_t	size;
+	uint64_t	value;
 	uint64_t	external_functions_index;
 	uint64_t	section_index;
 	const char	*section_name;

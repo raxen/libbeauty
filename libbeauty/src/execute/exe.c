@@ -182,6 +182,7 @@ static int get_value_RTL_instruction(
 		case STORE_DIRECT:
 			/* i - immediate */
 			printf("%s-immediate\n", info);
+			printf("%s-relocated=0x%x\n", info, source->relocated);
 			printf("index=%"PRIx64", size=%d\n",
 					source->index,
 					source->value_size);

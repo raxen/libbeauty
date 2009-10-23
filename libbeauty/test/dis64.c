@@ -189,6 +189,7 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 {
 	int ret = 1; /* Default to failed */
 	int tmp;
+	int n;
 	tmp = fprintf(fd, "// 0x%04x:%s%s",
 		instruction_number,
 		opcode_table[instruction->opcode],
@@ -236,11 +237,13 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 		break;
 	case CALL:
 		if (instruction->srcA.index < 100) {
-			tmp = fprintf(fd, " %"PRIu64":%s()\n",
+			tmp = fprintf(fd, " %"PRIu64":%s(",
 				instruction->srcA.index,
 				external_entry_points[instruction->srcA.index].name);
+			tmp = fprintf(fd, ");\n");
 		} else {
-			tmp = fprintf(fd, " CALL FAILED\n");
+			tmp = fprintf(fd, " CALL FAILED index=0x%"PRIx64"\n",
+				instruction->srcA.index);
 		}
 		ret = 0;
 		break;
@@ -1073,7 +1076,7 @@ uint32_t output_function_name(FILE *fd,
 int output_function_body(struct process_state_s *process_state,
 			 FILE *fd, int start, int end, struct label_redirect_s *label_redirect, struct label_s *labels)
 {
-	int tmp, n;
+	int tmp, n,l;
 	int err;
 	struct instruction_s *instruction;
 	struct instruction_s *instruction_prev;
@@ -1228,6 +1231,8 @@ int output_function_body(struct process_state_s *process_state,
 				if (print_inst(instruction, n))
 					return 1;
 				/* Search for EAX */
+				printf("call index = 0x%"PRIx64", params size = 0x%x\n", instruction->srcA.index,
+					external_entry_points[instruction->srcA.index].params_size);
 				printf("\t");
 				tmp = fprintf(fd, "\t");
 				tmp = label_redirect[inst_log1->value3.value_id].redirect;
@@ -1236,8 +1241,16 @@ int output_function_body(struct process_state_s *process_state,
 				printf(" = ");
 				tmp = fprintf(fd, " = ");
 
-				tmp = fprintf(fd, "%s();\n", 
+				tmp = fprintf(fd, "%s(", 
 					external_entry_points[instruction->srcA.index].name);
+				for (l = 0; l < external_entry_points[instruction->srcA.index].params_size; l++) {
+					if (l > 0) {
+						fprintf(fd, ", ");
+					}
+					label = &labels[external_entry_points[instruction->srcA.index].params[l]];
+					tmp = output_label(label, fd);
+				}
+				tmp = fprintf(fd, ");\n");
 				printf("%s();\n",
 					external_entry_points[instruction->srcA.index].name);
 //				tmp = fprintf(fd, "/* call(); */\n");
@@ -1713,10 +1726,12 @@ int main(int argc, char *argv[])
 	printf("\n");
 
 	bf_get_reloc_table_code_section(handle);
+	printf("reloc_table_code_sz=0x%"PRIx64"\n", handle->reloc_table_code_sz);
 	for (n = 0; n < handle->reloc_table_code_sz; n++) {
-		printf("reloc_table_code:addr = 0x%"PRIx64", size = 0x%"PRIx64", section_index = 0x%"PRIx64", section_name=%s, symbol_name=%s\n",
+		printf("reloc_table_code:addr = 0x%"PRIx64", size = 0x%"PRIx64", value = 0x%"PRIx64", section_index = 0x%"PRIx64", section_name=%s, symbol_name=%s\n",
 			handle->reloc_table_code[n].address,
 			handle->reloc_table_code[n].size,
+			handle->reloc_table_code[n].value,
 			handle->reloc_table_code[n].section_index,
 			handle->reloc_table_code[n].section_name,
 			handle->reloc_table_code[n].symbol_name);
@@ -2272,6 +2287,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	tmp = fprintf(fd, "#include <stdint.h>\n\n");
 	for (l = 0; l < 100; l++) {
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
@@ -2286,7 +2302,7 @@ int main(int argc, char *argv[])
 			
 			process_state = &external_entry_points[l].process_state;
 
-			tmp = fprintf(fd, "#include <stdint.h>\n\n");
+			tmp = fprintf(fd, "\n");
 			output_function_name(fd, &external_entry_points[l]);
 			for (n = 0; n < external_entry_points[l].params_size; n++) {
 				struct label_s *label;
