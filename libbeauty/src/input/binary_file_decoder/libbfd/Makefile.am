@@ -5,15 +5,15 @@ AM_CFLAGS = -O0 -g3 -Wall -fPIC
 #CFLAGS = -O0 -g3 -Wall
 
 #modulesdir = $(pkglibdir)/binary_file_decoder
-lib_LTLIBRARIES = libinput_bfd.la
+lib_LTLIBRARIES = libbeauty_input_bfd.la
 
 #noinst_HEADERS = \
 #	bfl.h
 
-libinput_bfd_la_SOURCES = \
+libbeauty_input_bfd_la_SOURCES = \
 	bfl.c
 
-libinput_bfd_la_LIBADD = -lbfd -liberty -lz
+libbeauty_input_bfd_la_LIBADD = -lbfd -liberty -lz
 #libinput_bfd_la_LIBADD = -lbfd -liberty -lz
-libinput_bfd_la_LDFLAGS = \
+libbeauty_input_bfd_la_LDFLAGS = \
 	 -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)

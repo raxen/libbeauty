@@ -5,14 +5,14 @@ AM_CFLAGS = -O0 -g3 -Wall
 #CFLAGS = -O0 -g3 -Wall
 
 #modulesdir = $(pkglibdir)/instruction_decoder
-lib_LTLIBRARIES = libia32_decoder.la
+lib_LTLIBRARIES = libbeauty_decoder_ia32.la
 #bin_PROGRAMS = dis
 
 #noinst_HEADERS = \
 #	opcodes.h
 
-libia32_decoder_la_SOURCES = \
+libbeauty_decoder_ia32_la_SOURCES = \
 	opcodes.c dis.c prefix_0f.c
 
-libia32_decoder_la_LDFLAGS = \
+libbeauty_decoder_ia32_la_LDFLAGS = \
 	 -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
