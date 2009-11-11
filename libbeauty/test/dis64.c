@@ -68,23 +68,22 @@ struct self_s *self = NULL;
 
 
 char *condition_table[] = {
-	"Unknown_0",
-	"OVERFLOW_1", /* Signed */
-	"NOT_OVERFLOW_2", /* Signed */
-	"BELOW_3",	/* Unsigned */
-	"NOT_BELOW_4",	/* Unsigned */
-	"EQUAL_5",	/* Signed or Unsigned */
-	"NOT_EQUAL_6",	/* Signed or Unsigned */
-	"ABOVE_7",	/* Unsigned */
-	"NOT_ABOVE_8",	/* Unsigned */
-	"SIGNED_9",	/* Signed */
-	"NO_SIGNED_10",	/* Signed */
-	"PARITY_11",	/* Signed or Unsigned */
-	"NOT_PARITY_12",/* Signed or Unsigned */
-	"LESS_13",	/* Signed */
-	"GREATER_EQUAL_14", /* Signed */
-	"LESS_EQUAL_15",    /* Signed */
-	"GREATER_16"	/* Signed */
+	"OVERFLOW_0", /* Signed */
+	"NOT_OVERFLOW_1", /* Signed */
+	"BELOW_2",	/* Unsigned */
+	"NOT_BELOW_3",	/* Unsigned */
+	"EQUAL_4",	/* Signed or Unsigned */
+	"NOT_EQUAL_5",	/* Signed or Unsigned */
+	"ABOVE_6",	/* Unsigned */
+	"NOT_ABOVE_7",	/* Unsigned */
+	"SIGNED_8",	/* Signed */
+	"NO_SIGNED_9",	/* Signed */
+	"PARITY_10",	/* Signed or Unsigned */
+	"NOT_PARITY_11",/* Signed or Unsigned */
+	"LESS_12",	/* Signed */
+	"GREATER_EQUAL_13", /* Signed */
+	"LESS_EQUAL_14",    /* Signed */
+	"GREATER_15"	/* Signed */
 };
 
 struct relocation_s {
@@ -200,7 +199,11 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	case SUB:
 	case MUL:
 	case OR:
+	case XOR:
+	case SHL:
+	case SHR:
 	case CMP:
+	case NOT:
 	/* FIXME: Add DIV */
 	//case DIV:
 	case JMP:
@@ -1005,7 +1008,7 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 	struct label_redirect_s *label_redirect, struct label_s *labels, FILE *fd)
 {
-	int opcode = inst_log1_flagged->instruction.opcode;
+	int opcode;
 	int err = 0;
 	int tmp;
 	int store;
@@ -1017,6 +1020,9 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 	uint64_t indirect_offset_value;
 	uint64_t indirect_value_id;
 	struct label_s *label;
+
+	opcode = inst_log1_flagged->instruction.opcode;
+	printf("\t if opcode=%d, ",inst_log1_flagged->instruction.opcode);
 
 	switch (opcode) {
 	case CMP:
@@ -1032,12 +1038,25 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 			tmp = output_label(label, fd);
 			tmp = fprintf(fd, ") ");
 			break;
+		case GREATER_EQUAL:
+			tmp = fprintf(fd, "(");
+			tmp = label_redirect[inst_log1_flagged->value2.value_id].redirect;
+			label = &labels[tmp];
+			tmp = output_label(label, fd);
+			tmp = fprintf(fd, " >= ");
+			tmp = label_redirect[inst_log1_flagged->value1.value_id].redirect;
+			label = &labels[tmp];
+			tmp = output_label(label, fd);
+			tmp = fprintf(fd, ") ");
+			break;
 		default:
+			printf("if_expression: non-yet-handled: 0x%x\n", condition);
 			err = 1;
 			break;
-		break;
 		}
+		break;
 	default:
+		printf("if_expression: CMP not present: opcode = 0x%x:0x%x, cond = 0x%x\n", CMP, opcode, condition);
 		err = 1;
 		break;
 	}
@@ -1078,10 +1097,12 @@ int output_function_body(struct process_state_s *process_state,
 {
 	int tmp, n,l;
 	int err;
+	int found;
 	struct instruction_s *instruction;
 	struct instruction_s *instruction_prev;
 	struct inst_log_entry_s *inst_log1;
 	struct inst_log_entry_s *inst_log1_prev;
+	struct inst_log_entry_s *inst_log1_flags;
 	struct memory_s *value;
 	struct label_s *label;
 
@@ -1210,6 +1231,91 @@ int output_function_body(struct process_state_s *process_state,
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
 				break;
+			case OR:
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
+				tmp = fprintf(fd, " |= ");
+				printf("\nstore=%d\n", instruction->srcA.store);
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
+				tmp = fprintf(fd, ";\n");
+				break;
+			case XOR:
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
+				tmp = fprintf(fd, " ^= ");
+				printf("\nstore=%d\n", instruction->srcA.store);
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
+				tmp = fprintf(fd, ";\n");
+				break;
+			case NOT:
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
+				tmp = fprintf(fd, " = !");
+				printf("\nstore=%d\n", instruction->srcA.store);
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
+				tmp = fprintf(fd, ";\n");
+				break;
+			case SHL:
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
+				tmp = fprintf(fd, " <<= ");
+				printf("\nstore=%d\n", instruction->srcA.store);
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
+				tmp = fprintf(fd, ";\n");
+				break;
+			case SHR:
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				tmp = label_redirect[inst_log1->value3.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
+				tmp = fprintf(fd, " >>= ");
+				printf("\nstore=%d\n", instruction->srcA.store);
+				tmp = label_redirect[inst_log1->value1.value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
+				tmp = fprintf(fd, ";\n");
+				break;
 			case JMP:
 				printf("JMP reached XXXX\n");
 				if (print_inst(instruction, n))
@@ -1277,12 +1383,40 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, "\t");
 				printf("if ");
 				tmp = fprintf(fd, "if ");
-				err = if_expression( instruction->srcA.index, inst_log1_prev, label_redirect, labels, fd);
-				printf("\t prev=%d, ",inst_log1->prev[0]);
-				printf("\t prev inst=%d, ",instruction_prev->opcode);
-				printf("\t %s", condition_table[instruction->srcA.index]);
+				found = 0;
+				tmp = 5; /* Limit the scan backwards */
+				l = inst_log1->prev[0];
+				do {
+					inst_log1_flags =  &inst_log_entry[l];
+					printf("Previous flags 0x%x\n", inst_log1_flags->instruction.flags);
+					if (1 == inst_log1_flags->instruction.flags) {
+						found = 1;
+					}
+					printf("Previous flags instruction size 0x%x\n", inst_log1_flags->prev_size);
+					if (inst_log1_flags->prev > 0) {
+						l = inst_log1_flags->prev[0];
+					} else {
+						l = 0;
+					}
+					tmp--;
+				} while ((0 == found) && (0 < tmp) && (0 != l));
+				if (found == 0) {
+					printf("Previous flags instruction not found. found=%d, tmp=%d, l=%d\n", found, tmp, l);
+					return 1;
+				} else {
+					printf("Previous flags instruction found. found=%d, tmp=%d, l=%d\n", found, tmp, l);
+				}
+					
+				err = if_expression( instruction->srcA.index, inst_log1_flags, label_redirect, labels, fd);
+				printf("\t prev flags=%d, ",inst_log1_flags->instruction.flags);
+				printf("\t prev opcode=%d, ",inst_log1_flags->instruction.opcode);
+				printf("\t 0x%"PRIx64":%s", instruction->srcA.index, condition_table[instruction->srcA.index]);
 				printf("\t LHS=%d, ",inst_log1->prev[0]);
 				printf("goto label%04"PRIx32";\n", inst_log1->next[1]);
+				if (err) {
+					printf("IF CONDITION unknown\n");	
+					return 1;
+				}
 				tmp = fprintf(fd, "goto label%04"PRIx32";\n", inst_log1->next[1]);
 				break;
 
@@ -1464,6 +1598,12 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			case ADD:
 			case MUL:
 			case SUB:
+			case rAND:
+			case OR:
+			case XOR:
+			case NOT:
+			case SHL:
+			case SHR:
 				tmp = register_label(entry_point, &(inst_log1->value3), label_redirect, labels);
 				tmp = register_label(entry_point, &(inst_log1->value1), label_redirect, labels);
 				break;
@@ -1967,7 +2107,7 @@ int main(int argc, char *argv[])
 	label_redirect = calloc(local_counter, sizeof(struct label_redirect_s));
 	labels = calloc(local_counter, sizeof(struct label_s));
 	/* n <= inst_log verified to be correct limit */
-	for (n = 0; n <= inst_log; n++) {
+	for (n = 1; n <= inst_log; n++) {
 		struct label_s label;
 		uint64_t value_id;
 
@@ -1988,7 +2128,14 @@ int main(int argc, char *argv[])
 		case MOV:
 		case ADD:
 		case ADC:
+		case SUB:
 		case MUL:
+		case OR:
+		case XOR:
+		case rAND:
+		case NOT:
+		case SHL:
+		case SHR:
 		case CMP:
 			if (value_id > local_counter) {
 				printf("SSA Failed at inst_log 0x%x\n", n);
@@ -2053,7 +2200,13 @@ int main(int argc, char *argv[])
 				labels[value_id].value = label.value;
 			}
 			break;
+		case IF:
+		case RET:
+		case JMP:
+			break;
 		default:
+			printf("SSA1 failed for Inst:0x%x, OP 0x%x\n", n, instruction->opcode);
+			return 1;
 			break;
 		}
 	}
@@ -2067,7 +2220,8 @@ int main(int argc, char *argv[])
 	 * It build bi-directional links to instruction operands.
 	 * This section does work for local_reg case.
 	 ************************************************************/
-	for (n = 0; n < inst_log; n++) {
+#if 0
+	for (n = 1; n < inst_log; n++) {
 		struct label_s label;
 		uint64_t value_id1;
 		uint64_t value_id2;
@@ -2081,19 +2235,24 @@ int main(int argc, char *argv[])
 		case ADD:
 		case ADC:
 		case MUL:
+		case OR:
+		case XOR:
+		case rAND:
+		case SHL:
+		case SHR:
 		case CMP:
 		default:
 			break;
 		/* FIXME: TODO */
 		}
 	}
-	
+#endif
 	/************************************************************
 	 * This section deals with correcting SSA for branches/joins.
 	 * It build bi-directional links to instruction operands.
 	 * This section does work for local_stack case.
 	 ************************************************************/
-	for (n = 0; n < inst_log; n++) {
+	for (n = 1; n < inst_log; n++) {
 		struct label_s label;
 		uint64_t value_id;
 		uint64_t value_id1;
@@ -2119,7 +2278,14 @@ int main(int argc, char *argv[])
 		case MOV:
 		case ADD:
 		case ADC:
+		case SUB:
 		case MUL:
+		case OR:
+		case XOR:
+		case rAND:
+		case NOT:
+		case SHL:
+		case SHR:
 		case CMP:
 			value_id = label_redirect[value_id1].redirect;
 			if ((1 == labels[value_id].scope) &&
@@ -2169,7 +2335,13 @@ int main(int argc, char *argv[])
 				}
 			}
 			break;
+		case IF:
+		case RET:
+		case JMP:
+			break;
 		default:
+			printf("SSA2 failed for OP 0x%x\n", instruction->opcode);
+			return 1;
 			break;
 		/* FIXME: TODO */
 		}
@@ -2216,6 +2388,11 @@ int main(int argc, char *argv[])
 				external_entry_points[l].inst_log_end,
 				label_redirect,
 				labels);
+		if (tmp) {
+			printf("Unhandled scan instruction 0x%x\n", l);
+			return 1;
+		}
+
 		/* Expected param order: %rdi, %rsi, %rdx, %rcx, %r08, %r09 
 		                         0x40, 0x38, 0x18, 0x10, 0x50, 0x58, then stack */
 		
@@ -2333,12 +2510,15 @@ int main(int argc, char *argv[])
 			}
 			fprintf(fd, "\n");
 					
-			output_function_body(process_state,
+			tmp = output_function_body(process_state,
 				fd,
 				external_entry_points[l].inst_log,
 				external_entry_points[l].inst_log_end,
 				label_redirect,
 				labels);
+			if (tmp) {
+				return 1;
+			}
 			for (n = external_entry_points[l].inst_log; n <= external_entry_points[l].inst_log_end; n++) {
 			}			
 		}

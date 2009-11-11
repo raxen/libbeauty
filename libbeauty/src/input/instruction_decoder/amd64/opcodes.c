@@ -39,8 +39,14 @@ char * opcode_table[] = {
 	"OR ",
 	"XOR",
 	"AND",
+	"NOT",
+	"TEST",
+	"NEG",
 	"CMP",
 	"MUL",
+	"IMUL",
+	"DIV",
+	"IDIV",
 	"JMP",
 	"CALL",
 	"IF ",
@@ -95,6 +101,17 @@ int shift2_table[] = {
 	SHR,
 	NOP,
 	SAR
+};
+
+int grp3_table[] = {
+	TEST,
+	NOP,
+	NOT,
+	NEG,
+	MUL,
+	IMUL,
+	DIV,
+	IDIV
 };
 
 char *store_table[] = { "i", "r", "m", "s" };

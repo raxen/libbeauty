@@ -743,7 +743,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		/* Get value of srcA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 0); 
 		/* Create result */
 		printf("NOP\n");
 		//put_value_RTL_instruction(self, process_state, inst);
@@ -753,7 +753,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		/* Get value of srcA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 0); 
 		/* Create result */
 		printf("CMP\n");
 		/* A CMP does not save any values */
@@ -862,7 +862,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		/* Get value of dstA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
-		printf("ADD\n");
+		printf("MUL\n");
 		inst->value3.start_address = inst->value2.start_address;
 		inst->value3.length = inst->value2.length;
 		inst->value3.init_value_type = inst->value2.init_value_type;
@@ -930,13 +930,138 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		/* Get value of dstA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
-		printf("SUB\n");
+		printf("OR \n");
 		inst->value3.start_address = inst->value2.start_address;
 		inst->value3.length = inst->value2.length;
 		inst->value3.init_value_type = inst->value2.init_value_type;
 		inst->value3.init_value = 0;
 		inst->value3.offset_value = (inst->value2.offset_value +
 			inst->value2.init_value) |
+			inst->value1.init_value;
+		inst->value3.value_type = inst->value2.value_type;
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(self, process_state, inst);
+		break;
+	case XOR:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("XOR\n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = 0;
+		inst->value3.offset_value = (inst->value2.offset_value +
+			inst->value2.init_value) ^
+			inst->value1.init_value;
+		inst->value3.value_type = inst->value2.value_type;
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(self, process_state, inst);
+		break;
+	case NOT:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("NOT\n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = 0;
+		inst->value3.offset_value = !(inst->value2.offset_value +
+			inst->value2.init_value);
+		inst->value3.value_type = inst->value2.value_type;
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(self, process_state, inst);
+		break;
+	case SHL:
+		/* This is an UNSIGNED operation */
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("SHL\n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = 0;
+		inst->value3.offset_value = (inst->value2.offset_value +
+			inst->value2.init_value) <<
+			inst->value1.init_value;
+		inst->value3.value_type = inst->value2.value_type;
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(self, process_state, inst);
+		break;
+	case SHR:
+		/* This is an UNSIGNED operation */
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("SHL\n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = 0;
+		inst->value3.offset_value = (inst->value2.offset_value +
+			inst->value2.init_value) >>
 			inst->value1.init_value;
 		inst->value3.value_type = inst->value2.value_type;
 		inst->value3.ref_memory =
@@ -1052,6 +1177,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		break;
 
 	default:
+		printf("Unhandled EXE intruction 0x%x\n", instruction->opcode);
 		return 1;
 		break;
 	}

@@ -444,6 +444,39 @@ void dis_Ex_Ix(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instr
 	}
 	dis_instructions->instruction_number++;
 }
+int dis_Ex(struct rev_eng *handle, int *table, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, int size) {
+	uint8_t reg;
+	uint8_t reg_mem;
+	uint8_t mod;
+	int number;
+	int result = 0;
+	instruction_t *instruction;
+
+	number = dis_instructions->instruction_number;
+	split_ModRM(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &reg, &reg_mem, &mod);
+	dis_instructions->bytes_used++;
+	if (3 == mod) {
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = table[reg]; /* FIXME is this reg right */
+		instruction->flags = 1;
+		instruction->srcA.store = STORE_REG;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = reg_table[reg_mem].offset;
+		instruction->srcA.relocated = 0;
+		instruction->srcA.value_size = size;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.index = reg_table[reg_mem].offset;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = size;
+		dis_instructions->instruction_number++;
+		result = 1;
+	}
+	return result;
+};
+
 
 int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset) {
 	uint8_t reg = 0;
@@ -604,7 +637,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0x29:												/* SUB Ev,Gv */
-		dis_Ex_Gx(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 4);
+		dis_Ex_Gx(handle, SUB, rex, dis_instructions, base_address, offset, &reg, width);
 		result = 1;
 		break;
 	case 0x2a:												/* SUB Gb,Eb */
@@ -648,13 +681,27 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x30:												/* XOR Eb,Gb */
 		break;
 	case 0x31:												/* XOR Ev,Gv */
+		dis_Ex_Gx(handle, XOR, rex, dis_instructions, base_address, offset, &reg, width);
+		result = 1;
+		break;
 	case 0x32:												/* XOR Gb,Eb */
+		dis_Gx_Ex(handle, XOR, rex, dis_instructions, base_address, offset, &reg, 1);
+		result = 1;
+		break;
 	case 0x33:												/* XOR Gv,Ev */
+		dis_Gx_Ex(handle, XOR, rex, dis_instructions, base_address, offset, &reg, width);
+		result = 1;
+		break;
 	case 0x34:												/* XOR AL,Ib */
 	case 0x35:												/* XOR eAX,Iv */
 	case 0x36:												/* SEG SS: */
 	case 0x37:												/* AAA */
+	case 0x38:												/* AAA */
+		break;
 	case 0x39:												/* CMP Ev,Gv */
+		dis_Ex_Gx(handle, CMP, rex, dis_instructions, base_address, offset, &reg, width);
+		result = 1;
+		break;
 	case 0x3a:												/* CMP Gb,Eb */
 	case 0x3b:												/* CMP Gv,Ev */
 	case 0x3c:												/* CMP AL,Ib */
@@ -792,6 +839,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x6d:												/* INSW */
 	case 0x6e:												/* OUTSB */
 	case 0x6f:												/* OUTSW */
+		break;
 	case 0x70:												/* JO */
 	case 0x71:												/* JNO */
 	case 0x72:												/* JB */
@@ -807,6 +855,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x7c:												/* JL */
 	case 0x7d:												/* JNL */
 	case 0x7e:	/* JLE relative 1 byte */
+	case 0x7f:												/* JNLE */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = IF;
 		instruction->flags = 0;
@@ -823,13 +872,12 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 8;
-		instruction->srcA.index = LESS_EQUAL;
+		instruction->srcA.index = byte & 0xf; /* CONDITION */
 		instruction->srcA.relocated = 0;
 		instruction->srcA.value_size = 4;
 		dis_instructions->instruction_number++;
 		result = 1;
 		break;
-	case 0x7f:												/* JNLE */
 	case 0x80:												/* Grpl Eb,Ib */
 		break;
 	case 0x81:												/* Grpl Ev,Iv */
@@ -1501,6 +1549,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		break;
 	case 0xf6:												/* GRP3 Eb ,Ib: */
 	case 0xf7:												/* GRP3 Ev ,Iv: */
+		result = dis_Ex(handle, grp3_table, rex, dis_instructions, base_address, offset, width);
+		break;
 	case 0xf8:												/* CLC */
 		break;
 	case 0xf9:												/* STC */

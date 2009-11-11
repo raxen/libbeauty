@@ -27,6 +27,7 @@
 */
 
 #include <dis.h>
+#include "internal.h"
 
 /* Little endian */
 uint32_t getbyte(uint8_t *base_address, uint64_t offset) {
