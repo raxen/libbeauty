@@ -805,7 +805,9 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 			/* value_id to identify it. */
 			/* It will always be a local and not a param */
 			/* FIXME: This should be handled scope = 1, type = 1 above. */
-			label->scope = 4;
+			/* was scope = 4*/
+			/* FIXME: get the label->value right */
+			label->scope = 1;
 			label->type = 1;
 			label->value = indirect_value_id;
 			break;
@@ -914,8 +916,8 @@ int output_label(struct label_s *label, FILE *fd) {
 		/* FIXME: local_reg should be handled in case 1.1 above and
 		 *        not be a separate label
 		 */
-		printf("*local_reg%04"PRIx64";\n", label->value);
-		tmp = fprintf(fd, "*local_reg%04"PRIx64,
+		printf("xxxlocal_reg%04"PRIx64";\n", label->value);
+		tmp = fprintf(fd, "xxxlocal_reg%04"PRIx64,
 			label->value);
 		break;
 	default:
@@ -987,8 +989,8 @@ int output_variable(int store, int indirect, uint64_t index, uint64_t relocated,
 			/* It will always be a register, and therefore can re-use the */
 			/* value_id to identify it. */
 			/* It will always be a local and not a param */
-			printf("*local_mem%04"PRIx64";\n", (indirect_value_id));
-			tmp = fprintf(fd, "*local_mem%04"PRIx64,
+			printf("xxxlocal_mem%04"PRIx64";\n", (indirect_value_id));
+			tmp = fprintf(fd, "xxxlocal_mem%04"PRIx64,
 				indirect_value_id);
 			break;
 		default:
@@ -1166,12 +1168,17 @@ int output_function_body(struct process_state_s *process_state,
 				printf("\t");
 				tmp = fprintf(fd, "\t");
 				/* FIXME: Check limits */
+				if (1 == instruction->dstA.indirect) {
+					tmp = fprintf(fd, "*");
+				}
 				tmp = label_redirect[inst_log1->value3.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " = ");
-
+				if (1 == instruction->srcA.indirect) {
+					tmp = fprintf(fd, "*");
+				}
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = label_redirect[inst_log1->value1.value_id].redirect;
 				label = &labels[tmp];
@@ -1185,11 +1192,17 @@ int output_function_body(struct process_state_s *process_state,
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
+				if (1 == instruction->dstA.indirect) {
+					tmp = fprintf(fd, "*");
+				}
 				tmp = label_redirect[inst_log1->value3.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " += ");
+				if (1 == instruction->srcA.indirect) {
+					tmp = fprintf(fd, "*");
+				}
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = label_redirect[inst_log1->value1.value_id].redirect;
 				label = &labels[tmp];
@@ -1202,11 +1215,17 @@ int output_function_body(struct process_state_s *process_state,
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
+				if (1 == instruction->dstA.indirect) {
+					tmp = fprintf(fd, "*");
+				}
 				tmp = label_redirect[inst_log1->value3.value_id].redirect;
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " *= ");
+				if (1 == instruction->srcA.indirect) {
+					tmp = fprintf(fd, "*");
+				}
 				printf("\nstore=%d\n", instruction->srcA.store);
 				tmp = label_redirect[inst_log1->value1.value_id].redirect;
 				label = &labels[tmp];
@@ -2346,7 +2365,6 @@ int main(int argc, char *argv[])
 		/* FIXME: TODO */
 		}
 	}
-	
 	/********************************************************
 	 * This section filters out duplicate param_reg entries.
          * from the labels table: FIXME: THIS IS NOT NEEDED NOW
