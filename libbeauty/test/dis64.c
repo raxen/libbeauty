@@ -1042,7 +1042,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 			}
 			tmp = label_redirect[value_id].redirect;
 			label = &labels[tmp];
-			tmp = fprintf(fd, "0x%x:", tmp);
+			//tmp = fprintf(fd, "0x%x:", tmp);
 			tmp = output_label(label, fd);
 			tmp = fprintf(fd, " <= ");
 			if (1 == inst_log1_flagged->instruction.srcA.indirect) {
@@ -1053,7 +1053,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 			}
 			tmp = label_redirect[value_id].redirect;
 			label = &labels[tmp];
-			tmp = fprintf(fd, "0x%x:", tmp);
+			//tmp = fprintf(fd, "0x%x:", tmp);
 			tmp = output_label(label, fd);
 			tmp = fprintf(fd, ") ");
 			break;
@@ -1206,7 +1206,7 @@ int output_function_body(struct process_state_s *process_state,
 				}
 				tmp = label_redirect[value_id].redirect;
 				label = &labels[tmp];
-				tmp = fprintf(fd, "0x%x:", tmp);
+				//tmp = fprintf(fd, "0x%x:", tmp);
 				tmp = output_label(label, fd);
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " = ");
@@ -1219,7 +1219,7 @@ int output_function_body(struct process_state_s *process_state,
 				}
 				tmp = label_redirect[value_id].redirect;
 				label = &labels[tmp];
-				tmp = fprintf(fd, "0x%x:", tmp);
+				//tmp = fprintf(fd, "0x%x:", tmp);
 				tmp = output_label(label, fd);
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
@@ -1238,7 +1238,7 @@ int output_function_body(struct process_state_s *process_state,
 				}
 				tmp = label_redirect[value_id].redirect;
 				label = &labels[tmp];
-				tmp = fprintf(fd, "0x%x:", tmp);
+				//tmp = fprintf(fd, "0x%x:", tmp);
 				tmp = output_label(label, fd);
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " += ");
@@ -1251,7 +1251,7 @@ int output_function_body(struct process_state_s *process_state,
 				}
 				tmp = label_redirect[value_id].redirect;
 				label = &labels[tmp];
-				tmp = fprintf(fd, "0x%x:", tmp);
+				//tmp = fprintf(fd, "0x%x:", tmp);
 				tmp = output_label(label, fd);
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
