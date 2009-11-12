@@ -777,6 +777,8 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 				inst->value2.indirect_init_value;
 			inst->value3.indirect_offset_value =
 				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
 		}
 		inst->value3.ref_memory =
 			inst->value1.ref_memory;
@@ -830,6 +832,8 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 				inst->value2.indirect_init_value;
 			inst->value3.indirect_offset_value =
 				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
 		}
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
@@ -877,6 +881,8 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 				inst->value2.indirect_init_value;
 			inst->value3.indirect_offset_value =
 				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
 		}
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
@@ -908,6 +914,14 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.offset_value = inst->value2.offset_value -
 			inst->value1.init_value;
 		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
 		inst->value3.ref_log =
@@ -939,6 +953,14 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 			inst->value2.init_value) |
 			inst->value1.init_value;
 		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
 		inst->value3.ref_log =
@@ -970,6 +992,14 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 			inst->value2.init_value) ^
 			inst->value1.init_value;
 		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
 		inst->value3.ref_log =
@@ -1000,6 +1030,14 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.offset_value = !(inst->value2.offset_value +
 			inst->value2.init_value);
 		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
 		inst->value3.ref_log =
@@ -1032,6 +1070,14 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 			inst->value2.init_value) <<
 			inst->value1.init_value;
 		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
 		inst->value3.ref_log =
@@ -1064,6 +1110,14 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 			inst->value2.init_value) >>
 			inst->value1.init_value;
 		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
 		inst->value3.ref_log =
@@ -1156,6 +1210,14 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 			inst->value2.indirect_init_value;
 		inst->value3.indirect_offset_value =
 			inst->value2.indirect_offset_value;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
 		inst->value3.ref_memory =
 			inst->value2.ref_memory;
 		inst->value3.ref_log =
