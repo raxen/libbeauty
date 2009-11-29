@@ -1685,9 +1685,7 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 	int err;
 	uint64_t value_id;
 	struct instruction_s *instruction;
-	struct instruction_s *instruction_prev;
 	struct inst_log_entry_s *inst_log1;
-	struct inst_log_entry_s *inst_log1_prev;
 	struct memory_s *value;
 	struct label_s *label;
 
@@ -1703,16 +1701,8 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			printf("scan_for_labels:Invalid inst_log1[0x%x]\n", n);
 			return 1;
 		}
-		/* FIXME: need to search for previous instruction with the "f" flag */
-		/* This will get complex if there is a join before the first "f" instruction */
-		/* For now, just use immediately preceeding instruction */
-		inst_log1_prev =  &inst_log_entry[inst_log1->prev[0]];
-		if (!inst_log1_prev) {
-			printf("scan_for_labels:Invalid inst_log1_prev[0x%x]\n", n);
-			return 1;
-		}
+
 		instruction =  &inst_log1->instruction;
-		instruction_prev =  &inst_log1_prev->instruction;
 
 		/* Test to see if we have an instruction to output */
 		printf("Inst 0x%04x: %d: value_type = %d, %d, %d\n", n,
@@ -1774,6 +1764,12 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			case JMP:
 				break;
 			case CALL:
+				if (1 == instruction->dstA.indirect) {
+					value_id = inst_log1->value3.indirect_value_id;
+				} else {
+					value_id = inst_log1->value3.value_id;
+				}
+				tmp = register_label(entry_point, value_id, &(inst_log1->value3), label_redirect, labels);
 				break;
 
 			case CMP:
@@ -2680,7 +2676,6 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	tmp = fprintf(fd, "#include <stdint.h>\n\n");
 	for (l = 0; l < 100; l++) {
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
