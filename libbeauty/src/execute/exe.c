@@ -1198,7 +1198,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 	case CALL:
 		/* Get value of dstA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
-		printf("CALL\n");
+		printf("CALL local_counter = 0x%x\n", local_counter);
 		/* FIXME: Currently this is a NOP. */
 		inst->value3.start_address = inst->value2.start_address;
 		inst->value3.length = inst->value2.length;

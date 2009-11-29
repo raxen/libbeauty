@@ -20,3 +20,6 @@ gcc -c -g -o test19.o test19.c
 gcc -c -g -o test21.o test21.c
 gcc -c -g -o test22.o test22.c
 gcc -c -g -o test23.o test23.c
+gcc -c -g -o test30.o test30.c
+gcc -c -g -o test33.o test33.c
+gcc -c -g -o test34.o test34.c

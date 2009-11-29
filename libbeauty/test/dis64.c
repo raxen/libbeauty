@@ -2338,7 +2338,7 @@ int main(int argc, char *argv[])
 				inst_log1->value3.indirect_value_id,
 				&label);
 			if (tmp) {
-				printf("Inst:0x, value1 unknown label %x\n", n);
+				printf("Inst:0x, value3 unknown label %x\n", n);
 			}
 			if (!tmp && value_id > 0) {
 				label_redirect[value_id].redirect = value_id;
@@ -2377,6 +2377,11 @@ int main(int argc, char *argv[])
 			break;
 		case CALL:
 			printf("SSA CALL inst_log 0x%x\n", n);
+			if (1 == instruction->dstA.indirect) {
+				value_id = inst_log1->value3.indirect_value_id;
+			} else {
+				value_id = inst_log1->value3.value_id;
+			}
 			if (value_id > local_counter) {
 				printf("SSA Failed at inst_log 0x%x\n", n);
 				return 1;
@@ -2385,12 +2390,15 @@ int main(int argc, char *argv[])
 				instruction->dstA.indirect,
 				instruction->dstA.index,
 				instruction->dstA.relocated,
-				inst_log1->value2.value_scope,
-				inst_log1->value2.value_id,
-				inst_log1->value2.indirect_offset_value,
-				inst_log1->value2.indirect_value_id,
+				inst_log1->value3.value_scope,
+				inst_log1->value3.value_id,
+				inst_log1->value3.indirect_offset_value,
+				inst_log1->value3.indirect_value_id,
 				&label);
-			if (value_id > 0) {
+			if (tmp) {
+				printf("Inst:0x, value3 unknown label %x\n", n);
+			}
+			if (!tmp && value_id > 0) {
 				label_redirect[value_id].redirect = value_id;
 				labels[value_id].scope = label.scope;
 				labels[value_id].type = label.type;
@@ -2494,7 +2502,7 @@ int main(int argc, char *argv[])
 					return 1;
 				}
 				printf("SSA inst:0x%x:size=0x%"PRIx64"\n", n, size);
-				/* FIXME: This if statement is really doing to much */
+				/* FIXME: This if statement is really doing too much */
 				if (size > 0) {
 					uint64_t value_id_highest = value_id;
 					inst_log1->value1.prev = calloc(size, sizeof(inst_log1->value1.prev));
@@ -2536,8 +2544,12 @@ int main(int argc, char *argv[])
 		case RET:
 		case JMP:
 			break;
+		case CALL:
+			//printf("SSA2 failed for inst:0x%x, CALL\n", n);
+			//return 1;
+			break;
 		default:
-			printf("SSA2 failed for OP 0x%x\n", instruction->opcode);
+			printf("SSA2 failed for inst:0x%x, OP 0x%x\n", n, instruction->opcode);
 			return 1;
 			break;
 		/* FIXME: TODO */
