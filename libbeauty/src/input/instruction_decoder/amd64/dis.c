@@ -418,7 +418,7 @@ void dis_Ex_Ix(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instr
 	instruction->srcA.store = STORE_DIRECT;
 	instruction->srcA.indirect = IND_DIRECT;
 	instruction->srcA.indirect_size = 8;
-	if (4 == size) {
+	if (4 == size || 8 == size) {
 		// Means get from rest of instruction
 		instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used);
 		instruction->srcA.relocated = 0;
@@ -516,7 +516,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0x01:												/* ADD Ev,Gv */
-		dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 4);
+		dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, width);
 		result = 1;
 		break;
 	case 0x02:												/* ADD Gb,Eb */
@@ -524,7 +524,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0x03:												/* ADD Gv,Ev */
-		dis_Gx_Ex(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 4);
+		dis_Gx_Ex(handle, ADD, rex, dis_instructions, base_address, offset, &reg, width);
 		result = 1;
 		break;
 	case 0x04:												/* ADD AL,Ib */
@@ -981,7 +981,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->dstA.indirect_size = 8;
 		instruction->dstA.index = reg_table[reg].offset;
 		instruction->dstA.relocated = 0;
-		instruction->dstA.value_size = 4;
+		instruction->dstA.value_size = width;
 		if (!half) {
 			printf("!half number=%d\n", dis_instructions->instruction_number);
 			printf("inst[0].srcA.index = %"PRIx64"\n",
@@ -995,7 +995,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 				instruction->srcA.indirect_size = 8;
 			}
 			instruction->srcA.index = REG_TMP1;
-			instruction->srcA.value_size = 4;
+			instruction->srcA.value_size = width;
 		}
 		//if (!half) {
 		//	instruction->srcA.store = STORE_REG;
@@ -1292,7 +1292,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xc6:												/* MOV Eb,Ib */
 	case 0xc7:												/* MOV EW,Iv */
 		/* JCD: Work in progress */
-		dis_Ex_Ix(handle, MOV, rex, dis_instructions, base_address, offset, &reg, 4);
+		dis_Ex_Ix(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
 		result = 1;
 		break;
 	case 0xc8:												/* ENTER Iv,Ib */
