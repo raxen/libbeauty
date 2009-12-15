@@ -112,6 +112,11 @@ struct external_entry_point_s {
 	/* FIXME: add function return type and param types */
 };
 
+/* Params order:
+ * int test30(int64_t param_reg0040, int64_t param_reg0038, int64_t param_reg0018, int64_t param_reg0010, int64_t param_reg0050, int64_t param_reg0058, int64_t param_stack0008, int64_t param_stack0010)
+ */
+
+
 #define RELOCATION_SIZE 100
 #define EXTERNAL_ENTRY_POINTS_SIZE 100
 struct relocation_s relocations[RELOCATION_SIZE];
@@ -2497,42 +2502,39 @@ int main(int argc, char *argv[])
 					printf("SSA search_back Failed at inst_log 0x%x\n", n);
 					return 1;
 				}
-				printf("SSA inst:0x%x:size=0x%"PRIx64"\n", n, size);
-				/* FIXME: This if statement is really doing too much */
-				if (size > 0) {
-					uint64_t value_id_highest = value_id;
-					inst_log1->value1.prev = calloc(size, sizeof(inst_log1->value1.prev));
-					inst_log1->value1.prev_size = size;
-					for (l = 0; l < size; l++) {
-						struct inst_log_entry_s *inst_log_l;
-						inst_log_l = &inst_log_entry[inst_list[l]];
-						inst_log1->value1.prev[l] = inst_list[l];
-						inst_log_l->value3.next = realloc(inst_log_l->value3.next, (inst_log_l->value3.next_size + 1) * sizeof(inst_log_l->value3.next));
-						inst_log_l->value3.next[inst_log_l->value3.next_size] =
-							 inst_list[l];
-						inst_log_l->value3.next_size++;
-						if (label_redirect[inst_log_l->value3.value_id].redirect > value_id_highest) {
-							value_id_highest = label_redirect[inst_log_l->value3.value_id].redirect;
-						}
-						printf("rel inst:0x%"PRIx64"\n", inst_list[l]);
+			}
+			printf("SSA inst:0x%x:size=0x%"PRIx64"\n", n, size);
+			/* Renaming is only needed if there are more than one label present */
+			if (size > 0) {
+				uint64_t value_id_highest = value_id;
+				inst_log1->value1.prev = calloc(size, sizeof(inst_log1->value1.prev));
+				inst_log1->value1.prev_size = size;
+				for (l = 0; l < size; l++) {
+					struct inst_log_entry_s *inst_log_l;
+					inst_log_l = &inst_log_entry[inst_list[l]];
+					inst_log1->value1.prev[l] = inst_list[l];
+					inst_log_l->value3.next = realloc(inst_log_l->value3.next, (inst_log_l->value3.next_size + 1) * sizeof(inst_log_l->value3.next));
+					inst_log_l->value3.next[inst_log_l->value3.next_size] =
+						 inst_list[l];
+					inst_log_l->value3.next_size++;
+					if (label_redirect[inst_log_l->value3.value_id].redirect > value_id_highest) {
+						value_id_highest = label_redirect[inst_log_l->value3.value_id].redirect;
 					}
-					/* Renaming is only needed if there are more than one label present */
-					if (size > 0) {
-						printf("Renaming label 0x%"PRIx64" to 0x%"PRIx64"\n",
-							label_redirect[value_id1].redirect,
-							value_id_highest);
-						label_redirect[value_id1].redirect =
-								value_id_highest;
-						for (l = 0; l < size; l++) {
-							struct inst_log_entry_s *inst_log_l;
-							inst_log_l = &inst_log_entry[inst_list[l]];
-							printf("Renaming label 0x%"PRIx64" to 0x%"PRIx64"\n",
-								label_redirect[inst_log_l->value3.value_id].redirect,
-								value_id_highest);
-							label_redirect[inst_log_l->value3.value_id].redirect =
-								value_id_highest;
-						}
-					}
+					printf("rel inst:0x%"PRIx64"\n", inst_list[l]);
+				}
+				printf("Renaming label 0x%"PRIx64" to 0x%"PRIx64"\n",
+					label_redirect[value_id1].redirect,
+					value_id_highest);
+				label_redirect[value_id1].redirect =
+					value_id_highest;
+				for (l = 0; l < size; l++) {
+					struct inst_log_entry_s *inst_log_l;
+					inst_log_l = &inst_log_entry[inst_list[l]];
+					printf("Renaming label 0x%"PRIx64" to 0x%"PRIx64"\n",
+						label_redirect[inst_log_l->value3.value_id].redirect,
+						value_id_highest);
+					label_redirect[inst_log_l->value3.value_id].redirect =
+						value_id_highest;
 				}
 			}
 			break;
