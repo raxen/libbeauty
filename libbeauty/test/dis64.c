@@ -91,6 +91,11 @@ struct relocation_s {
 	uint64_t index; /* Index into the external_entry_point or data */
 };
 
+struct mid_start_s {
+	uint64_t mid_start;
+	uint64_t valid;
+};
+
 struct external_entry_point_s {
 	int valid;
 	int type; /* 1: Internal, 2: External */
@@ -110,6 +115,11 @@ struct external_entry_point_s {
 	int *locals;
 	int *locals_order;
 	/* FIXME: add function return type and param types */
+};
+
+struct extension_call_s {
+	int params_size;
+	int *params;
 };
 
 /* Params order:
@@ -1127,6 +1137,7 @@ int output_function_body(struct process_state_s *process_state,
 	struct inst_log_entry_s *inst_log1_flags;
 	struct memory_s *value;
 	struct label_s *label;
+	struct extension_call_s *call;
 
 	if (!start || !end) {
 		printf("output_function_body:Invalid start or end\n");
@@ -1482,11 +1493,12 @@ int output_function_body(struct process_state_s *process_state,
 
 				tmp = fprintf(fd, "%s(", 
 					external_entry_points[instruction->srcA.index].name);
-				for (l = 0; l < external_entry_points[instruction->srcA.index].params_size; l++) {
+				call = inst_log1->extension;
+				for (l = 0; l < call->params_size; l++) {
 					if (l > 0) {
 						fprintf(fd, ", ");
 					}
-					label = &labels[external_entry_points[instruction->srcA.index].params[l]];
+					label = &labels[call->params[l]];
 					tmp = output_label(label, fd);
 				}
 				tmp = fprintf(fd, ");\n");
@@ -1806,52 +1818,31 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
  * This is a complex routine. It utilises dynamic lists in order to reduce 
  * memory usage.
  **********************************************************************************/
-int search_back_local_stack(int start_location, uint64_t indirect_init_value, uint64_t indirect_offset_value, uint64_t *size, uint64_t **inst_list)
+int search_back_local_reg_stack(uint64_t mid_start_size, struct mid_start_s *mid_start, int reg_stack, uint64_t indirect_init_value, uint64_t indirect_offset_value, uint64_t *size, uint64_t **inst_list)
 {
 	struct instruction_s *instruction;
 	struct inst_log_entry_s *inst_log1;
 	uint64_t value_id;
-	uint64_t mid_start_size;
 	uint64_t inst_num;
 	uint64_t tmp;
 	int found = 0;
 	int n;
-	struct mid_start_s {
-		uint64_t mid_start;
-		uint64_t valid;
-	};
-	struct mid_start_s *mid_start;
 
 	*size = 0;
 	/* FIXME: This could be optimized out if the "seen" value just increased on each call */
 	for (n = 0; n < INST_LOG_ENTRY_SIZE; n++) {
 		search_back_seen[n] = 0;
 	}
-	inst_log1 =  &inst_log_entry[start_location];
-	instruction =  &inst_log1->instruction;
-	if (1 == instruction->srcA.indirect) {
-		value_id = inst_log1->value1.indirect_value_id;
-	} else {
-		value_id = inst_log1->value1.value_id;
-	}
-	/* FIXME: complete this */
+
 	printf("search_back_local_stack: 0x%"PRIx64", 0x%"PRIx64"\n", indirect_init_value, indirect_offset_value);
-	if (0 < inst_log1->prev_size) {
-		printf("search_back:prev_size=0x%x\n", inst_log1->prev_size);
+	if (0 < mid_start_size) {
+		printf("search_back:prev_size=0x%"PRIx64"\n", mid_start_size);
 	}
-	if (0 == inst_log1->prev_size) {
+	if (0 == mid_start_size) {
 		printf("search_back ended\n");
 		return 1;
 	}
-	if (0 < inst_log1->prev_size) {
-		mid_start = calloc(inst_log1->prev_size, sizeof(struct mid_start_s));
-		mid_start_size = inst_log1->prev_size;
-		for (n = 0; n < inst_log1->prev_size; n++) {
-			mid_start[n].mid_start = inst_log1->prev[n];
-			mid_start[n].valid = 1;
-			printf("mid_start added 0x%"PRIx64" at 0x%x\n", mid_start[n].mid_start, n);
-		}
-	}
+
 	do {
 		found = 0;
 		for(n = 0; n < mid_start_size; n++) {
@@ -1875,11 +1866,27 @@ int search_back_local_stack(int start_location, uint64_t indirect_init_value, ui
 		instruction =  &inst_log1->instruction;
 		value_id = inst_log1->value3.value_id;
 		printf("inst_num:0x%"PRIx64"\n", inst_num);
-		if ((instruction->dstA.store == STORE_REG) &&
+		/* STACK */
+		if ((reg_stack == 2) &&
+			(instruction->dstA.store == STORE_REG) &&
 			(inst_log1->value3.value_scope == 2) &&
 			(instruction->dstA.indirect == IND_STACK) &&
 			(inst_log1->value3.indirect_init_value == indirect_init_value) &&
 			(inst_log1->value3.indirect_offset_value == indirect_offset_value)) {
+			tmp = *size;
+			tmp++;
+			*size = tmp;
+			if (tmp == 1) {
+				*inst_list = malloc(sizeof(*inst_list));
+				(*inst_list)[0] = inst_num;
+			} else {
+				*inst_list = realloc(*inst_list, tmp * sizeof(*inst_list));
+				(*inst_list)[tmp - 1] = inst_num;
+			}
+		} else if ((reg_stack == 1) &&
+			(instruction->dstA.store == STORE_REG) &&
+			(instruction->dstA.indirect == IND_DIRECT) &&
+			(instruction->dstA.index == indirect_init_value)) {
 			tmp = *size;
 			tmp++;
 			*size = tmp;
@@ -1953,7 +1960,7 @@ int main(int argc, char *argv[])
 	const char *file = "test.obj";
 	size_t inst_size = 0;
 //	uint64_t reloc_size = 0;
-	int l;
+	int l, m;
 	struct instruction_s *instruction;
 //	struct instruction_s *instruction_prev;
 	struct inst_log_entry_s *inst_log1;
@@ -2444,24 +2451,19 @@ int main(int argc, char *argv[])
 	 * This section does work for local_stack case.
 	 ************************************************************/
 	for (n = 1; n < inst_log; n++) {
-		struct label_s label;
 		uint64_t value_id;
 		uint64_t value_id1;
-		uint64_t value_id2;
 		uint64_t size;
 		uint64_t *inst_list;
+		uint64_t mid_start_size;
+		struct mid_start_s *mid_start;
 
 		size = 0;
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
 		value_id1 = inst_log1->value1.value_id;
-		value_id2 = inst_log1->value2.value_id;
 		
 		if (value_id1 > local_counter) {
-			printf("SSA Failed at inst_log 0x%x\n", n);
-			return 1;
-		}
-		if (value_id2 > local_counter) {
 			printf("SSA Failed at inst_log 0x%x\n", n);
 			return 1;
 		}
@@ -2482,7 +2484,20 @@ int main(int argc, char *argv[])
 			if ((1 == labels[value_id].scope) &&
 				(2 == labels[value_id].type)) {
 				printf("Found local_stack Inst:0x%x:value_id:0x%"PRIx64"\n", n, value_id1);
-				tmp = search_back_local_stack(n, inst_log1->value1.indirect_init_value, inst_log1->value1.indirect_offset_value, &size, &inst_list);
+				if (0 == inst_log1->prev_size) {
+					printf("search_back ended\n");
+					return 1;
+				}
+				if (0 < inst_log1->prev_size) {
+					mid_start = calloc(inst_log1->prev_size, sizeof(struct mid_start_s));
+					mid_start_size = inst_log1->prev_size;
+					for (l = 0; l < inst_log1->prev_size; l++) {
+						mid_start[l].mid_start = inst_log1->prev[l];
+						mid_start[l].valid = 1;
+						printf("mid_start added 0x%"PRIx64" at 0x%x\n", mid_start[l].mid_start, l);
+					}
+				}
+				tmp = search_back_local_reg_stack(mid_start_size, mid_start, 2, inst_log1->value1.indirect_init_value, inst_log1->value1.indirect_offset_value, &size, &inst_list);
 				if (tmp) {
 					printf("SSA search_back Failed at inst_log 0x%x\n", n);
 					return 1;
@@ -2592,6 +2607,91 @@ int main(int argc, char *argv[])
 			external_entry_points[l].locals_size);
 		}
 	}
+
+	/***************************************************
+	 * This section, PARAM, deals with converting
+	 * function params to reference locals.
+	 * e.g. Change local0011 = function(param_reg0040);
+	 *      to     local0011 = function(local0009);
+	 ***************************************************/
+	for (n = 1; n < inst_log; n++) {
+		struct label_s *label;
+		uint64_t value_id;
+		uint64_t value_id1;
+		uint64_t size;
+		uint64_t *inst_list;
+		struct extension_call_s *call;
+		struct external_entry_point_s *external_entry_point;
+		uint64_t mid_start_size;
+		struct mid_start_s *mid_start;
+
+		size = 0;
+		inst_log1 =  &inst_log_entry[n];
+		instruction =  &inst_log1->instruction;
+		value_id1 = inst_log1->value1.value_id;
+		
+		if (value_id1 > local_counter) {
+			printf("PARAM Failed at inst_log 0x%x\n", n);
+			return 1;
+		}
+		switch (instruction->opcode) {
+		case CALL:
+			external_entry_point = &external_entry_points[instruction->srcA.index];
+			inst_log1->extension = calloc(1, sizeof(call));
+			call = inst_log1->extension;
+			call->params_size = external_entry_point->params_size;
+			call->params = calloc(call->params_size, sizeof(call->params));
+			if (!call) {
+				printf("PARAM failed for inst:0x%x, CALL. Out of memory\n", n);
+				return 1;
+			}
+			printf("PARAM:call size=%x\n", call->params_size);
+			printf("PARAM:params size=%x\n", external_entry_point->params_size);
+			for (m = 0; m < external_entry_point->params_size; m++) {
+				label = &labels[external_entry_point->params[m]];
+				if (0 == inst_log1->prev_size) {
+					printf("search_back ended\n");
+					return 1;
+				}
+				if (0 < inst_log1->prev_size) {
+					mid_start = calloc(inst_log1->prev_size, sizeof(struct mid_start_s));
+					mid_start_size = inst_log1->prev_size;
+					for (l = 0; l < inst_log1->prev_size; l++) {
+						mid_start[l].mid_start = inst_log1->prev[l];
+						mid_start[l].valid = 1;
+						printf("mid_start added 0x%"PRIx64" at 0x%x\n", mid_start[l].mid_start, l);
+					}
+				}
+				tmp = search_back_local_reg_stack(mid_start_size, mid_start, 1, label->value, 0, &size, &inst_list);
+				/* FIXME: Some renaming of local vars will also be needed if size > 1 */
+				if (tmp) {
+					printf("PARAM search_back Failed at inst_log 0x%x\n", n);
+					return 1;
+				}
+				tmp = output_label(label, stdout);
+				tmp = fprintf(stdout, ");\n");
+				tmp = fprintf(stdout, "PARAM size = 0x%"PRIx64"\n", size);
+				if (size > 0) {
+					for (l = 0; l < size; l++) {
+						struct inst_log_entry_s *inst_log_l;
+						inst_log_l = &inst_log_entry[inst_list[l]];
+						call->params[m] = inst_log_l->value3.value_id;
+						//tmp = label_redirect[inst_log_l->value3.value_id].redirect;
+						//label = &labels[tmp];
+						//tmp = output_label(label, stdout);
+					}
+				}
+			}
+			//printf("SSA2 failed for inst:0x%x, CALL\n", n);
+			//return 1;
+			break;
+
+		default:
+			break;
+		}
+	}
+
+
 	/***************************************************
 	 * This section deals with outputting the .c file.
 	 ***************************************************/

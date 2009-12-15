@@ -58,6 +58,7 @@ struct inst_log_entry_s {
 	struct memory_s value1;		/* First input value */
 	struct memory_s value2;		/* Second input value */
 	struct memory_s value3;		/* Result */
+	void *extension;		/* Instruction specific extention */
 } ;
 
 int execute_instruction(void *self, struct process_state_s *process_state, struct inst_log_entry_s *inst);
