@@ -1030,6 +1030,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 	uint64_t indirect_offset_value;
 	uint64_t indirect_value_id;
 	struct label_s *label;
+	const char *condition_string;
 
 	opcode = inst_log1_flagged->instruction.opcode;
 	printf("\t if opcode=%d, ",inst_log1_flagged->instruction.opcode);
@@ -1038,58 +1039,42 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 	case CMP:
 		switch (condition) {
 		case LESS_EQUAL:
-			tmp = fprintf(fd, "(");
-			if (1 == inst_log1_flagged->instruction.dstA.indirect) {
-				tmp = fprintf(fd, "*");
-				value_id = inst_log1_flagged->value2.indirect_value_id;
-			} else {
-				value_id = inst_log1_flagged->value2.value_id;
-			}
-			tmp = label_redirect[value_id].redirect;
-			label = &labels[tmp];
-			//tmp = fprintf(fd, "0x%x:", tmp);
-			tmp = output_label(label, fd);
-			tmp = fprintf(fd, " <= ");
-			if (1 == inst_log1_flagged->instruction.srcA.indirect) {
-				tmp = fprintf(fd, "*");
-				value_id = inst_log1_flagged->value1.indirect_value_id;
-			} else {
-				value_id = inst_log1_flagged->value1.value_id;
-			}
-			tmp = label_redirect[value_id].redirect;
-			label = &labels[tmp];
-			//tmp = fprintf(fd, "0x%x:", tmp);
-			tmp = output_label(label, fd);
-			tmp = fprintf(fd, ") ");
+			condition_string = " <= ";
 			break;
 		case GREATER_EQUAL:
-			tmp = fprintf(fd, "(");
-			if (1 == inst_log1_flagged->instruction.dstA.indirect) {
-				tmp = fprintf(fd, "*");
-				value_id = inst_log1_flagged->value2.indirect_value_id;
-			} else {
-				value_id = inst_log1_flagged->value2.value_id;
-			}
-			tmp = label_redirect[value_id].redirect;
-			label = &labels[tmp];
-			tmp = output_label(label, fd);
-			tmp = fprintf(fd, " >= ");
-			if (1 == inst_log1_flagged->instruction.srcA.indirect) {
-				tmp = fprintf(fd, "*");
-				value_id = inst_log1_flagged->value1.indirect_value_id;
-			} else {
-				value_id = inst_log1_flagged->value1.value_id;
-			}
-			tmp = label_redirect[value_id].redirect;
-			label = &labels[tmp];
-			tmp = output_label(label, fd);
-			tmp = fprintf(fd, ") ");
+			condition_string = " >= ";
+			break;
+		case GREATER:
+			condition_string = " > ";
 			break;
 		default:
 			printf("if_expression: non-yet-handled: 0x%x\n", condition);
 			err = 1;
 			break;
 		}
+		tmp = fprintf(fd, "(");
+		if (1 == inst_log1_flagged->instruction.dstA.indirect) {
+			tmp = fprintf(fd, "*");
+			value_id = inst_log1_flagged->value2.indirect_value_id;
+		} else {
+			value_id = inst_log1_flagged->value2.value_id;
+		}
+		tmp = label_redirect[value_id].redirect;
+		label = &labels[tmp];
+		//tmp = fprintf(fd, "0x%x:", tmp);
+		tmp = output_label(label, fd);
+		tmp = fprintf(fd, "%s", condition_string);
+		if (1 == inst_log1_flagged->instruction.srcA.indirect) {
+			tmp = fprintf(fd, "*");
+			value_id = inst_log1_flagged->value1.indirect_value_id;
+		} else {
+			value_id = inst_log1_flagged->value1.value_id;
+		}
+		tmp = label_redirect[value_id].redirect;
+		label = &labels[tmp];
+		//tmp = fprintf(fd, "0x%x:", tmp);
+		tmp = output_label(label, fd);
+		tmp = fprintf(fd, ") ");
 		break;
 	default:
 		printf("if_expression: CMP not present: opcode = 0x%x:0x%x, cond = 0x%x\n", CMP, opcode, condition);
