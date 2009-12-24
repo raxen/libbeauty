@@ -134,13 +134,13 @@ struct external_entry_point_s external_entry_points[EXTERNAL_ENTRY_POINTS_SIZE];
 
 /* For the .text segment. I.e. Instructions. */
 #define MEMORY_TEXT_SIZE 1000
-#define MEMORY_STACK_SIZE 100
+#define MEMORY_STACK_SIZE 1000
 #define MEMORY_REG_SIZE 100
 /* For the .data segment. I.e. Static data */
 #define MEMORY_DATA_SIZE 1000
 #define MEMORY_USED_SIZE 1000
-#define INST_LOG_ENTRY_SIZE 100
-#define ENTRY_POINTS_SIZE 100
+#define INST_LOG_ENTRY_SIZE 1000
+#define ENTRY_POINTS_SIZE 1000
 
 /* Used to store details of each instruction.
  * Linked by prev/next pointers
@@ -2082,7 +2082,7 @@ int main(int argc, char *argv[])
 	dis_instructions.bytes_used = 0;
 	inst_exe = &inst_log_entry[0];
 	/* Where should entry_point_list_length be initialised */
-	entry_point_list_length = 100;
+	entry_point_list_length = ENTRY_POINTS_SIZE;
 	/* Print the symtab */
 	printf("symtab_sz = %lu\n", handle->symtab_sz);
 	if (handle->symtab_sz >= 100) {
@@ -2151,7 +2151,7 @@ int main(int argc, char *argv[])
 
 	}
 	printf("Number of functions = %d\n", n);
-	for (n = 0; n < 100; n++) {
+	for (n = 0; n < EXTERNAL_ENTRY_POINTS_SIZE; n++) {
 		if (external_entry_points[n].valid != 0) {
 		printf("type = %d, sect_offset = %d, sect_id = %d, sect_index = %d, &%s() = 0x%04"PRIx64"\n",
 			external_entry_points[n].type,
@@ -2166,7 +2166,7 @@ int main(int argc, char *argv[])
 		int len, len1;
 
 		len = strlen(handle->reloc_table_code[n].symbol_name);
-		for (l = 0; l < 100; l++) {
+		for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
 			if (external_entry_points[l].valid != 0) {
 				len1 = strlen(external_entry_points[l].name);
 				if (len != len1) {
@@ -2191,7 +2191,7 @@ int main(int argc, char *argv[])
 			handle->reloc_table_code[n].symbol_name);
 	}
 			
-	for (l = 0; l < 100; l++) {
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
 		if ((external_entry_points[l].valid != 0) &&
 			(external_entry_points[l].type == 1)) {
 			struct process_state_s *process_state;
@@ -2215,7 +2215,7 @@ int main(int argc, char *argv[])
 			entry_point[0].eip_init_value = memory_reg[2].init_value;
 			entry_point[0].eip_offset_value = memory_reg[2].offset_value;
 			entry_point[0].previous_instuction = 0;
-			entry_point_list_length = 100;
+			entry_point_list_length = ENTRY_POINTS_SIZE;
 
 			print_mem(memory_reg, 1);
 			printf ("LOGS: inst_log = 0x%"PRIx64"\n", inst_log);
@@ -2586,7 +2586,7 @@ int main(int argc, char *argv[])
 	 * 	Function params,
 	 *	local vars.
 	 ***************************************************/
-	for (l = 0; l < 100; l++) {
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
 		if (external_entry_points[l].valid &&
 			external_entry_points[l].type == 1) {
 		tmp = scan_for_labels_in_function_body(&external_entry_points[l],
@@ -2662,8 +2662,17 @@ int main(int argc, char *argv[])
 						printf("mid_start added 0x%"PRIx64" at 0x%x\n", mid_start[l].mid_start, l);
 					}
 				}
-				tmp = search_back_local_reg_stack(mid_start_size, mid_start, 1, label->value, 0, &size, &inst_list);
+				/* param_regXXX */
+				if ((2 == label->scope) &&
+					(1 == label->type)) {
+					tmp = search_back_local_reg_stack(mid_start_size, mid_start, 1, label->value, 0, &size, &inst_list);
+				} else {
+				/* param_stackXXX */
+				/* SP value held in value1 */
+					printf("PARAM: Searching for SP(0x%"PRIx64":0x%"PRIx64") + label->value(0x%"PRIx64") - 8\n", inst_log1->value1.init_value, inst_log1->value1.offset_value, label->value);
+					tmp = search_back_local_reg_stack(mid_start_size, mid_start, 2, inst_log1->value1.init_value, inst_log1->value1.offset_value + label->value - 8, &size, &inst_list);
 				/* FIXME: Some renaming of local vars will also be needed if size > 1 */
+				}
 				if (tmp) {
 					printf("PARAM search_back Failed at inst_log 0x%x\n", n);
 					return 1;
@@ -2671,6 +2680,11 @@ int main(int argc, char *argv[])
 				tmp = output_label(label, stdout);
 				tmp = fprintf(stdout, ");\n");
 				tmp = fprintf(stdout, "PARAM size = 0x%"PRIx64"\n", size);
+				if (size > 1) {
+					printf("number of param locals found too big at instruction 0x%x\n", n);
+					return 1;
+					break;
+				}
 				if (size > 0) {
 					for (l = 0; l < size; l++) {
 						struct inst_log_entry_s *inst_log_l;
@@ -2705,7 +2719,7 @@ int main(int argc, char *argv[])
 	printf("writing out to file\n");
 	tmp = fprintf(fd, "#include <stdint.h>\n\n");
 	printf("\nPRINTING MEMORY_DATA\n");
-	for (l = 0; l < 100; l++) {
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
 		struct process_state_s *process_state;
 		if (external_entry_points[l].valid) {
 			process_state = &external_entry_points[l].process_state;
@@ -2763,7 +2777,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	for (l = 0; l < 100; l++) {
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
 		          one function per .o file. */

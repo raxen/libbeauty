@@ -359,7 +359,7 @@ static int get_value_RTL_instruction(
 		/* s - stack */
 		printf("%s-indirect\n", info);
 		printf("%s-stack\n", info);
-		printf("index=%"PRIx64", indirect_size=%d, value_sizr=%d\n",
+		printf("index=%"PRIx64", indirect_size=%d, value_size=%d\n",
 				source->index,
 				source->indirect_size,
 				source->value_size);
@@ -724,6 +724,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 	struct memory_s *memory_reg;
 	struct memory_s *memory_data;
 	int *memory_used;
+	struct operand_s operand;
 
 	memory_text = process_state->memory_text;
 	memory_stack = process_state->memory_stack;
@@ -1198,6 +1199,13 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 	case CALL:
 		/* Get value of dstA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		/* Get the current ESP value so one can convert function params to locals */
+		operand.indirect = IND_DIRECT;
+		operand.store = STORE_REG;
+		operand.index = REG_SP;
+		/* Need to find out if the reg is 32bit or 64bit. Use the REG_AX return value size */
+		operand.value_size = instruction->dstA.value_size;
+		ret = get_value_RTL_instruction(self, process_state, &(operand), &(inst->value1), 1); 
 		printf("CALL local_counter = 0x%x\n", local_counter);
 		/* FIXME: Currently this is a NOP. */
 		inst->value3.start_address = inst->value2.start_address;

@@ -1132,31 +1132,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xb5:												/* MOV CH,Ib */
 	case 0xb6:												/* MOV DH,Ib */
 	case 0xb7:												/* MOV BH,Ib */
-	case 0xb8:												/* MOV eAX,Iv */
-		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
-		instruction->opcode = MOV;
-		instruction->flags = 0;
-		instruction->srcA.store = STORE_DIRECT;
-		instruction->srcA.indirect = IND_DIRECT;
-		instruction->srcA.indirect_size = 8;
-		// Means get from rest of instruction
-		instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used);
-		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4, &reloc_table_entry);
-		if (!tmp) {
-			instruction->srcA.relocated = 1;
-		}
-		dis_instructions->bytes_used += 4;
-		instruction->srcA.value_size = 4;
-		instruction->dstA.store = STORE_REG;
-		instruction->dstA.indirect = IND_DIRECT;
-		instruction->dstA.indirect_size = 8;
-		instruction->dstA.index = REG_AX;
-		instruction->dstA.relocated = 0;
-		instruction->dstA.value_size = 4;
-		dis_instructions->instruction_number++;
-		result = 1;
 		break;
-
+	case 0xb8:												/* MOV eAX,Iv */
 	case 0xb9:												/* MOV CX,Iv */
 	case 0xba:												/* MOV DX,Iv */
 	case 0xbb:												/* MOV BX,Iv */
@@ -1181,7 +1158,13 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = IND_DIRECT;
 		instruction->dstA.indirect_size = width;
-		instruction->dstA.index = REG_DI;
+		tmp = (byte & 0x7);
+		if (rex & 0x1) {
+			/* Register extention */
+			/* Value 0x1 determined by disassemply observations */
+			tmp = tmp | 0x8;
+		}
+		instruction->dstA.index = reg_table[tmp].offset;
 		instruction->dstA.relocated = 0;
 		instruction->dstA.value_size = width;
 		dis_instructions->instruction_number++;
