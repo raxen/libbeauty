@@ -725,6 +725,10 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 	struct memory_s *memory_data;
 	int *memory_used;
 	struct operand_s operand;
+	int16_t tmp16s;
+	int32_t tmp32s;
+	int64_t tmp64s;
+	uint64_t tmp64u;
 
 	memory_text = process_state->memory_text;
 	memory_stack = process_state->memory_stack;
@@ -772,6 +776,84 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.init_value_type = inst->value1.init_value_type;
 		inst->value3.init_value = inst->value1.init_value;
 		inst->value3.offset_value = inst->value1.offset_value;
+		inst->value3.value_type = inst->value1.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
+		inst->value3.ref_memory =
+			inst->value1.ref_memory;
+		inst->value3.ref_log =
+			inst->value1.ref_log;
+		/* Note: value_scope stays from the dst, not the src. */
+		/* FIXME Maybe Exception is the MOV instruction */
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* MOV param to local */
+		/* When the destination is a param_reg,
+		 * Change it to a local_reg */
+		if ((inst->value3.value_scope == 1) &&
+			(STORE_REG == instruction->dstA.store) &&
+			(1 == inst->value2.value_scope) &&
+			(0 == instruction->dstA.indirect)) {
+			inst->value3.value_scope = 2;
+		}
+		/* Counter */
+		//if (inst->value3.value_scope == 2) {
+			/* Only value_id preserves the value2 values */
+		//inst->value3.value_id = inst->value2.value_id;
+		inst->value3.value_id = local_counter;
+		inst->value2.value_id = local_counter;
+		local_counter++;
+		//}
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(self, process_state, inst);
+		break;
+	case SEX:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("SEX\n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value1.init_value_type;
+		if (8 == inst->value3.length) {
+			tmp32s = inst->value1.init_value;
+			tmp64s = tmp32s;
+			tmp64u = tmp64s;
+		} else if (4 == inst->value3.length) {
+			tmp16s = inst->value1.init_value;
+			tmp32s = tmp16s;
+			tmp64u = tmp32s;
+		} else {
+			printf("SEX length failure\n");
+			return 1;
+		}
+		inst->value3.init_value =tmp64u;
+		if (8 == inst->value3.length) {
+			tmp32s = inst->value1.offset_value;
+			tmp64s = tmp32s;
+			tmp64u = tmp64s;
+		} else if (4 == inst->value3.length) {
+			tmp16s = inst->value1.offset_value;
+			tmp32s = tmp16s;
+			tmp64u = tmp32s;
+		} else {
+			printf("SEX length failure\n");
+			return 1;
+		}
+		inst->value3.offset_value = tmp64u;
 		inst->value3.value_type = inst->value1.value_type;
 		if (inst->instruction.dstA.indirect) {
 			inst->value3.indirect_init_value =

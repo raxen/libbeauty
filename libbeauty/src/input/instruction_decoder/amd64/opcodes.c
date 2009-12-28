@@ -59,7 +59,8 @@ char * opcode_table[] = {
 	"SAR",
 	"IN ",
 	"OUT",
-	"RET"
+	"RET",
+	"SEX"
 };
 
 reg_t reg_table[] = {

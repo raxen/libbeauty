@@ -846,8 +846,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x73:												/* JNB */
 	case 0x74:												/* JZ */
 	case 0x75:												/* JNZ */
-	case 0x76:	/* JBE or JA */
-	case 0x77:	/* JNBE or JNA */
+	case 0x76:	/* JBE or JNA */
+	case 0x77:	/* JNBE or JA */
 	case 0x78:												/* JS */
 	case 0x79:												/* JNS */
 	case 0x7a:												/* JP */
@@ -1050,8 +1050,27 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		break;
 	case 0x97:												/* XCHG DI,eAX */
 		break;
-	case 0x98:												/* CBW */
-	case 0x99:												/* CWD */
+	case 0x98:
+		/* CBW: Signed extention. */
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = SEX;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_REG;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = REG_AX;
+		instruction->srcA.value_size = width / 2;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.index = REG_AX;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = width;
+		dis_instructions->instruction_number++;
+		result = 1;
+		break;
+	case 0x99:
+		/* CWD: Signed extention. */
 		break;
 	case 0x9a:												/* CALL Ap */
 	case 0x9b:												/* WAIT */

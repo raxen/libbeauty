@@ -40,36 +40,37 @@ enum {
 	IND_IO,
 };
 
-#define NOP 0
-#define MOV 1
-#define ADD 2
-#define ADC 3
-#define SUB 4
-#define SBB 5
-#define OR  6
-#define XOR 7
-#define rAND 8
-#define NOT 9
-#define TEST 10
-#define NEG 11
-#define CMP 12
-#define MUL 13
-#define IMUL 14
-#define DIV 15
-#define IDIV 16
-#define JMP 17 /* Relative */
-#define CALL 18 /* non-relative */ 
-#define IF  19
-#define ROL 20
-#define ROR 21
-#define RCL 22
-#define RCR 23
-#define SHL 24
-#define SHR 25
-#define SAR 26
-#define IN  27
-#define OUT 28
-#define RET 29 /* Special instruction for helping to print the "return local_regNNNN;" */
+#define NOP 0x00
+#define MOV 0x01
+#define ADD 0x02
+#define ADC 0x03
+#define SUB 0x04
+#define SBB 0x05
+#define OR  0x06
+#define XOR 0x07
+#define rAND 0x08
+#define NOT 0x09
+#define TEST 0x0a
+#define NEG 0x0b
+#define CMP 0x0c
+#define MUL 0x0d
+#define IMUL 0x0e
+#define DIV 0x0f
+#define IDIV 0x10
+#define JMP 0x11 /* Relative */
+#define CALL 0x12 /* non-relative */ 
+#define IF  0x13
+#define ROL 0x14
+#define ROR 0x15
+#define RCL 0x16
+#define RCR 0x17
+#define SHL 0x18
+#define SHR 0x19
+#define SAR 0x1a
+#define IN  0x1b
+#define OUT 0x1c
+#define RET 0x1d /* Special instruction for helping to print the "return local_regNNNN;" */
+#define SEX 0x1e /* Signed Extention */
 
 #define OVERFLOW 0
 #define NOT_OVERFLOW 1
@@ -77,8 +78,8 @@ enum {
 #define NOT_BELOW 3
 #define EQUAL 4
 #define NOT_EQUAL 5
-#define ABOVE 6
-#define NOT_ABOVE 7
+#define BELOW_EQUAL 6
+#define ABOVE 7
 #define rSIGNED 8
 #define NO_SIGNED 9
 #define PARITY 10

@@ -74,8 +74,8 @@ char *condition_table[] = {
 	"NOT_BELOW_3",	/* Unsigned */
 	"EQUAL_4",	/* Signed or Unsigned */
 	"NOT_EQUAL_5",	/* Signed or Unsigned */
-	"ABOVE_6",	/* Unsigned */
-	"NOT_ABOVE_7",	/* Unsigned */
+	"BELOW_EQUAL_6",	/* Unsigned */
+	"ABOVE_7",	/* Unsigned */
 	"SIGNED_8",	/* Signed */
 	"NO_SIGNED_9",	/* Signed */
 	"PARITY_10",	/* Signed or Unsigned */
@@ -219,6 +219,7 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	case SHR:
 	case CMP:
 	case NOT:
+	case SEX:
 	/* FIXME: Add DIV */
 	//case DIV:
 	case JMP:
@@ -1049,9 +1050,11 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 	case CMP:
 		switch (condition) {
 		case LESS_EQUAL:
+		case BELOW_EQUAL:   /* Unsigned */
 			condition_string = " <= ";
 			break;
-		case GREATER_EQUAL:
+		case GREATER_EQUAL: /* Signed */
+//		case ABOVE_EQUAL:   /* Unsigned */
 			condition_string = " >= ";
 			break;
 		case GREATER:
@@ -1186,6 +1189,7 @@ int output_function_body(struct process_state_s *process_state,
 			(5 == inst_log1->value3.value_type)) {
 			switch (instruction->opcode) {
 			case MOV:
+			case SEX:
 				if (inst_log1->value1.value_type == 6) {
 					printf("ERROR1\n");
 					break;
@@ -1719,6 +1723,7 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			(5 == inst_log1->value3.value_type)) {
 			switch (instruction->opcode) {
 			case MOV:
+			case SEX:
 				if (inst_log1->value1.value_type == 6) {
 					printf("ERROR1\n");
 					break;
@@ -2312,6 +2317,7 @@ int main(int argc, char *argv[])
 		case SHL:
 		case SHR:
 		case CMP:
+		case SEX:
 			if (1 == instruction->dstA.indirect) {
 				value_id = inst_log1->value3.indirect_value_id;
 			} else {
@@ -2480,6 +2486,7 @@ int main(int argc, char *argv[])
 		case SHL:
 		case SHR:
 		case CMP:
+		case SEX:
 			value_id = label_redirect[value_id1].redirect;
 			if ((1 == labels[value_id].scope) &&
 				(2 == labels[value_id].type)) {
