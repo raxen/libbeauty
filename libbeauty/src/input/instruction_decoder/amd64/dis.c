@@ -1641,6 +1641,32 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			dis_instructions->instruction_number++;
 			result = 1;
 			break;
+		case 2:
+			instruction->opcode = CALL; /* CALL rm. E.g. ff 53 08 callq  *0x8(%rbx)    */
+			instruction->flags = 0;
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = 1;
+			instruction->srcA.value_size = 4;
+			if (!half) {
+				instruction->dstA.store = STORE_REG;
+	
+				instruction->dstA.indirect = IND_MEM;
+				instruction->dstA.indirect_size = 8;
+				if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+				    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
+					/* SP and BP use STACK memory and not DATA memory. */
+					instruction->dstA.indirect = IND_STACK;
+					instruction->dstA.indirect_size = 8;
+				}
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 4;
+			}
+			dis_instructions->instruction_number++;
+			result = 1;
+			break;
 		case 6: /* FIXME: not correct yet */
 			/* the pushl -4[%ecx] case */
 			/* Need to work out if -4[%ecx] is
