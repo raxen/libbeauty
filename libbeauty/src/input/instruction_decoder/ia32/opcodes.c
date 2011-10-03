@@ -56,10 +56,12 @@ char * opcode_table[] = {
 	"RCR",
 	"SHL",
 	"SHR",
+	"SAL",
 	"SAR",
 	"IN ",
 	"OUT",
-	"RET"
+	"RET",
+	"SEX"
 };
 
 /*

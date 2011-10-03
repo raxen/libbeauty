@@ -66,11 +66,12 @@ enum {
 #define RCR 0x17
 #define SHL 0x18
 #define SHR 0x19
-#define SAR 0x1a
-#define IN  0x1b
-#define OUT 0x1c
-#define RET 0x1d /* Special instruction for helping to print the "return local_regNNNN;" */
-#define SEX 0x1e /* Signed Extention */
+#define SAL 0x1a
+#define SAR 0x1b
+#define IN  0x1c
+#define OUT 0x1d
+#define RET 0x1e /* Special instruction for helping to print the "return local_regNNNN;" */
+#define SEX 0x1f /* Signed Extention */
 
 #define OVERFLOW 0
 #define NOT_OVERFLOW 1

@@ -217,6 +217,8 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	case XOR:
 	case SHL:
 	case SHR:
+	case SAL:
+	case SAR:
 	case CMP:
 	case NOT:
 	case SEX:
