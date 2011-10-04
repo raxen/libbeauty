@@ -822,7 +822,14 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		break;
 	case 0x62:												/* BOUND */
 		break;
-	case 0x63:												/* ARPL Ev,Rw */
+	case 0x63:												/* MOVS Rv,Rw */
+		/* MOVSDX: Signed extention. 32 bit to 64 bit. */
+		dis_Ex_Gx(handle, SEX, rex, dis_instructions, base_address, offset, &reg, width);
+		/* Correct value_size */
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number - 1];	
+		instruction->srcA.value_size = width / 2;
+		instruction->dstA.value_size = width;
+		result = 1;
 		break;
 	case 0x64:												/* SEG FS: */
 	case 0x65:												/* SEG GS: */
