@@ -642,7 +642,12 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 		//printf("disassemble_fn\n");
 		//disassemble_fn = disassembler (handle->bfd);
 		//printf("disassemble_fn done\n");
-		printf("disassemble: ");
+		printf("disassemble att  : ");
+	        disasm_info.disassembler_options = "att";
+		octets = (*disassemble_fn) (offset, &disasm_info);
+		printf("  octets=%d\n", octets);
+		printf("disassemble intel: ");
+	        disasm_info.disassembler_options = "intel";
 		octets = (*disassemble_fn) (offset, &disasm_info);
 		printf("  octets=%d\n", octets);
 		if (dis_instructions.bytes_used != octets) {
@@ -2075,7 +2080,7 @@ int main(int argc, char *argv[])
 	disasm_info.flavour = bfd_get_flavour(handle->bfd);
 	disasm_info.arch = bfd_get_arch(handle->bfd);
 	disasm_info.mach = bfd_get_mach(handle->bfd);
-	disasm_info.disassembler_options = NULL;
+	disasm_info.disassembler_options = "intel";
 	disasm_info.octets_per_byte = bfd_octets_per_byte(handle->bfd);
 	disasm_info.skip_zeroes = 8;
 	disasm_info.skip_zeroes_at_end = 3;

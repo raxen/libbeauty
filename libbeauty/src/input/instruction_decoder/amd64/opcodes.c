@@ -61,7 +61,7 @@ char * opcode_table[] = {
 	"IN ",
 	"OUT",
 	"RET",
-	"SEX"
+	"SEX"   /* Signed extension */
 };
 
 reg_t reg_table[] = {
