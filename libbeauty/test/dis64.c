@@ -1413,7 +1413,7 @@ int output_function_body(struct process_state_s *process_state,
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
 				break;
-			case SHL:
+			case SHL: //TODO: UNSIGNED
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
@@ -1442,7 +1442,65 @@ int output_function_body(struct process_state_s *process_state,
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
 				tmp = fprintf(fd, ";\n");
 				break;
-			case SHR:
+			case SHR: //TODO: UNSIGNED
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				if (1 == instruction->dstA.indirect) {
+					tmp = fprintf(fd, "*");
+					value_id = inst_log1->value3.indirect_value_id;
+				} else {
+					value_id = inst_log1->value3.value_id;
+				}
+				tmp = label_redirect[value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
+				tmp = fprintf(fd, " >>= ");
+				printf("\nstore=%d\n", instruction->srcA.store);
+				if (1 == instruction->srcA.indirect) {
+					tmp = fprintf(fd, "*");
+					value_id = inst_log1->value1.indirect_value_id;
+				} else {
+					value_id = inst_log1->value1.value_id;
+				}
+				tmp = label_redirect[value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
+				tmp = fprintf(fd, ";\n");
+				break;
+			case SAL: //TODO: SIGNED
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				if (1 == instruction->dstA.indirect) {
+					tmp = fprintf(fd, "*");
+					value_id = inst_log1->value3.indirect_value_id;
+				} else {
+					value_id = inst_log1->value3.value_id;
+				}
+				tmp = label_redirect[value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
+				tmp = fprintf(fd, " <<= ");
+				printf("\nstore=%d\n", instruction->srcA.store);
+				if (1 == instruction->srcA.indirect) {
+					tmp = fprintf(fd, "*");
+					value_id = inst_log1->value1.indirect_value_id;
+				} else {
+					value_id = inst_log1->value1.value_id;
+				}
+				tmp = label_redirect[value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
+				tmp = fprintf(fd, ";\n");
+				break;
+			case SAR: //TODO: SIGNED
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
@@ -1762,6 +1820,8 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			case NOT:
 			case SHL:
 			case SHR:
+			case SAL:
+			case SAR:
 				if (1 == instruction->dstA.indirect) {
 					value_id = inst_log1->value3.indirect_value_id;
 				} else {
@@ -2323,6 +2383,8 @@ int main(int argc, char *argv[])
 		case NOT:
 		case SHL:
 		case SHR:
+		case SAL:
+		case SAR:
 		case CMP:
 		case SEX:
 			if (1 == instruction->dstA.indirect) {
@@ -2492,6 +2554,8 @@ int main(int argc, char *argv[])
 		case NOT:
 		case SHL:
 		case SHR:
+		case SAL:
+		case SAR:
 		case CMP:
 		case SEX:
 			value_id = label_redirect[value_id1].redirect;
