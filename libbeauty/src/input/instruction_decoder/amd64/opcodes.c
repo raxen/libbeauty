@@ -30,38 +30,38 @@
 #include "internal.h"
 
 char * opcode_table[] = {
-	"NOP",
-	"MOV",
-	"ADD",
-	"ADC",
-	"SUB",
-	"SBB",
-	"OR ",
-	"XOR",
-	"AND",
-	"NOT",
-	"TEST",
-	"NEG",
-	"CMP",
-	"MUL",
-	"IMUL",
-	"DIV",
-	"IDIV",
-	"JMP",
-	"CALL",
-	"IF ",
-	"ROL",  /* ROL,ROR etc. might be reduced to simpler equivalents. */
-	"ROR",
-	"RCL",
-	"RCR",
-	"SHL",
-	"SHR",
-	"SAL",
-	"SAR",
-	"IN ",
-	"OUT",
-	"RET",
-	"SEX"   /* Signed extension */
+	"NOP",   // 0x00
+	"MOV",   // 0x01
+	"ADD",   // 0x02
+	"ADC",   // 0x03
+	"SUB",   // 0x04
+	"SBB",   // 0x05
+	"OR ",   // 0x06
+	"XOR",   // 0x07
+	"AND",   // 0x08
+	"NOT",   // 0x09
+	"TEST",  // 0x0A
+	"NEG",   // 0x0B
+	"CMP",   // 0x0C
+	"MUL",   // 0x0D
+	"IMUL",  // 0x0E
+	"DIV",   // 0x0F
+	"IDIV",  // 0x10
+	"JMP",   // 0x11
+	"CALL",  // 0x12
+	"IF ",   // 0x13
+	"ROL",   // 0x14  /* ROL,ROR etc. might be reduced to simpler equivalents. */
+	"ROR",   // 0x15
+	"RCL",   // 0x16
+	"RCR",   // 0x17
+	"SHL",   // 0x18
+	"SHR",   // 0x19
+	"SAL",   // 0x1A
+	"SAR",   // 0x1B
+	"IN ",   // 0x1C
+	"OUT",   // 0x1D
+	"RET",   // 0x1E
+	"SEX"    // 0x1F   /* Signed extension */
 };
 
 reg_t reg_table[] = {

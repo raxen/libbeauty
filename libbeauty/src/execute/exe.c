@@ -50,18 +50,24 @@
 
 
 uint64_t read_data(struct self_s *self, uint64_t offset, int size) {
-	uint64_t tmp, tmp2, tmp3;
+	uint64_t tmp, tmp2, tmp3, limit;
 	int n;
 
 	tmp = 0;
-	printf("read_data:offset = %"PRIx64"\n", offset);
-	for (n = (size - 1); n >= 0; n--) {
-		tmp2 = (tmp << 8);
-		tmp3 = self->data[n + offset];
-		printf("read_data:data = %"PRIx64"\n", tmp3);
-		tmp = tmp2 | tmp3;
+	printf("read_data:offset = 0x%"PRIx64", size = %d\n", offset, size);
+	limit = offset + size - 1;
+	if (limit <= self->data_size) {
+		for (n = (size - 1); n >= 0; n--) {
+			tmp2 = (tmp << 8);
+			tmp3 = self->data[n + offset];
+			printf("read_data:data = 0x%"PRIx64"\n", tmp3);
+			tmp = tmp2 | tmp3;
+		}
+	} else {
+		printf("read_data: offset out of range\n");
+		tmp = 0;
 	}
-	printf("read_data:return = %"PRIx64"\n", tmp);
+	printf("read_data:return = 0x%"PRIx64"\n", tmp);
 	
 	return tmp;
 }
@@ -107,7 +113,7 @@ struct memory_s *add_new_store(
 	uint64_t memory_end;
 	struct memory_s *result = NULL;
 
-	printf("memory=%p, index=%"PRIx64", size=%d\n", memory, index, size);
+	printf("add_new_store: memory=%p, index=0x%"PRIx64", size=%d\n", memory, index, size);
 	while (memory[n].valid == 1) {
 		printf("looping\n");
 		memory_start = memory[n].start_address;
