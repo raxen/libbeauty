@@ -268,7 +268,7 @@ static int get_value_RTL_instruction(
 		/* m - memory */
 		printf("%s-indirect\n", info);
 		printf("%s-memory\n", info);
-		printf("index=%"PRIx64", indirect_size=%d, value_size=%d",
+		printf("index=%"PRIx64", indirect_size=%d, value_size=%d\n",
 				source->index,
 				source->indirect_size,
 				source->value_size);
