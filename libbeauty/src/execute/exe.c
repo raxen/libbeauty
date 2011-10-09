@@ -153,6 +153,15 @@ exit_add_new_store:
 	return result;
 }
 
+static int source_equals_dest(operand_t *srcA, operand_t *dstA)
+{
+	int tmp, ret;
+	tmp = memcmp(srcA, dstA, sizeof(operand_t));
+	ret = 0;
+	if (tmp == 0) ret = 1;
+	return ret;
+}
+
 static int get_value_RTL_instruction(
 	struct self_s *self,
 	struct process_state_s *process_state,
@@ -735,6 +744,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 	int32_t tmp32s;
 	int64_t tmp64s;
 	uint64_t tmp64u;
+	int tmp;
 
 	memory_text = process_state->memory_text;
 	memory_stack = process_state->memory_stack;
@@ -1067,8 +1077,16 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		put_value_RTL_instruction(self, process_state, inst);
 		break;
 	case XOR:
+		/* If XOR against itself, this is a special case of making a dst value out of a src value,
+		    but not really using the src value. 
+		    So, the source value cannot be considered a PARAM
+		    If tmp == 0, set scope to PARAM in get_value_RTL_intruction.
+		    If tmp == 1, set scope to LOCAL in get_value_RTL_intruction.
+		    TODO: Change output .c code from "local1 ^= local1;" to "local1 = 0;"
+		 */
+		tmp = source_equals_dest(&(instruction->srcA), &(instruction->dstA));
 		/* Get value of srcA */
-		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), tmp); 
 		/* Get value of dstA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
@@ -1269,7 +1287,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		/* Get value of srcA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
-		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 0); 
 		/* Create result */
 		printf("SAR\n");
 		inst->value3.start_address = inst->value2.start_address;
