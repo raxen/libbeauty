@@ -66,6 +66,11 @@ uint64_t inst_log = 1;	/* Pointer to the current free instruction log entry. */
 int local_counter = 1;
 struct self_s *self = NULL;
 
+int reg_params_order[] = {
+	0x40,
+	0x38,
+	0x18
+};
 
 char *condition_table[] = {
 	"OVERFLOW_0", /* Signed */
@@ -2866,20 +2871,45 @@ int main(int argc, char *argv[])
 		if (external_entry_points[l].valid &&
 			external_entry_points[l].type == 1) {
 			struct process_state_s *process_state;
+			int tmp_state;
 			
 			process_state = &external_entry_points[l].process_state;
 
 			tmp = fprintf(fd, "\n");
 			output_function_name(fd, &external_entry_points[l]);
+			tmp_state = 0;
+			for (m = 0; m < 3; m++) {
+				struct label_s *label;
+				for (n = 0; n < external_entry_points[l].params_size; n++) {
+					label = &labels[external_entry_points[l].params[n]];
+					printf("reg_params_order = 0x%x, label->value = 0x%"PRIx64"\n", reg_params_order[m], label->value);
+					if ((label->scope == 2) &&
+						(label->type == 1) &&
+						(label->value == reg_params_order[m])) {
+						if (tmp_state > 0) {
+							fprintf(fd, ", ");
+						}
+						fprintf(fd, "int%"PRId64"_t ",
+							label->size_bits);
+						tmp = output_label(label, fd);
+						tmp_state++;
+					}
+				}
+			}
 			for (n = 0; n < external_entry_points[l].params_size; n++) {
 				struct label_s *label;
-				if (n > 0) {
+				label = &labels[external_entry_points[l].params[n]];
+				if ((label->scope == 2) &&
+					(label->type == 1)) {
+					continue;
+				}
+				if (tmp_state > 0) {
 					fprintf(fd, ", ");
 				}
-				label = &labels[external_entry_points[l].params[n]];
 				fprintf(fd, "int%"PRId64"_t ",
 					label->size_bits);
 				tmp = output_label(label, fd);
+				tmp_state++;
 			}
 			tmp = fprintf(fd, ")\n{\n");
 			for (n = 0; n < external_entry_points[l].locals_size; n++) {
