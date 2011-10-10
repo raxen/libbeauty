@@ -133,19 +133,19 @@ struct extension_call_s {
  */
 
 
-#define RELOCATION_SIZE 100
-#define EXTERNAL_ENTRY_POINTS_SIZE 100
+#define RELOCATION_SIZE 1000
+#define EXTERNAL_ENTRY_POINTS_SIZE 1000
 struct relocation_s relocations[RELOCATION_SIZE];
 struct external_entry_point_s external_entry_points[EXTERNAL_ENTRY_POINTS_SIZE];
 
 /* For the .text segment. I.e. Instructions. */
-#define MEMORY_TEXT_SIZE 1000
-#define MEMORY_STACK_SIZE 1000
+#define MEMORY_TEXT_SIZE 10000
+#define MEMORY_STACK_SIZE 10000
 #define MEMORY_REG_SIZE 100
 /* For the .data segment. I.e. Static data */
-#define MEMORY_DATA_SIZE 1000
-#define MEMORY_USED_SIZE 1000
-#define INST_LOG_ENTRY_SIZE 1000
+#define MEMORY_DATA_SIZE 10000
+#define MEMORY_USED_SIZE 10000
+#define INST_LOG_ENTRY_SIZE 10000
 #define ENTRY_POINTS_SIZE 1000
 
 /* Used to store details of each instruction.
@@ -1795,6 +1795,7 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			switch (instruction->opcode) {
 			case MOV:
 			case SEX:
+				printf("SEX\n");
 				if (inst_log1->value1.value_type == 6) {
 					printf("ERROR1\n");
 					break;
