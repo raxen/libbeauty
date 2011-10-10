@@ -787,6 +787,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("MOV\n");
+		printf("MOV dest length = %d %d %d\n", inst->value1.length, inst->value2.length, inst->value3.length);
 		inst->value3.start_address = inst->value2.start_address;
 		inst->value3.length = inst->value1.length;
 		inst->value3.init_value_type = inst->value1.init_value_type;
@@ -835,6 +836,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		put_value_RTL_instruction(self, process_state, inst);
 		break;
 	case SEX:
+		printf("SEX dest length = %d %d %d\n", inst->value1.length, inst->value2.length, inst->value3.length);
 		/* Get value of srcA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */
@@ -842,7 +844,15 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		/* Create result */
 		printf("SEX\n");
 		inst->value3.start_address = inst->value2.start_address;
-		inst->value3.length = inst->value2.length;
+		/* Special case for SEX instruction. */
+		/* FIXME: Stored value in reg store should be size modified */
+		value = search_store(process_state->memory_reg,
+				instruction->dstA.index,
+				instruction->dstA.value_size);
+		value->length = instruction->dstA.value_size;
+		//inst->value3.length = inst->value2.length;
+		inst->value3.length = instruction->dstA.value_size;
+		printf("SEX dest length = %d %d %d\n", inst->value1.length, inst->value2.length, inst->value3.length);
 		inst->value3.init_value_type = inst->value1.init_value_type;
 		if (8 == inst->value3.length) {
 			tmp32s = inst->value1.init_value;
@@ -919,6 +929,7 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
 		/* Create result */
 		printf("ADD\n");
+		printf("ADD dest length = %d %d %d\n", inst->value1.length, inst->value2.length, inst->value3.length);
 		inst->value3.start_address = inst->value2.start_address;
 		inst->value3.length = inst->value2.length;
 		inst->value3.init_value_type = inst->value2.init_value_type;
@@ -1011,6 +1022,85 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.init_value_type = inst->value2.init_value_type;
 		inst->value3.init_value = inst->value2.init_value;
 		inst->value3.offset_value = inst->value2.offset_value -
+			inst->value1.init_value;
+		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		put_value_RTL_instruction(self, process_state, inst);
+		break;
+	case TEST:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("TEST \n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = 0;
+		inst->value3.offset_value = (inst->value2.offset_value +
+			inst->value2.init_value) &
+			inst->value1.init_value;
+		inst->value3.value_type = inst->value2.value_type;
+		if (inst->instruction.dstA.indirect) {
+			inst->value3.indirect_init_value =
+				inst->value2.indirect_init_value;
+			inst->value3.indirect_offset_value =
+				inst->value2.indirect_offset_value;
+			inst->value3.indirect_value_id =
+				inst->value2.indirect_value_id;
+		}
+		inst->value3.ref_memory =
+			inst->value2.ref_memory;
+		inst->value3.ref_log =
+			inst->value2.ref_log;
+		inst->value3.value_scope = inst->value2.value_scope;
+		/* Counter */
+		inst->value3.value_id = inst->value2.value_id;
+		/* 1 - Entry Used */
+		inst->value3.valid = 1;
+			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
+				inst->value3.init_value,
+				inst->value3.offset_value,
+				inst->value3.init_value +
+					inst->value3.offset_value);
+		/* Fixme handle saving flags */
+		//put_value_RTL_instruction(self, process_state, inst);
+		break;
+	case rAND:
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
+		/* Get value of dstA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
+		/* Create result */
+		printf("AND \n");
+		inst->value3.start_address = inst->value2.start_address;
+		inst->value3.length = inst->value2.length;
+		inst->value3.init_value_type = inst->value2.init_value_type;
+		inst->value3.init_value = 0;
+		inst->value3.offset_value = (inst->value2.offset_value +
+			inst->value2.init_value) &
 			inst->value1.init_value;
 		inst->value3.value_type = inst->value2.value_type;
 		if (inst->instruction.dstA.indirect) {

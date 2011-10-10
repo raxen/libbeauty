@@ -619,6 +619,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x20:												/* AND Eb,Gb */
 		break;
 	case 0x21:												/* AND Ev,Gv */
+		dis_Ex_Gx(handle, rAND, rex, dis_instructions, base_address, offset, &reg, width);
+		result = 1;
 		break;
 	case 0x22:												/* AND Gb,Eb */
 		break;
@@ -957,6 +959,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x84:												/* TEST Eb,Gb */
 		break;
 	case 0x85:												/* TEST Ev,Gv */
+		dis_Ex_Gx(handle, TEST, rex, dis_instructions, base_address, offset, &reg, width);
+		result = 1;
 		break;
 	case 0x86:												/* XCHG Eb,Gb */
 	case 0x87:												/* XCHG Ev,Gv */
@@ -1196,7 +1200,6 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		dis_instructions->instruction_number++;
 		result = 1;
 		break;
-
 	case 0xc0:												/* GRP2 Eb,Ib */
 		break;
 	case 0xc1:												/* GRP2 Ev,Ib */
@@ -1370,6 +1373,31 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xd1:												/* GRP2 Ev,1 */
 	case 0xd2:												/* GRP2 Eb,CL */
 	case 0xd3:												/* GRP2 Ev,CL */
+		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = shift2_table[reg];
+		instruction->flags = 1;
+		instruction->srcA.store = STORE_REG;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 1;
+		instruction->srcA.index = REG_CX;
+		instruction->srcA.value_size = 1;
+		if (!half) {
+    			instruction->dstA.indirect = IND_MEM;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.store = STORE_REG;
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
+				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
+				instruction->dstA.indirect_size = 8;
+			}
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = width;
+		}
+		dis_instructions->instruction_number++;
+		result = 1;
+		break;
 	case 0xd4:												/* AAM Ib */
 	case 0xd5:												/* AAD Ib */
 	case 0xd6:												/* SALC */

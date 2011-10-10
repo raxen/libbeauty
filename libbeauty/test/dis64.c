@@ -219,6 +219,7 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	case ADD:
 	case SUB:
 	case MUL:
+	case rAND:
 	case OR:
 	case XOR:
 	case SHL:
@@ -228,6 +229,7 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	case CMP:
 	case NOT:
 	case SEX:
+	case TEST:
 	/* FIXME: Add DIV */
 	//case DIV:
 	case JMP:
