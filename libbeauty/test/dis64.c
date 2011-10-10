@@ -66,6 +66,7 @@ uint64_t inst_log = 1;	/* Pointer to the current free instruction log entry. */
 int local_counter = 1;
 struct self_s *self = NULL;
 
+#define REG_PARAMS_ORDER_MAX 3
 int reg_params_order[] = {
 	0x40,
 	0x38,
@@ -2878,7 +2879,7 @@ int main(int argc, char *argv[])
 			tmp = fprintf(fd, "\n");
 			output_function_name(fd, &external_entry_points[l]);
 			tmp_state = 0;
-			for (m = 0; m < 3; m++) {
+			for (m = 0; m < REG_PARAMS_ORDER_MAX; m++) {
 				struct label_s *label;
 				for (n = 0; n < external_entry_points[l].params_size; n++) {
 					label = &labels[external_entry_points[l].params[n]];
