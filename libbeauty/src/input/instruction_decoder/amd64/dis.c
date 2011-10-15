@@ -121,7 +121,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 	switch (mod) {
 	case 0:
 		/* Special case uses SIB */
-		if (reg_mem == 4) {
+		if ((reg_mem == 4) || (reg_mem > 7) ) {
 			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
 			dis_instructions->bytes_used++;
 			/* FIXME: index == 4 not explicitly handled */
@@ -247,7 +247,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		break;
 	case 1:
 		/* Special case uses SIB */
-		if (reg_mem == 4) {
+		if ((reg_mem == 4) || (reg_mem > 7) ) {
 			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
 			dis_instructions->bytes_used++;
 			/* FIXME: index == 4 not explicitly handled */
@@ -436,7 +436,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		break;
 	case 2:
 		/* Special case uses SIB */
-		if (reg_mem == 4) {
+		if ((reg_mem == 4) || (reg_mem > 7) ) {
 			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
 			dis_instructions->bytes_used++;
 			/* FIXME: index == 4 not explicitly handled */
@@ -2106,7 +2106,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xfe:												/* GRP4 Eb */
 		break;
 	case 0xff:												/* GRP5 Ev */
-		/* Cannot handle: 41 ff 54 24 08 */
+		/* FIXED: Cannot handle: 41 ff 54 24 08 */
 		half = base_address[offset + dis_instructions->bytes_used] & 0x38;
 		if (half == 0x30) { /* Special for the PUSH case */
 			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
