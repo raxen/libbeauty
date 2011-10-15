@@ -25,7 +25,7 @@
 
  Naming convention taken from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
-
+#include <stdlib.h>
 #include <dis.h>
 #include "internal.h"
 
@@ -64,6 +64,8 @@ uint32_t relocated_code(struct rev_eng *handle, uint8_t *base_address, uint64_t 
 void split_ModRM(uint8_t byte, uint8_t rex, uint8_t *reg,  uint8_t *reg_mem, uint8_t *mod) {
 	*reg = (byte >> 3) & 0x7; //bits 3-5
 	*reg_mem = (byte & 0x7); //bits 0-2
+	/* mod: 00, 01, 10 = various memory addressing modes. */
+	/* mod: 11 = register */
 	*mod = (byte >> 6); //bit 6-7
 	if (rex & 0x4) {
 		*reg = *reg | 0x8;
@@ -98,13 +100,15 @@ void split_SIB(uint8_t byte, uint8_t rex, uint8_t *mul,  uint8_t *index, uint8_t
 		*base);
 }
 
-int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint64_t size, uint8_t rex, uint8_t *return_reg) {
+/* Refer to Intel reference: Volume 2A, section 2.1.3 Mod R/M and SIB Bytes */
+int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint64_t size, uint8_t rex, uint8_t *return_reg, int *half) {
 	uint8_t reg;
 	uint8_t reg_mem;
 	uint8_t mod;
 	uint8_t mul, index, base;
 	instruction_t *instruction;
 	int	tmp;
+	int	result = 0;
 	struct reloc_table *reloc_table_entry;
 	/* Does not always start at zero.
 	 * e.g. 0xff 0x71 0xfd pushl -0x4(%ecx)
@@ -114,8 +118,447 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 	split_ModRM(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &reg, &reg_mem, &mod);
 	dis_instructions->bytes_used++;
 	*return_reg = reg;
-	if (mod == 3) {  // Special case Reg to Reg transfer
-/* Fill in half of instruction */
+	switch (mod) {
+	case 0:
+		/* Special case uses SIB */
+		if (reg_mem == 4) {
+			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
+			dis_instructions->bytes_used++;
+			/* FIXME: index == 4 not explicitly handled */
+			if (index != 4) {
+				/* Handle scaled index */
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+				instruction->srcA.store = STORE_REG;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				instruction->srcA.index = reg_table[index].offset;
+				instruction->srcA.relocated = 0;
+				instruction->srcA.value_size = reg_table[index].size;
+				printf("Got here1\n");
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+				/* Skip * 1 */
+				if (mul > 0) {
+					instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+					instruction->opcode = MUL;
+					instruction->flags = 0;
+					instruction->srcA.store = STORE_DIRECT;
+					instruction->srcA.indirect = IND_DIRECT;
+					instruction->srcA.indirect_size = 8;
+					instruction->srcA.index = 1 << mul;
+					instruction->srcA.relocated = 0;
+					instruction->srcA.value_size = size;
+					instruction->dstA.store = STORE_REG;
+					instruction->dstA.indirect = IND_DIRECT;
+					instruction->dstA.indirect_size = 8;
+					instruction->dstA.index = REG_TMP1;
+					instruction->dstA.relocated = 0;
+					instruction->dstA.value_size = 8;
+					dis_instructions->instruction_number++;
+				}
+			}
+			if (base == 5) {
+				/* Handle base==5 */
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
+				if (dis_instructions->instruction_number > number) {
+					instruction->opcode = ADD;
+					instruction->flags = 0;
+				} else {
+					instruction->opcode = MOV;
+					instruction->flags = 0;
+				}
+				instruction->srcA.store = STORE_REG;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				instruction->srcA.index = REG_BP;
+				instruction->srcA.relocated = 0;
+				instruction->srcA.value_size = size;
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+			} else {
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+				if (dis_instructions->instruction_number > number) {
+					instruction->opcode = ADD;
+					instruction->flags = 0;
+				} else {
+					instruction->opcode = MOV;
+					instruction->flags = 0;
+				}
+				instruction->srcA.store = STORE_REG;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				instruction->srcA.index = reg_table[base].offset;
+				instruction->srcA.relocated = 0;
+				instruction->srcA.value_size = reg_table[base].size;
+				printf("Got here2\n");
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+			}
+			result = 1;
+		} else if (reg_mem == 5) {
+			printf("Unhandled rmb 0\n");
+			result = 0;
+		} else {
+			/* Not SIB */
+			printf("MODRM mod 1 number=0x%x\n", number);
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			if (dis_instructions->instruction_number > number) {
+				instruction->opcode = ADD;
+				instruction->flags = 0;
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
+			instruction->srcA.store = STORE_REG;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = reg_table[reg_mem].offset;
+			instruction->srcA.relocated = 0;
+			//instruction->srcA.value_size = reg_table[reg_mem].size;
+			instruction->srcA.value_size = 8;
+			printf("Got here3 size = %d\n", instruction->srcA.value_size);
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 8;
+			dis_instructions->instruction_number++;
+
+			result = 1;
+		}
+		break;
+	case 1:
+		/* Special case uses SIB */
+		if (reg_mem == 4) {
+			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
+			dis_instructions->bytes_used++;
+			/* FIXME: index == 4 not explicitly handled */
+			if (index != 4) {
+				/* Handle scaled index */
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+				instruction->srcA.store = STORE_REG;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				instruction->srcA.index = reg_table[index].offset;
+				instruction->srcA.relocated = 0;
+				instruction->srcA.value_size = reg_table[index].size;
+				printf("Got here1\n");
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+				/* Skip * 1 */
+				if (mul > 0) {
+					instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+					instruction->opcode = MUL;
+					instruction->flags = 0;
+					instruction->srcA.store = STORE_DIRECT;
+					instruction->srcA.indirect = IND_DIRECT;
+					instruction->srcA.indirect_size = 8;
+					instruction->srcA.index = 1 << mul;
+					instruction->srcA.relocated = 0;
+					instruction->srcA.value_size = size;
+					instruction->dstA.store = STORE_REG;
+					instruction->dstA.indirect = IND_DIRECT;
+					instruction->dstA.indirect_size = 8;
+					instruction->dstA.index = REG_TMP1;
+					instruction->dstA.relocated = 0;
+					instruction->dstA.value_size = 8;
+					dis_instructions->instruction_number++;
+				}
+			}
+			if (base == 5) {
+				/* Handle base==5 */
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
+				if (dis_instructions->instruction_number > number) {
+					instruction->opcode = ADD;
+					instruction->flags = 0;
+				} else {
+					instruction->opcode = MOV;
+					instruction->flags = 0;
+				}
+				instruction->srcA.store = STORE_REG;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				instruction->srcA.index = REG_BP;
+				instruction->srcA.relocated = 0;
+				instruction->srcA.value_size = size;
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+			} else {
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+				if (dis_instructions->instruction_number > number) {
+					instruction->opcode = ADD;
+					instruction->flags = 0;
+				} else {
+					instruction->opcode = MOV;
+					instruction->flags = 0;
+				}
+				instruction->srcA.store = STORE_REG;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				instruction->srcA.index = reg_table[base].offset;
+				instruction->srcA.relocated = 0;
+				instruction->srcA.value_size = reg_table[base].size;
+				printf("Got here2\n");
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+			}
+			result = 1;
+		} else {
+			/* Not SIB */
+			printf("MODRM mod 1 number=0x%x\n", number);
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			if (dis_instructions->instruction_number > number) {
+				instruction->opcode = ADD;
+				instruction->flags = 0;
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
+			instruction->srcA.store = STORE_REG;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = reg_table[reg_mem].offset;
+			instruction->srcA.relocated = 0;
+			//instruction->srcA.value_size = reg_table[reg_mem].size;
+			instruction->srcA.value_size = 8;
+			printf("Got here3 size = %d\n", instruction->srcA.value_size);
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 8;
+			dis_instructions->instruction_number++;
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			if (dis_instructions->instruction_number > number) {
+				instruction->opcode = ADD;
+				instruction->flags = 0; /* Do not effect flags, just calculated indirect memory location */
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			/* mod 1 */
+			printf("Got here4 size = 1\n");
+			instruction->srcA.value_size = 8;
+			instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+			instruction->srcA.relocated = 0;
+			printf("Got here4 byte = 0x%"PRIx64"\n", instruction->srcA.index);
+			/* if the offset is negative,
+			 * replace ADD with SUB */
+			if ((instruction->opcode == ADD) &&
+				(instruction->srcA.index > 0x7f)) {
+				instruction->opcode = SUB;
+				tmp = 0x100 - instruction->srcA.index;
+				instruction->srcA.index = tmp;
+			}
+			dis_instructions->bytes_used++;
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 8;
+			dis_instructions->instruction_number++;
+
+			result = 1;
+		}
+		break;
+	case 2:
+		/* Special case uses SIB */
+		if (reg_mem == 4) {
+			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
+			dis_instructions->bytes_used++;
+			/* FIXME: index == 4 not explicitly handled */
+			if (index != 4) {
+				/* Handle scaled index */
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+				instruction->srcA.store = STORE_REG;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				instruction->srcA.index = reg_table[index].offset;
+				instruction->srcA.relocated = 0;
+				instruction->srcA.value_size = reg_table[index].size;
+				printf("Got here1\n");
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+				/* Skip * 1 */
+				if (mul > 0) {
+					instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+					instruction->opcode = MUL;
+					instruction->flags = 0;
+					instruction->srcA.store = STORE_DIRECT;
+					instruction->srcA.indirect = IND_DIRECT;
+					instruction->srcA.indirect_size = 8;
+					instruction->srcA.index = 1 << mul;
+					instruction->srcA.relocated = 0;
+					instruction->srcA.value_size = size;
+					instruction->dstA.store = STORE_REG;
+					instruction->dstA.indirect = IND_DIRECT;
+					instruction->dstA.indirect_size = 8;
+					instruction->dstA.index = REG_TMP1;
+					instruction->dstA.relocated = 0;
+					instruction->dstA.value_size = 8;
+					dis_instructions->instruction_number++;
+				}
+			}
+			if (base == 5) {
+				/* Handle base==5 */
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
+				if (dis_instructions->instruction_number > number) {
+					instruction->opcode = ADD;
+					instruction->flags = 0;
+				} else {
+					instruction->opcode = MOV;
+					instruction->flags = 0;
+				}
+				instruction->srcA.store = STORE_REG;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				instruction->srcA.index = REG_BP;
+				instruction->srcA.relocated = 0;
+				instruction->srcA.value_size = size;
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+			} else {
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+				if (dis_instructions->instruction_number > number) {
+					instruction->opcode = ADD;
+					instruction->flags = 0;
+				} else {
+					instruction->opcode = MOV;
+					instruction->flags = 0;
+				}
+				instruction->srcA.store = STORE_REG;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				instruction->srcA.index = reg_table[base].offset;
+				instruction->srcA.relocated = 0;
+				instruction->srcA.value_size = reg_table[base].size;
+				printf("Got here2\n");
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+			}
+			result = 1;
+		} else {
+			/* Not SIB */
+			printf("MODRM mod 1 number=0x%x\n", number);
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			if (dis_instructions->instruction_number > number) {
+				instruction->opcode = ADD;
+				instruction->flags = 0;
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
+			instruction->srcA.store = STORE_REG;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = reg_table[reg_mem].offset;
+			instruction->srcA.relocated = 0;
+			//instruction->srcA.value_size = reg_table[reg_mem].size;
+			instruction->srcA.value_size = 8;
+			printf("Got here3 size = %d\n", instruction->srcA.value_size);
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 8;
+			dis_instructions->instruction_number++;
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			if (dis_instructions->instruction_number > number) {
+				instruction->opcode = ADD;
+				instruction->flags = 0; /* Do not effect flags, just calculated indirect memory location */
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			/* mod 1 */
+			printf("Got here4 size = 1\n");
+			instruction->srcA.value_size = 8;
+			instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+			instruction->srcA.relocated = 0;
+			printf("Got here4 byte = 0x%"PRIx64"\n", instruction->srcA.index);
+			/* if the offset is negative,
+			 * replace ADD with SUB */
+			if ((instruction->opcode == ADD) &&
+				(instruction->srcA.index > 0x7fffffff)) {
+				instruction->opcode = SUB;
+				tmp = 0x100000000 - instruction->srcA.index;
+				instruction->srcA.index = tmp;
+			}
+			dis_instructions->bytes_used+=4;
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 8;
+			dis_instructions->instruction_number++;
+
+			result = 1;
+		}
+		break;
+	case 3:  // Special case Reg to Reg transfer
+		/* Fill in half of instruction */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = NOP;
 		instruction->flags = 0;
@@ -131,43 +574,29 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		instruction->dstA.index = reg_table[reg_mem].offset;
 		instruction->dstA.relocated = 0;
 		instruction->dstA.value_size = size;
-		return 1;
+		*half = 1;
+		result = 1;
+		break;
 	}
+#if 0
+	case 2:
 	/* FIXME: Case where mod == 3 is not handled yet */
-	if ((reg_mem == 4) && (mod != 3)) {
-		split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
-		dis_instructions->bytes_used++;
-		/* FIXME: index == 4 not explicitly handled */
-		if (index != 4) {
-			/* Handle scaled index */
-			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
-			instruction->opcode = MOV;
-			instruction->flags = 0;
-			instruction->srcA.store = STORE_REG;
-			instruction->srcA.indirect = IND_DIRECT;
-			instruction->srcA.indirect_size = 8;
-			instruction->srcA.index = reg_table[index].offset;
-			instruction->srcA.relocated = 0;
-			instruction->srcA.value_size = reg_table[index].size;
-			printf("Got here1\n");
-			instruction->dstA.store = STORE_REG;
-			instruction->dstA.indirect = IND_DIRECT;
-			instruction->dstA.indirect_size = 8;
-			instruction->dstA.index = REG_TMP1;
-			instruction->dstA.relocated = 0;
-			instruction->dstA.value_size = 8;
-			dis_instructions->instruction_number++;
-			/* Skip * 1 */
-			if (mul > 0) {
+		if (reg_mem == 4) {
+			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
+			dis_instructions->bytes_used++;
+			/* FIXME: index == 4 not explicitly handled */
+			if (index != 4) {
+				/* Handle scaled index */
 				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
-				instruction->opcode = MUL;
+				instruction->opcode = MOV;
 				instruction->flags = 0;
-				instruction->srcA.store = STORE_DIRECT;
+				instruction->srcA.store = STORE_REG;
 				instruction->srcA.indirect = IND_DIRECT;
 				instruction->srcA.indirect_size = 8;
-				instruction->srcA.index = 1 << mul;
+				instruction->srcA.index = reg_table[index].offset;
 				instruction->srcA.relocated = 0;
-				instruction->srcA.value_size = size;
+				instruction->srcA.value_size = reg_table[index].size;
+				printf("Got here1\n");
 				instruction->dstA.store = STORE_REG;
 				instruction->dstA.indirect = IND_DIRECT;
 				instruction->dstA.indirect_size = 8;
@@ -175,9 +604,27 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 				instruction->dstA.relocated = 0;
 				instruction->dstA.value_size = 8;
 				dis_instructions->instruction_number++;
+				/* Skip * 1 */
+				if (mul > 0) {
+					instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+					instruction->opcode = MUL;
+					instruction->flags = 0;
+					instruction->srcA.store = STORE_DIRECT;
+					instruction->srcA.indirect = IND_DIRECT;
+					instruction->srcA.indirect_size = 8;
+					instruction->srcA.index = 1 << mul;
+					instruction->srcA.relocated = 0;
+					instruction->srcA.value_size = size;
+					instruction->dstA.store = STORE_REG;
+					instruction->dstA.indirect = IND_DIRECT;
+					instruction->dstA.indirect_size = 8;
+					instruction->dstA.index = REG_TMP1;
+					instruction->dstA.relocated = 0;
+					instruction->dstA.value_size = 8;
+					dis_instructions->instruction_number++;
+				}
 			}
-		}
-		if (base == 5) {
+			if (base == 5) {
 			/* Handle base==5 */
 			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
 			if (dis_instructions->instruction_number > number) {
@@ -187,6 +634,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 				instruction->opcode = MOV;
 				instruction->flags = 0;
 			}
+/*
 			if (mod==0) {
 				instruction->srcA.store = STORE_DIRECT;
 				instruction->srcA.indirect = IND_DIRECT;
@@ -199,14 +647,13 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 				}
 				dis_instructions->bytes_used+=4;
 				instruction->srcA.value_size = 4;
-			} else {
-				instruction->srcA.store = STORE_REG;
-				instruction->srcA.indirect = IND_DIRECT;
-				instruction->srcA.indirect_size = 8;
-				instruction->srcA.index = REG_BP;
-				instruction->srcA.relocated = 0;
-				instruction->srcA.value_size = size;
-			}
+*/
+			instruction->srcA.store = STORE_REG;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = REG_BP;
+			instruction->srcA.relocated = 0;
+			instruction->srcA.value_size = size;
 			instruction->dstA.store = STORE_REG;
 			instruction->dstA.indirect = IND_DIRECT;
 			instruction->dstA.indirect_size = 8;
@@ -311,6 +758,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 			instruction->srcA.value_size = 8;
 			instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
 			instruction->srcA.relocated = 0;
+			printf("Got here4 byte = 0x%"PRIx64"\n", instruction->srcA.index);
 			/* if the offset is negative,
 			 * replace ADD with SUB */
 			if ((instruction->opcode == ADD) &&
@@ -339,13 +787,20 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		dis_instructions->instruction_number++;
 	}
 	return 0;
+#endif
+	return result;
 }
 
-void dis_Ex_Gx(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
+int dis_Ex_Gx(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half;
+	int tmp;
 	instruction_t *instruction;
+	/* FIXME: Cannot handle 89 16 */
 
-	half = rmb(handle, dis_instructions, base_address, offset, size, rex, reg);
+	tmp = rmb(handle, dis_instructions, base_address, offset, size, rex, reg, &half);
+	if (!tmp) {
+		return 0;
+	}
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
@@ -372,13 +827,18 @@ void dis_Ex_Gx(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instr
 		instruction->dstA.value_size = size;
 	}
 	dis_instructions->instruction_number++;
+	return 1;
 }
 
-void dis_Gx_Ex(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
+int dis_Gx_Ex(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half=0;
+	int tmp;
 	instruction_t *instruction;
 
-	half = rmb(handle, dis_instructions, base_address, offset, size, rex, reg);
+	tmp = rmb(handle, dis_instructions, base_address, offset, size, rex, reg, &half);
+	if (!tmp) {
+		return 0;
+	}
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
@@ -403,15 +863,19 @@ void dis_Gx_Ex(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instr
 		instruction->srcA.value_size = size;
 	}
 	dis_instructions->instruction_number++;
+	return 1;
 }
 
-void dis_Ex_Ix(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
+int dis_Ex_Ix(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half;
 	int tmp;
 	struct reloc_table *reloc_table_entry;
 	instruction_t *instruction;
 
-	half = rmb(handle, dis_instructions, base_address, offset, size, rex, reg);
+	tmp = rmb(handle, dis_instructions, base_address, offset, size, rex, reg, &half);
+	if (!tmp) {
+		return 0;
+	}
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
@@ -443,6 +907,7 @@ void dis_Ex_Ix(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instr
 		instruction->dstA.value_size = size;
 	}
 	dis_instructions->instruction_number++;
+	return 1;
 }
 int dis_Ex(struct rev_eng *handle, int *table, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, int size) {
 	uint8_t reg;
@@ -512,20 +977,16 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 
 	switch(byte) {
 	case 0x00:												/* ADD Eb,Gb */
-		dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 1);
-		result = 1;
+		result = dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x01:												/* ADD Ev,Gv */
-		dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		result = dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x02:												/* ADD Gb,Eb */
-		dis_Gx_Ex(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 1);
-		result = 1;
+		result = dis_Gx_Ex(handle, ADD, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x03:												/* ADD Gv,Ev */
-		dis_Gx_Ex(handle, ADD, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		result = dis_Gx_Ex(handle, ADD, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x04:												/* ADD AL,Ib */
 		break;
@@ -560,20 +1021,17 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
                 /* POP -> ES=[SP]; SP=SP+4 (+2 for word); */
 		break;
 	case 0x08:												/* OR Eb,Gb */
-		dis_Ex_Gx(handle, OR, rex, dis_instructions, base_address, offset, &reg, 1);
-		result = 1;
+		result = dis_Ex_Gx(handle, OR, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x09:												/* OR Ev,Gv */
-		dis_Ex_Gx(handle, OR, rex, dis_instructions, base_address, offset, &reg, 4);
-		result = 1;
+		result = dis_Ex_Gx(handle, OR, rex, dis_instructions, base_address, offset, &reg, 4);
 		break;
 	case 0x0a:												/* OR Gb,Eb */
-		dis_Gx_Ex(handle, OR, rex, dis_instructions, base_address, offset, &reg, 1);
+		result = dis_Gx_Ex(handle, OR, rex, dis_instructions, base_address, offset, &reg, 1);
 		result = 1;
 		break;
 	case 0x0b:												/* OR Gv,Ev */
-		dis_Gx_Ex(handle, OR, rex, dis_instructions, base_address, offset, &reg, 4);
-		result = 1;
+		result = dis_Gx_Ex(handle, OR, rex, dis_instructions, base_address, offset, &reg, 4);
 		break;
 	case 0x0c:												/* OR AL,Ib */
 		break;
@@ -619,8 +1077,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x20:												/* AND Eb,Gb */
 		break;
 	case 0x21:												/* AND Ev,Gv */
-		dis_Ex_Gx(handle, rAND, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		result = dis_Ex_Gx(handle, rAND, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x22:												/* AND Gb,Eb */
 		break;
@@ -635,20 +1092,16 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x27:												/* DAA */
 		break;
 	case 0x28:												/* SUB Eb,Gb */
-		dis_Ex_Gx(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 1);
-		result = 1;
+		result = dis_Ex_Gx(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x29:												/* SUB Ev,Gv */
-		dis_Ex_Gx(handle, SUB, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		result = dis_Ex_Gx(handle, SUB, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x2a:												/* SUB Gb,Eb */
-		dis_Gx_Ex(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 1);
-		result = 1;
+		result = dis_Gx_Ex(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x2b:												/* SUB Gv,Ev */
-		dis_Gx_Ex(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 4);
-		result = 1;
+		result = dis_Gx_Ex(handle, SUB, rex, dis_instructions, base_address, offset, &reg, 4);
 		break;
 	case 0x2c:												/* SUB AL,Ib */
 		break;
@@ -683,16 +1136,13 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x30:												/* XOR Eb,Gb */
 		break;
 	case 0x31:												/* XOR Ev,Gv */
-		dis_Ex_Gx(handle, XOR, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		result = dis_Ex_Gx(handle, XOR, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x32:												/* XOR Gb,Eb */
-		dis_Gx_Ex(handle, XOR, rex, dis_instructions, base_address, offset, &reg, 1);
-		result = 1;
+		result = dis_Gx_Ex(handle, XOR, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x33:												/* XOR Gv,Ev */
-		dis_Gx_Ex(handle, XOR, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		result = dis_Gx_Ex(handle, XOR, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x34:												/* XOR AL,Ib */
 	case 0x35:												/* XOR eAX,Iv */
@@ -701,8 +1151,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x38:												/* AAA */
 		break;
 	case 0x39:												/* CMP Ev,Gv */
-		dis_Ex_Gx(handle, CMP, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		result = dis_Ex_Gx(handle, CMP, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x3a:												/* CMP Gb,Eb */
 	case 0x3b:												/* CMP Gv,Ev */
@@ -710,22 +1159,23 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x3d:												/* CMP eAX,Iv */
 	case 0x3e:												/* SEG DS: */
 	case 0x3f:												/* AAS */
-	case 0x40:												/* INC eAX */
-	case 0x41:												/* INC CX */
-	case 0x42:												/* INC DX */
-	case 0x43:												/* INC BX */
-	case 0x44:												/* INC SP */
-	case 0x45:												/* INC BP */
-	case 0x46:												/* INC SI */
-	case 0x47:												/* INC DI */
-	case 0x48:												/* DEC eAX */
-	case 0x49:												/* DEC CX */
-	case 0x4a:												/* DEC DX */
-	case 0x4b:												/* DEC BX */
-	case 0x4c:												/* DEC SP */
-	case 0x4d:												/* DEC BP */
-	case 0x4e:												/* DEC SI */
-	case 0x4f:												/* DEC DI */
+		break;
+	case 0x40:												/* REX */
+	case 0x41:												/*  */
+	case 0x42:												/*  */
+	case 0x43:												/*  */
+	case 0x44:												/*  */
+	case 0x45:												/*  */
+	case 0x46:												/*  */
+	case 0x47:												/*  */
+	case 0x48:												/*  */
+	case 0x49:												/*  */
+	case 0x4a:												/*  */
+	case 0x4b:												/*  */
+	case 0x4c:												/*  */
+	case 0x4d:												/*  */
+	case 0x4e:												/*  */
+	case 0x4f:												/*  */
 		break;
 /* PUSH reg. 0x50-0x57 is handled by same code. */
 	case 0x50:												/* PUSH eAX */
@@ -826,12 +1276,11 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		break;
 	case 0x63:												/* MOVS Rv,Rw */
 		/* MOVSDX: Signed extention. 32 bit to 64 bit. */
-		dis_Ex_Gx(handle, SEX, rex, dis_instructions, base_address, offset, &reg, width);
+		result = dis_Ex_Gx(handle, SEX, rex, dis_instructions, base_address, offset, &reg, width);
 		/* Correct value_size */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number - 1];	
 		instruction->srcA.value_size = width / 2;
 		instruction->dstA.value_size = width;
-		result = 1;
 		break;
 	case 0x64:												/* SEG FS: */
 	case 0x65:												/* SEG GS: */
@@ -890,7 +1339,11 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x80:												/* Grpl Eb,Ib */
 		break;
 	case 0x81:												/* Grpl Ev,Iv */
-		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
+		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
 		instruction->opcode = immed_table[reg];
 		instruction->flags = 1;
@@ -926,7 +1379,11 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x82:												/* Grpl Eb,Ib Mirror instruction */
 		break;
 	case 0x83:												/* Grpl Ev,Ix */
-		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
+		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = immed_table[reg];
 		instruction->flags = 1;
@@ -959,31 +1416,32 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x84:												/* TEST Eb,Gb */
 		break;
 	case 0x85:												/* TEST Ev,Gv */
-		dis_Ex_Gx(handle, TEST, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		result = dis_Ex_Gx(handle, TEST, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x86:												/* XCHG Eb,Gb */
 	case 0x87:												/* XCHG Ev,Gv */
 		break;
 	case 0x88:												/* MOV Eb,Gb */
-		dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, 1);
-		result = 1;
+		result = dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x89:												/* MOV Ev,Gv */
-		dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		/* FIXME: Cannot handle 89 16 */
+		result = dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x8a:												/* MOV Gb,Eb */
-		dis_Gx_Ex(handle, MOV, rex, dis_instructions, base_address, offset, &reg, 1);
-		result = 1;
+		result = dis_Gx_Ex(handle, MOV, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x8b:
 		/* MOV Gv,Ev */
 		/* FIXME: Cannot handle 8b 15 00 00 00 00 */
 		/* FIXME: Cannot handle 8b 45 fc */
 		/* FIXME: Cannot handle 48 8b 05 00 00 00 00 */
-		//dis_Gx_Ex(handle, MOV, dis_instructions, base_address, offset, &reg, 4);
-		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
+		//result = dis_Gx_Ex(handle, MOV, dis_instructions, base_address, offset, &reg, 4);
+		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->flags = 0;
@@ -1020,7 +1478,11 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x8c:												/* Mov Ew,Sw */
 		break;
 	case 0x8d:												/* LEA Gv */
-		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
+		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = MOV;
 		instruction->flags = 0;
@@ -1203,7 +1665,11 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xc0:												/* GRP2 Eb,Ib */
 		break;
 	case 0xc1:												/* GRP2 Ev,Ib */
-		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
+		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = shift2_table[reg];
 		instruction->flags = 1;
@@ -1304,8 +1770,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xc6:												/* MOV Eb,Ib */
 	case 0xc7:												/* MOV EW,Iv */
 		/* JCD: Work in progress */
-		dis_Ex_Ix(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
-		result = 1;
+		result = dis_Ex_Ix(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0xc8:												/* ENTER Iv,Ib */
 		break;
@@ -1373,7 +1838,11 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xd1:												/* GRP2 Ev,1 */
 	case 0xd2:												/* GRP2 Eb,CL */
 	case 0xd3:												/* GRP2 Ev,CL */
-		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
+		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = shift2_table[reg];
 		instruction->flags = 1;
@@ -1603,6 +2072,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xfe:												/* GRP4 Eb */
 		break;
 	case 0xff:												/* GRP5 Ev */
+		/* Cannot handle: 41 ff 54 24 08 */
 		half = base_address[offset + dis_instructions->bytes_used] & 0x38;
 		if (half == 0x30) { /* Special for the PUSH case */
 			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
@@ -1622,9 +2092,13 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			dis_instructions->instruction_number++;
 
 		}
-		half = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg);
+		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
 		printf("Unfinished section 0xff\n");
 		printf("half=0x%x, reg=0x%x\n",half, reg);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
 		switch(reg) {
 		case 0:

@@ -2070,8 +2070,8 @@ int main(int argc, char *argv[])
 	}
 	tmp = bf_get_arch_mach(handle, &arch, &mach);
 	if ((arch != 9) ||
-		(mach != 64)) {
-		printf("File not the correct arch and mach\n");
+		(mach != 8)) {
+		printf("File not the correct arch(0x%x) and mach(0x%"PRIx64")\n", arch, mach);
 		return 1;
 	}
 

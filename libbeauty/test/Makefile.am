@@ -11,14 +11,14 @@ bin_PROGRAMS = dis32 dis64 bf
 dis32_SOURCES = \
 	dis32.c
 
-dis32_LDADD = -L$(libdir) -lbeauty_input_bfd -lbeauty_decoder_ia32 -lopcodes -liberty -lbeauty_exe
+dis32_LDADD = -L$(libdir) -lbeauty_input_bfd -lbeauty_decoder_ia32 -lopcodes -liberty -lbeauty_exe -lbfd -lz
 
 dis32_LDFLAGS = @MODULE_LDFLAGS@
 
 dis64_SOURCES = \
 	dis64.c
 
-dis64_LDADD = -L$(libdir) -lbeauty_input_bfd -lbeauty_decoder_amd64 -lopcodes -liberty -lbeauty_exe
+dis64_LDADD = -L$(libdir) -lbeauty_input_bfd -lbeauty_decoder_amd64 -lopcodes -liberty -lbeauty_exe -lbfd -lz
 
 dis64_LDFLAGS = @MODULE_LDFLAGS@
 
