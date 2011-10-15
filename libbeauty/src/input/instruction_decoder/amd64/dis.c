@@ -977,21 +977,59 @@ int dis_Ex(struct rev_eng *handle, int *table, uint8_t rex, struct dis_instructi
 	uint8_t reg_mem;
 	uint8_t mod;
 	int number;
+	int tmp;
 	int result = 0;
+	struct reloc_table *reloc_table_entry;
 	instruction_t *instruction;
 
 	number = dis_instructions->instruction_number;
 	split_ModRM(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &reg, &reg_mem, &mod);
 	dis_instructions->bytes_used++;
-	if (3 == mod) {
+	switch (mod) {
+	case 3:
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = table[reg]; /* FIXME is this reg right */
 		instruction->flags = 1;
-		instruction->srcA.store = STORE_REG;
 		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 8;
-		instruction->srcA.index = reg_table[reg_mem].offset;
-		instruction->srcA.relocated = 0;
+		if (0 == reg) {  /* Only the TEST instruction uses Ix */
+			instruction->srcA.store = STORE_DIRECT;
+			if (4 == size || 8 == size) {
+				// Means get from rest of instruction
+				instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used);
+				instruction->srcA.relocated = 0;
+				tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4, &reloc_table_entry);
+				if (!tmp) {
+					instruction->srcA.relocated = 1;
+				}
+				dis_instructions->bytes_used+=4;
+			} else if (2 == size) {
+				// Means get from rest of instruction
+				instruction->srcA.index = getword(base_address, offset + dis_instructions->bytes_used);
+				instruction->srcA.relocated = 0;
+				tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 2, &reloc_table_entry);
+				if (!tmp) {
+					instruction->srcA.relocated = 1;
+				}
+				dis_instructions->bytes_used+=2;
+			} else if (1 == size) {
+				// Means get from rest of instruction
+				instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used);
+				instruction->srcA.relocated = 0;
+				tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 1, &reloc_table_entry);
+				if (!tmp) {
+					instruction->srcA.relocated = 1;
+				}
+				dis_instructions->bytes_used+=1;
+			} else {
+				printf("FIXME:JCD1\n");
+				return 0;
+			}
+		} else {
+			instruction->srcA.store = STORE_REG;
+			instruction->srcA.index = reg_table[reg_mem].offset;
+			instruction->srcA.relocated = 0;
+		}
 		instruction->srcA.value_size = size;
 		instruction->dstA.store = STORE_REG;
 		instruction->dstA.indirect = IND_DIRECT;
@@ -1001,6 +1039,10 @@ int dis_Ex(struct rev_eng *handle, int *table, uint8_t rex, struct dis_instructi
 		instruction->dstA.value_size = size;
 		dis_instructions->instruction_number++;
 		result = 1;
+		break;
+	default:
+		result = 0;
+		break;
 	}
 	return result;
 };
@@ -2158,6 +2200,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xf5:												/* CMC */
 		break;
 	case 0xf6:												/* GRP3 Eb ,Ib: */
+		result = dis_Ex(handle, grp3_table, rex, dis_instructions, base_address, offset, 1);
 		break;
 	case 0xf7:												/* GRP3 Ev ,Iv: */
 		result = dis_Ex(handle, grp3_table, rex, dis_instructions, base_address, offset, width);
