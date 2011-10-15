@@ -337,6 +337,39 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 				instruction->dstA.value_size = 8;
 				dis_instructions->instruction_number++;
 			}
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			if (dis_instructions->instruction_number > number) {
+				instruction->opcode = ADD;
+				instruction->flags = 0; /* Do not effect flags, just calculated indirect memory location */
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			/* mod 1 */
+			printf("Got here4 size = 1\n");
+			instruction->srcA.value_size = 8;
+			instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+			instruction->srcA.relocated = 0;
+			printf("Got here4 byte = 0x%"PRIx64"\n", instruction->srcA.index);
+			/* if the offset is negative,
+			 * replace ADD with SUB */
+			if ((instruction->opcode == ADD) &&
+				(instruction->srcA.index > 0x7f)) {
+				instruction->opcode = SUB;
+				tmp = 0x100 - instruction->srcA.index;
+				instruction->srcA.index = tmp;
+			}
+			dis_instructions->bytes_used++;
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 8;
+			dis_instructions->instruction_number++;
 			result = 1;
 		} else {
 			/* Not SIB */
@@ -1426,6 +1459,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		break;
 	case 0x89:												/* MOV Ev,Gv */
 		/* FIXME: Cannot handle 89 16 */
+		/* FIXED: Cannot handle 4c 89 64 24 08 */
 		result = dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x8a:												/* MOV Gb,Eb */
