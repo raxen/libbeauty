@@ -37,6 +37,15 @@ uint32_t getbyte(uint8_t *base_address, uint64_t offset) {
 	return result;
 }
 
+uint32_t getword(uint8_t *base_address, uint64_t offset) {
+	uint32_t result;
+	result=getbyte(base_address, offset);
+	offset++;
+	result=result | getbyte(base_address, offset) << 8;
+	offset++;
+	return result;
+}
+
 uint32_t getdword(uint8_t *base_address, uint64_t offset) {
 	uint32_t result;
 	result=getbyte(base_address, offset);
@@ -924,7 +933,28 @@ int dis_Ex_Ix(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instru
 			instruction->srcA.relocated = 1;
 		}
 		dis_instructions->bytes_used+=4;
-	} else printf("FIXME:JCD1\n");
+	} else if (2 == size) {
+		// Means get from rest of instruction
+		instruction->srcA.index = getword(base_address, offset + dis_instructions->bytes_used);
+		instruction->srcA.relocated = 0;
+		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 2, &reloc_table_entry);
+		if (!tmp) {
+			instruction->srcA.relocated = 1;
+		}
+		dis_instructions->bytes_used+=2;
+	} else if (1 == size) {
+		// Means get from rest of instruction
+		instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used);
+		instruction->srcA.relocated = 0;
+		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 1, &reloc_table_entry);
+		if (!tmp) {
+			instruction->srcA.relocated = 1;
+		}
+		dis_instructions->bytes_used+=1;
+	} else {
+		printf("FIXME:JCD1\n");
+		return 0;
+	}
 	instruction->srcA.value_size = size;
 	if (!half) {
 		instruction->dstA.indirect = IND_MEM;
@@ -987,6 +1017,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	struct reloc_table *reloc_table_entry;
 	uint64_t width = 4;
 	uint8_t rex = 0;
+	uint8_t p66 = 0;
 	instruction_t *instruction;
 
 	printf("inst[0]=0x%x\n",base_address[offset + 0]);
@@ -996,6 +1027,15 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	byte = base_address[offset];
 	dis_instructions->bytes_used++;
 	printf("BYTE=%02x\n", byte);
+	if (byte == 0x66) {
+		/* Detect Operand length prefix. */
+		p66 = 1;
+		width = 2;
+		dis_instructions->bytes_used++;
+		byte = base_address[offset + 1];
+		printf("BYTE=%02x\n", byte);
+	}
+
 	if ((byte & 0xf0 ) == 0x40) {
 		/* Detect REX. */
 		rex = byte & 0xf;
@@ -1318,7 +1358,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x64:												/* SEG FS: */
 	case 0x65:												/* SEG GS: */
 	case 0x66:												/* Operand Size Prefix */
+		break;
 	case 0x67:												/* Address Size Prefix */
+		break;
 	case 0x68:												/* PUSH Iv */
 	case 0x69:												/* IMUL Gv,Ev,Iv */
 		break;
@@ -1447,6 +1489,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0x84:												/* TEST Eb,Gb */
+		result = dis_Ex_Gx(handle, TEST, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x85:												/* TEST Ev,Gv */
 		result = dis_Ex_Gx(handle, TEST, rex, dis_instructions, base_address, offset, &reg, width);
@@ -1802,6 +1845,8 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xc4:												/* LES */
 	case 0xc5:												/* LDS */
 	case 0xc6:												/* MOV Eb,Ib */
+		result = dis_Ex_Ix(handle, MOV, rex, dis_instructions, base_address, offset, &reg, 1);
+		break;
 	case 0xc7:												/* MOV EW,Iv */
 		/* JCD: Work in progress */
 		result = dis_Ex_Ix(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
@@ -1871,6 +1916,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xd0:												/* GRP2 Eb,1 */
 	case 0xd1:												/* GRP2 Ev,1 */
 	case 0xd2:												/* GRP2 Eb,CL */
+		break;
 	case 0xd3:												/* GRP2 Ev,CL */
 		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
 		if (!tmp) {
@@ -2018,6 +2064,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0xea:												/* JMP Ap */
+		break;
 	case 0xeb:												/* JMP Jb */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = JMP;
@@ -2088,6 +2135,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xf5:												/* CMC */
 		break;
 	case 0xf6:												/* GRP3 Eb ,Ib: */
+		break;
 	case 0xf7:												/* GRP3 Ev ,Iv: */
 		result = dis_Ex(handle, grp3_table, rex, dis_instructions, base_address, offset, width);
 		break;
