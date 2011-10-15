@@ -1134,6 +1134,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x18:												/* SBB Eb,Gb */
 		break;
 	case 0x19:												/* SBB Ev,Gv */
+		result = dis_Ex_Gx(handle, SBB, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x1a:												/* SBB Gb,Eb */
 		break;

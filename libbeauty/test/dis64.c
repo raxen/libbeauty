@@ -218,6 +218,7 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	case MOV:
 	case ADD:
 	case SUB:
+	case SBB:
 	case MUL:
 	case rAND:
 	case OR:
