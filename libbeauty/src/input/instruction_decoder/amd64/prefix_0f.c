@@ -25,7 +25,9 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 	int tmp;
 	int result = 0;
 	uint8_t byte;
-	int64_t relative = 0;
+	int8_t rel8 = 0;
+	int32_t rel32 = 0;
+	int64_t rel64 = 0;
 	instruction_t *instruction;
 	byte = base_address[offset + dis_instructions->bytes_used++]; 
 	switch (byte) {
@@ -88,8 +90,8 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		/* Means get from rest of instruction */
 		//relative = getbyte(base_address, offset + dis_instructions->bytes_used);
 		/* extends byte to int64_t */
-		relative = 0; /* Skip to next instruction */
-		instruction->dstA.index = relative;
+		rel64 = 0; /* Skip to next instruction */
+		instruction->dstA.index = rel64;
 		instruction->dstA.relocated = 0;
 		instruction->dstA.value_size = 4;
 		instruction->srcA.store = STORE_DIRECT;
@@ -125,10 +127,11 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		instruction->dstA.indirect = IND_DIRECT;
 		instruction->dstA.indirect_size = 8;
 		/* Means get from rest of instruction */
-		relative = getdword(base_address, offset + dis_instructions->bytes_used);
+		rel32 = getdword(base_address, offset + dis_instructions->bytes_used);
+		rel64 = rel32;
 		dis_instructions->bytes_used += 4; 
 		/* extends byte to int64_t */
-		instruction->dstA.index = relative;
+		instruction->dstA.index = rel64;
 		instruction->dstA.relocated = 0;
 		instruction->dstA.value_size = 4;
 		instruction->srcA.store = STORE_DIRECT;

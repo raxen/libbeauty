@@ -1129,6 +1129,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	int64_t long_signed;
 	uint8_t byte;
 	int tmp;
+	int8_t rel8;
+	int32_t rel32;
+	int64_t rel64;
 	struct reloc_table *reloc_table_entry;
 	uint64_t width = 4;
 	uint8_t rex = 0;
@@ -1350,7 +1353,11 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = dis_Ex_Gx(handle, CMP, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x3a:												/* CMP Gb,Eb */
+		result = dis_Gx_Ex(handle, CMP, rex, dis_instructions, base_address, offset, &reg, 1);
+		break;
 	case 0x3b:												/* CMP Gv,Ev */
+		result = dis_Gx_Ex(handle, CMP, rex, dis_instructions, base_address, offset, &reg, width);
+		break;
 	case 0x3c:												/* CMP AL,Ib */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = CMP;
@@ -2280,7 +2287,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 8;
 		// Means get from rest of instruction
-		instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used);
+		rel32 = getdword(base_address, offset + dis_instructions->bytes_used);
+		rel64 = rel32;
+		instruction->srcA.index = rel64;
 		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4, &reloc_table_entry);
 		if (!tmp) {
 			printf("RELOCATED 0x%04"PRIx64"\n", offset + dis_instructions->bytes_used);
