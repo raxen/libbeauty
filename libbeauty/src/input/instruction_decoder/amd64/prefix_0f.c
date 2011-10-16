@@ -101,7 +101,7 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		instruction->srcA.relocated = 0;
 		instruction->srcA.value_size = 4;
 		dis_instructions->instruction_number++;
-		result = dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, size);
+		result = dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, size);
 		break;
 	/* JMP */
 	case 0x80:												/* JO */
@@ -160,6 +160,44 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 	case 0x9d:												/* SETNL */
 	case 0x9e:												/* SETLE */
 	case 0x9f:												/* SETNLE */
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = IF;
+		instruction->flags = 0;
+		instruction->dstA.store = STORE_DIRECT;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		/* Means get from rest of instruction */
+		//relative = getbyte(base_address, offset + dis_instructions->bytes_used);
+		/* extends byte to int64_t */
+		rel64 = 0; /* Skip to next instruction */
+		instruction->dstA.index = rel64;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 4;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = (byte & 0xf) ^ 0x01; /* CONDITION to skip mov instruction */
+		instruction->srcA.relocated = 0;
+		instruction->srcA.value_size = 4;
+		dis_instructions->instruction_number++;
+		tmp = rmb(handle, dis_instructions, base_address, offset, size, rex, &reg, &half);
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = MOV;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = 1;
+		instruction->srcA.relocated = 0;
+		instruction->srcA.value_size = 1;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.index = REG_TMP1;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = size;
+		dis_instructions->instruction_number++;
+		result = 1;
+		break;
 	case 0xa0:												/* PUSH FS */		
 	case 0xa1:												/* POP FS */		
 	case 0xa2:												/* CPUID */

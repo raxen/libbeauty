@@ -1381,6 +1381,28 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0x3d:												/* CMP eAX,Iv */
+		/* FIXME: Handle non standard widths */
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = CMP;
+		instruction->flags = 1;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 4;
+		instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+		instruction->srcA.relocated = 0;
+		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4, &reloc_table_entry);
+		if (!tmp) {
+			instruction->srcA.relocated = 1;
+		}
+		dis_instructions->bytes_used += 4;
+		instruction->srcA.value_size = 4;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 4;
+		instruction->dstA.index = REG_AX;
+		dis_instructions->instruction_number++;
+		result = 1;
+		break;
 	case 0x3e:												/* SEG DS: */
 	case 0x3f:												/* AAS */
 		break;
