@@ -1150,6 +1150,13 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		dis_instructions->bytes_used++;
 		printf("BYTE=%02x\n", byte);
 	}
+	if (byte == 0x2e) {
+		/* Detect Operand CS prefix. */
+		/* FIXME: Only skips for now */
+		byte = getbyte(base_address, offset + dis_instructions->bytes_used);
+		dis_instructions->bytes_used++;
+		printf("BYTE=%02x\n", byte);
+	}
 
 	if ((byte & 0xf0 ) == 0x40) {
 		/* Detect REX. */
@@ -1549,6 +1556,42 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0x80:												/* Grpl Eb,Ib */
+		tmp = rmb(handle, dis_instructions, base_address, offset, 1, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
+		instruction->opcode = immed_table[reg];
+		instruction->flags = 1;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		/* FIXME: This may sometimes be a word and not dword */
+		instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+		instruction->srcA.relocated = 0;
+		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4, &reloc_table_entry);
+		if (!tmp) {
+			instruction->srcA.relocated = 1;
+		}
+		dis_instructions->bytes_used += 1;
+		instruction->srcA.value_size = 1;
+		/* FIXME: !half bad */
+		if (!half) {
+    			instruction->dstA.indirect = IND_MEM;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.store = STORE_REG;
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
+				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
+				instruction->dstA.indirect_size = 8;
+			}
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 1;
+		}
+		dis_instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0x81:												/* Grpl Ev,Iv */
 		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);

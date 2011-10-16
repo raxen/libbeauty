@@ -22,9 +22,8 @@
 int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint64_t size, uint8_t rex) {
 	int half;
 	uint8_t reg = 0;
-	int ret = 0;
 	int tmp;
-	int result;
+	int result = 0;
 	uint8_t byte;
 	int8_t relative = 0;
 	instruction_t *instruction;
@@ -35,6 +34,24 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 	case 0x02:												/* LAR Gv,Ev */
 	case 0x03:												/* LSL Gv,Ev */
 	case 0x06:												/* CLTS */
+		break;
+	case 0x1F:												/* NOP */
+		byte = base_address[offset + dis_instructions->bytes_used++]; 
+		switch (byte) {
+		case 0x84:
+			dis_instructions->bytes_used++; 
+		case 0x80:
+			dis_instructions->bytes_used += 2; 
+		case 0x44:
+			dis_instructions->bytes_used++; 
+		case 0x40:
+			dis_instructions->bytes_used++; 
+		case 0x00: 
+			result = 1;
+			break;
+		default:
+			break;
+		}
 		break;
 	case 0x20:												/* MOV Rd.CRx */
 		break;
@@ -78,11 +95,11 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 8;
-		instruction->srcA.index = byte & 0xf; /* CONDITION */
+		instruction->srcA.index = (byte & 0xf) ^ 0x01; /* CONDITION to skip mov instruction */
 		instruction->srcA.relocated = 0;
 		instruction->srcA.value_size = 4;
 		dis_instructions->instruction_number++;
-		result = 1;
+		result = dis_Ex_Gx(handle, ADD, rex, dis_instructions, base_address, offset, &reg, size);
 		break;
 	/* JMP */
 	case 0x80:												/* JO */
@@ -154,7 +171,7 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		}
 		instruction->srcA.value_size = 1;
 		dis_instructions->instruction_number++;
-		ret = 1;
+		result = 1;
 		break;
 	case 0xb7:												/* MOVZX Gv,Ev */
 		tmp = rmb(handle, dis_instructions, base_address, offset, size, rex, &reg, &half);
@@ -173,6 +190,7 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		}
 		instruction->srcA.value_size = 2;
 		dis_instructions->instruction_number++;
+		result = 1;
 		break;
 
 
@@ -193,6 +211,6 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		break;
 
 	};
-	return ret;
+	return result;
 }
 		
