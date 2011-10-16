@@ -25,7 +25,7 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 	int tmp;
 	int result = 0;
 	uint8_t byte;
-	int8_t relative = 0;
+	int64_t relative = 0;
 	instruction_t *instruction;
 	byte = base_address[offset + dis_instructions->bytes_used++]; 
 	switch (byte) {
@@ -118,6 +118,28 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 	case 0x8d:												/* JNL */
 	case 0x8e:												/* JLE */
 	case 0x8f:												/* JNLE */
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = IF;
+		instruction->flags = 0;
+		instruction->dstA.store = STORE_DIRECT;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		/* Means get from rest of instruction */
+		relative = getdword(base_address, offset + dis_instructions->bytes_used);
+		dis_instructions->bytes_used += 4; 
+		/* extends byte to int64_t */
+		instruction->dstA.index = relative;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 4;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = byte & 0xf; /* CONDITION */
+		instruction->srcA.relocated = 0;
+		instruction->srcA.value_size = 4;
+		dis_instructions->instruction_number++;
+		result = 1;
+		break;
 	/* SET */
 	case 0x90:												/* SETO */
 	case 0x91:												/* SETNO */
