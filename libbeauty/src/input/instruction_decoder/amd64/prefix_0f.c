@@ -24,8 +24,12 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 	uint8_t reg = 0;
 	int ret = 0;
 	int tmp;
+	int result;
+	uint8_t byte;
+	int8_t relative = 0;
 	instruction_t *instruction;
-	switch (base_address[offset + dis_instructions->bytes_used++]) {
+	byte = base_address[offset + dis_instructions->bytes_used++]; 
+	switch (byte) {
 	case 0x00:												/* GRP 6 Exxx */
 	case 0x01:												/* Group 7 Ev */
 	case 0x02:												/* LAR Gv,Ev */
@@ -40,6 +44,47 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		break;
 	case 0x23:												/* MOV DRx,Rd */
 		break;
+	/* CMOVcc */
+	case 0x40:												/* CMOVO */
+	case 0x41:												/* CMOVNO */
+	case 0x42:												/* CMOVB */
+	case 0x43:												/* CMOVNB */
+	case 0x44:												/* CMOVZ */
+	case 0x45:												/* CMOVNZ */
+	case 0x46:												/* CMOVBE */
+	case 0x47:												/* CMOVNBE */
+	case 0x48:												/* CMOVS */
+	case 0x49:												/* CMOVNS */
+	case 0x4a:												/* CMOVP */
+	case 0x4b:												/* CMOVNP */
+	case 0x4c:												/* CMOVL */
+	case 0x4d:												/* CMOVNL */
+	case 0x4e:												/* CMOVLE */
+	case 0x4f:												/* CMOVNLE */
+		/* FIXME: Add the MOV bit */
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = IF;
+		instruction->flags = 0;
+		instruction->dstA.store = STORE_DIRECT;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		/* Means get from rest of instruction */
+		//relative = getbyte(base_address, offset + dis_instructions->bytes_used);
+		/* extends byte to int64_t */
+		relative = 0; /* Skip to next instruction */
+		instruction->dstA.index = relative;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 4;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = byte & 0xf; /* CONDITION */
+		instruction->srcA.relocated = 0;
+		instruction->srcA.value_size = 4;
+		dis_instructions->instruction_number++;
+		result = 1;
+		break;
+	/* JMP */
 	case 0x80:												/* JO */
 	case 0x81:												/* JNO */
 	case 0x82:												/* JB */
@@ -56,6 +101,7 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 	case 0x8d:												/* JNL */
 	case 0x8e:												/* JLE */
 	case 0x8f:												/* JNLE */
+	/* SET */
 	case 0x90:												/* SETO */
 	case 0x91:												/* SETNO */
 	case 0x92:												/* SETB */

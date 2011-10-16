@@ -970,7 +970,8 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		printf("ADC\n");
 		put_value_RTL_instruction(self, process_state, inst);
 		break;
-	case MUL:
+	case MUL:  /* Unsigned mul */
+	case IMUL: /* FIXME: Handled signed case */
 		/* Get value of srcA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0); 
 		/* Get value of dstA */

@@ -70,6 +70,7 @@ uint32_t relocated_code(struct rev_eng *handle, uint8_t *base_address, uint64_t 
 	return 1;
 }
 
+/* REX Volume2A Section 2.2.1.2 */
 void split_ModRM(uint8_t byte, uint8_t rex, uint8_t *reg,  uint8_t *reg_mem, uint8_t *mod) {
 	*reg = (byte >> 3) & 0x7; //bits 3-5
 	*reg_mem = (byte & 0x7); //bits 0-2
@@ -79,7 +80,8 @@ void split_ModRM(uint8_t byte, uint8_t rex, uint8_t *reg,  uint8_t *reg_mem, uin
 	if (rex & 0x4) {
 		*reg = *reg | 0x8;
 	}
-	if (rex & 0x1) {
+	/* Only is REX.X == 0 */
+	if ((rex & 0x3) == 1) {
 		*reg_mem = *reg_mem | 0x8;
 	}
 	printf("byte=%02x, reg=%02x, reg_mem=%02x, mod=%02x\n",
@@ -89,6 +91,7 @@ void split_ModRM(uint8_t byte, uint8_t rex, uint8_t *reg,  uint8_t *reg_mem, uin
 		*mod);
 	}
 
+/* REX Volume2A Section 2.2.1.2 */
 void split_SIB(uint8_t byte, uint8_t rex, uint8_t *mul,  uint8_t *index, uint8_t *base) {
 	*index = (byte >> 3) & 0x7; //bits 3-5
 	*base = (byte & 0x7); //bits 0-2
@@ -129,8 +132,9 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 	*return_reg = reg;
 	switch (mod) {
 	case 0:
-		/* Special case uses SIB */
-		if ((reg_mem == 4) || (reg_mem > 7) ) {
+		/* Special case uses SIB, when using ESP or R12 */
+		if ((4 == reg_mem) || (rex & 0x02) || (0xc == reg_mem)) {
+			printf("Doing SIB\n");
 			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
 			dis_instructions->bytes_used++;
 			/* FIXME: index == 4 not explicitly handled */
@@ -222,8 +226,41 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 			}
 			result = 1;
 		} else if (reg_mem == 5) {
-			printf("Unhandled rmb 0\n");
-			result = 0;
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			if (dis_instructions->instruction_number > number) {
+				instruction->opcode = ADD;
+				instruction->flags = 0; /* Do not effect flags, just calculated indirect memory location */
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			/* mod 1 */
+			printf("Got here4 size = 1\n");
+			instruction->srcA.value_size = 8;
+			instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+			instruction->srcA.relocated = 0;
+			printf("Got here4 byte = 0x%"PRIx64"\n", instruction->srcA.index);
+			/* if the offset is negative,
+			 * replace ADD with SUB */
+			if ((instruction->opcode == ADD) &&
+				(instruction->srcA.index > 0x7fffffff)) {
+				instruction->opcode = SUB;
+				tmp = 0x100000000 - instruction->srcA.index;
+				instruction->srcA.index = tmp;
+			}
+			dis_instructions->bytes_used+=4;
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 8;
+			dis_instructions->instruction_number++;
+
+			result = 1;
 		} else {
 			/* Not SIB */
 			printf("MODRM mod 1 number=0x%x\n", number);
@@ -256,7 +293,8 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		break;
 	case 1:
 		/* Special case uses SIB */
-		if ((reg_mem == 4) || (reg_mem > 7) ) {
+		if ((4 == reg_mem) || (rex & 0x02) || (0xc == reg_mem)) {
+			printf("Doing SIB\n");
 			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
 			dis_instructions->bytes_used++;
 			/* FIXME: index == 4 not explicitly handled */
@@ -445,7 +483,8 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		break;
 	case 2:
 		/* Special case uses SIB */
-		if ((reg_mem == 4) || (reg_mem > 7) ) {
+		if ((4 == reg_mem) || (rex & 0x02) || (0xc == reg_mem)) {
+			printf("Doing SIB\n");
 			split_SIB(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &mul, &index, &base);
 			dis_instructions->bytes_used++;
 			/* FIXME: index == 4 not explicitly handled */
@@ -535,6 +574,40 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 				instruction->dstA.value_size = 8;
 				dis_instructions->instruction_number++;
 			}
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			if (dis_instructions->instruction_number > number) {
+				instruction->opcode = ADD;
+				instruction->flags = 0; /* Do not effect flags, just calculated indirect memory location */
+			} else {
+				instruction->opcode = MOV;
+				instruction->flags = 0;
+			}
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			/* mod 1 */
+			printf("Got here4 size = 1\n");
+			instruction->srcA.value_size = 8;
+			instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+			instruction->srcA.relocated = 0;
+			printf("Got here4 byte = 0x%"PRIx64"\n", instruction->srcA.index);
+			/* if the offset is negative,
+			 * replace ADD with SUB */
+			if ((instruction->opcode == ADD) &&
+				(instruction->srcA.index > 0x7fffffff)) {
+				instruction->opcode = SUB;
+				tmp = 0x100000000 - instruction->srcA.index;
+				instruction->srcA.index = tmp;
+			}
+			dis_instructions->bytes_used+=4;
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 8;
+			dis_instructions->instruction_number++;
+
 			result = 1;
 		} else {
 			/* Not SIB */
@@ -1066,23 +1139,23 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	dis_instructions->instruction[dis_instructions->instruction_number].opcode = NOP; /* Un-supported OPCODE */
 	dis_instructions->instruction[dis_instructions->instruction_number].flags = 0; /* No flags effected */
 	
-	byte = base_address[offset];
+	byte = getbyte(base_address, offset + dis_instructions->bytes_used);
 	dis_instructions->bytes_used++;
 	printf("BYTE=%02x\n", byte);
 	if (byte == 0x66) {
 		/* Detect Operand length prefix. */
 		p66 = 1;
 		width = 2;
+		byte = getbyte(base_address, offset + dis_instructions->bytes_used);
 		dis_instructions->bytes_used++;
-		byte = base_address[offset + 1];
 		printf("BYTE=%02x\n", byte);
 	}
 
 	if ((byte & 0xf0 ) == 0x40) {
 		/* Detect REX. */
 		rex = byte & 0xf;
+		byte = getbyte(base_address, offset + dis_instructions->bytes_used);
 		dis_instructions->bytes_used++;
-		byte = base_address[offset + 1];
 		printf("BYTE=%02x\n", byte);
 	}
 
@@ -1272,6 +1345,27 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x3a:												/* CMP Gb,Eb */
 	case 0x3b:												/* CMP Gv,Ev */
 	case 0x3c:												/* CMP AL,Ib */
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = CMP;
+		instruction->flags = 1;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 1;
+		instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+		instruction->srcA.relocated = 0;
+		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 1, &reloc_table_entry);
+		if (!tmp) {
+			instruction->srcA.relocated = 1;
+		}
+		dis_instructions->bytes_used+=1;
+		instruction->srcA.value_size = 1;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 1;
+		instruction->dstA.index = REG_AX;
+		dis_instructions->instruction_number++;
+		result = 1;
+		break;
 	case 0x3d:												/* CMP eAX,Iv */
 	case 0x3e:												/* SEG DS: */
 	case 0x3f:												/* AAS */
@@ -1512,7 +1606,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		long_signed = relative;
 		instruction->srcA.index = long_signed;
 		instruction->srcA.relocated = 0;
-		dis_instructions->bytes_used++;
+		dis_instructions->bytes_used += 1;
 		instruction->srcA.value_size = width;
 		/* FIXME: !half bad */
 		if (!half) {
@@ -1546,6 +1640,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x89:												/* MOV Ev,Gv */
 		/* FIXME: Cannot handle 89 16 */
 		/* FIXED: Cannot handle 4c 89 64 24 08 */
+		/* FIXME: Cannot handle 89 05 NN NN NN NN */
 		result = dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x8a:												/* MOV Gb,Eb */
@@ -1553,6 +1648,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		break;
 	case 0x8b:
 		/* MOV Gv,Ev */
+		result = dis_Gx_Ex(handle, MOV, rex, dis_instructions, base_address, offset, &reg, width);
+		break;
+#if 0
 		/* FIXME: Cannot handle 8b 15 00 00 00 00 */
 		/* FIXME: Cannot handle 8b 45 fc */
 		/* FIXME: Cannot handle 48 8b 05 00 00 00 00 */
@@ -1595,6 +1693,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		dis_instructions->instruction_number++;
 		result = 1;
 		break;
+#endif
 	case 0x8c:												/* Mov Ew,Sw */
 		break;
 	case 0x8d:												/* LEA Gv */
@@ -1980,6 +2079,35 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xcf:												/* IRET */
 	case 0xd0:												/* GRP2 Eb,1 */
 	case 0xd1:												/* GRP2 Ev,1 */
+		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = shift2_table[reg];
+		instruction->flags = 1;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 1;
+		instruction->srcA.index = 1;
+		instruction->srcA.value_size = 1;
+		if (!half) {
+    			instruction->dstA.indirect = IND_MEM;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.store = STORE_REG;
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
+				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
+				instruction->dstA.indirect_size = 8;
+			}
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = width;
+		}
+		dis_instructions->instruction_number++;
+		result = 1;
+		break;
 	case 0xd2:												/* GRP2 Eb,CL */
 		break;
 	case 0xd3:												/* GRP2 Ev,CL */
