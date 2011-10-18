@@ -127,6 +127,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 	 * inserts an RTL dis_instructions before calling here
 	 */
 	int number = dis_instructions->instruction_number;
+	*half = 0;
 	split_ModRM(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &reg, &reg_mem, &mod);
 	dis_instructions->bytes_used++;
 	*return_reg = reg;
@@ -179,6 +180,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 			}
 			if (base == 5) {
 				/* Handle base==5 */
+				/* from Volume2A Table 2-3 Note 1 */
 				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
 				if (dis_instructions->instruction_number > number) {
 					instruction->opcode = ADD;
@@ -193,6 +195,40 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 				instruction->srcA.index = REG_BP;
 				instruction->srcA.relocated = 0;
 				instruction->srcA.value_size = size;
+				instruction->dstA.store = STORE_REG;
+				instruction->dstA.indirect = IND_DIRECT;
+				instruction->dstA.indirect_size = 8;
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 8;
+				dis_instructions->instruction_number++;
+
+				instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+				if (dis_instructions->instruction_number > number) {
+					instruction->opcode = ADD;
+					instruction->flags = 0; /* Do not effect flags, just calculated indirect memory location */
+				} else {
+					instruction->opcode = MOV;
+					instruction->flags = 0;
+				}
+				instruction->srcA.store = STORE_DIRECT;
+				instruction->srcA.indirect = IND_DIRECT;
+				instruction->srcA.indirect_size = 8;
+				/* mod 1 */
+				printf("Got here4 size = 1\n");
+				instruction->srcA.value_size = 8;
+				instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+				instruction->srcA.relocated = 0;
+				printf("Got here4 byte = 0x%"PRIx64"\n", instruction->srcA.index);
+				/* if the offset is negative,
+				 * replace ADD with SUB */
+				if ((instruction->opcode == ADD) &&
+					(instruction->srcA.index > 0x7fffffff)) {
+					instruction->opcode = SUB;
+					tmp = 0x100000000 - instruction->srcA.index;
+					instruction->srcA.index = tmp;
+				}
+				dis_instructions->bytes_used+=4;
 				instruction->dstA.store = STORE_REG;
 				instruction->dstA.indirect = IND_DIRECT;
 				instruction->dstA.indirect_size = 8;
@@ -224,6 +260,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 				instruction->dstA.value_size = 8;
 				dis_instructions->instruction_number++;
 			}
+
 			result = 1;
 		} else if (reg_mem == 5) {
 			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
@@ -2502,6 +2539,33 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			break;
 		case 2:
 			instruction->opcode = CALL; /* CALL rm. E.g. ff 53 08 callq  *0x8(%rbx)    */
+			instruction->flags = 0;
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = 1;
+			instruction->srcA.value_size = 4;
+			if (!half) {
+				instruction->dstA.store = STORE_REG;
+	
+				instruction->dstA.indirect = IND_MEM;
+				instruction->dstA.indirect_size = 8;
+				if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+				    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
+					/* SP and BP use STACK memory and not DATA memory. */
+					instruction->dstA.indirect = IND_STACK;
+					instruction->dstA.indirect_size = 8;
+				}
+				instruction->dstA.index = REG_TMP1;
+				instruction->dstA.relocated = 0;
+				instruction->dstA.value_size = 4;
+			}
+			dis_instructions->instruction_number++;
+			result = 1;
+			break;
+		case 4:
+			printf("JMP Inst: 0xFF\n");
+			instruction->opcode = JMP; /* JMP rm. E.g. ff 24 c5 00 00 00 00 jmpq   *0x0(,%rax,8)   */
 			instruction->flags = 0;
 			instruction->srcA.store = STORE_DIRECT;
 			instruction->srcA.indirect = IND_DIRECT;

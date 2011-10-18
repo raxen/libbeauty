@@ -230,6 +230,7 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	case SAR:
 	case CMP:
 	case NOT:
+	case NEG:
 	case SEX:
 	case TEST:
 	/* FIXME: Add DIV */
