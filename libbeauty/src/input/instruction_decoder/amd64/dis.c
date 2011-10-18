@@ -2565,6 +2565,26 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			break;
 		case 4:
 			printf("JMP Inst: 0xFF\n");
+			/* For now, get the EXE to assume the function has ended. */
+			/* Do this by setting EIP = 0 */
+//			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			instruction->opcode = MOV;
+			instruction->flags = 0;
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = 0;
+			instruction->srcA.value_size = 8;
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_IP;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 8;
+			dis_instructions->instruction_number++;
+#if 0
+
+
 			instruction->opcode = JMP; /* JMP rm. E.g. ff 24 c5 00 00 00 00 jmpq   *0x0(,%rax,8)   */
 			instruction->flags = 0;
 			instruction->srcA.store = STORE_DIRECT;
@@ -2588,6 +2608,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 				instruction->dstA.value_size = 4;
 			}
 			dis_instructions->instruction_number++;
+#endif
 			result = 1;
 			break;
 		case 6: /* FIXME: not correct yet */
