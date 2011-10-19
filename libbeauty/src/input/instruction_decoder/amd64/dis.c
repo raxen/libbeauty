@@ -1224,6 +1224,28 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = dis_Gx_Ex(handle, ADD, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x04:												/* ADD AL,Ib */
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = ADD;
+		instruction->flags = 1;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+		instruction->srcA.relocated = 0;
+		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4, &reloc_table_entry);
+		if (!tmp) {
+			instruction->srcA.relocated = 1;
+		}
+		dis_instructions->bytes_used += 1;
+		instruction->srcA.value_size = 1;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.index = REG_AX;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 1;
+		dis_instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0x05:												/* ADD eAX,Iv */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
@@ -1384,7 +1406,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0x35:												/* XOR eAX,Iv */
 	case 0x36:												/* SEG SS: */
 	case 0x37:												/* AAA */
-	case 0x38:												/* AAA */
+		break;
+	case 0x38:												/* CMP Eb,Gb */
+		result = dis_Ex_Gx(handle, CMP, rex, dis_instructions, base_address, offset, &reg, 1);
 		break;
 	case 0x39:												/* CMP Ev,Gv */
 		result = dis_Ex_Gx(handle, CMP, rex, dis_instructions, base_address, offset, &reg, width);
@@ -1566,13 +1590,74 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->dstA.value_size = width;
 		break;
 	case 0x64:												/* SEG FS: */
+		break;
 	case 0x65:												/* SEG GS: */
+		break;
 	case 0x66:												/* Operand Size Prefix */
 		break;
 	case 0x67:												/* Address Size Prefix */
 		break;
 	case 0x68:												/* PUSH Iv */
+		break;
 	case 0x69:												/* IMUL Gv,Ev,Iv */
+		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
+		instruction->opcode = IMUL;
+		instruction->flags = 1;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		/* FIXME: This may sometimes be a word and not dword */
+		instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+		instruction->srcA.relocated = 0;
+		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4, &reloc_table_entry);
+		if (!tmp) {
+			instruction->srcA.relocated = 1;
+		}
+		/* FIXME: Length wrong */
+		dis_instructions->bytes_used += 4;
+		instruction->srcA.value_size = width;
+    		instruction->dstA.indirect = IND_MEM;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.store = STORE_REG;
+		if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+		    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
+			instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
+			instruction->dstA.indirect_size = 8;
+		}
+		instruction->dstA.index = REG_TMP1;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 4;
+		dis_instructions->instruction_number++;
+
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
+		instruction->opcode = MOV;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_REG;
+		instruction->srcA.indirect = IND_MEM;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = REG_TMP1;
+		instruction->srcA.relocated = 0;
+		dis_instructions->bytes_used += width;
+		instruction->srcA.value_size = width;
+    		instruction->dstA.indirect = IND_MEM;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.store = STORE_REG;
+		if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+		    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
+			instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
+			instruction->dstA.indirect_size = 8;
+		}
+		instruction->dstA.index = reg;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = width;
+		dis_instructions->instruction_number++;
+
+		result = 1;
 		break;
 	case 0x6a:												/* PUSH Ib */
 		break;
@@ -1741,6 +1826,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = dis_Ex_Gx(handle, TEST, rex, dis_instructions, base_address, offset, &reg, width);
 		break;
 	case 0x86:												/* XCHG Eb,Gb */
+		break;
 	case 0x87:												/* XCHG Ev,Gv */
 		break;
 	case 0x88:												/* MOV Eb,Gb */
@@ -2013,6 +2099,35 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0xc0:												/* GRP2 Eb,Ib */
+		tmp = rmb(handle, dis_instructions, base_address, offset, 1, rex, &reg, &half);
+		if (!tmp) {
+			result = 0;
+			break;
+		}
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = shift2_table[reg];
+		instruction->flags = 1;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = getbyte(base_address, offset + dis_instructions->bytes_used); // Means get from rest of instruction
+		dis_instructions->bytes_used++;
+		instruction->srcA.value_size = width;
+		if (!half) {
+    			instruction->dstA.indirect = IND_MEM;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.store = STORE_REG;
+			if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+			    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
+				instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
+				instruction->dstA.indirect_size = 8;
+			}
+			instruction->dstA.index = REG_TMP1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = width;
+		}
+		dis_instructions->instruction_number++;
+		result = 1;
 		break;
 	case 0xc1:												/* GRP2 Ev,Ib */
 		tmp = rmb(handle, dis_instructions, base_address, offset, width, rex, &reg, &half);
