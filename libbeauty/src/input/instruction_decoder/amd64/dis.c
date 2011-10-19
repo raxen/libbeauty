@@ -711,6 +711,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		break;
 	case 3:  // Special case Reg to Reg transfer
 		/* Fill in half of instruction */
+		printf("mod 3\n");
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = NOP;
 		instruction->flags = 0;
@@ -726,6 +727,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		instruction->dstA.index = reg_table[reg_mem].offset;
 		instruction->dstA.relocated = 0;
 		instruction->dstA.value_size = size;
+		dis_instructions->instruction_number++;
 		*half = 1;
 		result = 1;
 		break;
@@ -1642,7 +1644,6 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->srcA.indirect_size = 8;
 		instruction->srcA.index = REG_TMP1;
 		instruction->srcA.relocated = 0;
-		dis_instructions->bytes_used += width;
 		instruction->srcA.value_size = width;
     		instruction->dstA.indirect = IND_MEM;
 		instruction->dstA.indirect_size = 8;
