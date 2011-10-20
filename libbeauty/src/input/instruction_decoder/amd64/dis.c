@@ -727,7 +727,6 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 		instruction->dstA.index = reg_table[reg_mem].offset;
 		instruction->dstA.relocated = 0;
 		instruction->dstA.value_size = size;
-		dis_instructions->instruction_number++;
 		*half = 1;
 		result = 1;
 		break;
@@ -1607,6 +1606,21 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			result = 0;
 			break;
 		}
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = MOV;
+		instruction->flags = 0;
+    		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.store = STORE_REG;
+		if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
+		    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
+			instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
+			instruction->dstA.indirect_size = 8;
+		}
+		instruction->dstA.index = REG_TMP1;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 4;
+		dis_instructions->instruction_number++;
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
 		instruction->opcode = IMUL;
 		instruction->flags = 1;
@@ -1623,14 +1637,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		/* FIXME: Length wrong */
 		dis_instructions->bytes_used += 4;
 		instruction->srcA.value_size = width;
-    		instruction->dstA.indirect = IND_MEM;
+    		instruction->dstA.indirect = IND_DIRECT;
 		instruction->dstA.indirect_size = 8;
 		instruction->dstA.store = STORE_REG;
-		if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
-		    (dis_instructions->instruction[0].srcA.index <= REG_BP) ) {
-			instruction->dstA.indirect = IND_STACK; /* SP and BP use STACK memory and not DATA memory. */
-			instruction->dstA.indirect_size = 8;
-		}
 		instruction->dstA.index = REG_TMP1;
 		instruction->dstA.relocated = 0;
 		instruction->dstA.value_size = 4;
@@ -1640,12 +1649,12 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->opcode = MOV;
 		instruction->flags = 0;
 		instruction->srcA.store = STORE_REG;
-		instruction->srcA.indirect = IND_MEM;
+		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 8;
 		instruction->srcA.index = REG_TMP1;
 		instruction->srcA.relocated = 0;
 		instruction->srcA.value_size = width;
-    		instruction->dstA.indirect = IND_MEM;
+    		instruction->dstA.indirect = IND_DIRECT;
 		instruction->dstA.indirect_size = 8;
 		instruction->dstA.store = STORE_REG;
 		if ((dis_instructions->instruction[0].srcA.index >= REG_SP) && 
