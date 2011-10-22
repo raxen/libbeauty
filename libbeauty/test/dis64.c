@@ -1825,11 +1825,14 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 				break;
 			case ADD:
 			case MUL:
+			case IMUL:
 			case SUB:
+			case SBB:
 			case rAND:
 			case OR:
 			case XOR:
 			case NOT:
+			case NEG:
 			case SHL:
 			case SHR:
 			case SAL:
@@ -1859,6 +1862,7 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 				break;
 
 			case CMP:
+			case TEST:
 				if (1 == instruction->dstA.indirect) {
 					value_id = inst_log1->value2.indirect_value_id;
 				} else {
@@ -2388,16 +2392,20 @@ int main(int argc, char *argv[])
 		case ADD:
 		case ADC:
 		case SUB:
+		case SBB:
 		case MUL:
+		case IMUL:
 		case OR:
 		case XOR:
 		case rAND:
 		case NOT:
+		case NEG:
 		case SHL:
 		case SHR:
 		case SAL:
 		case SAR:
 		case CMP:
+		case TEST: /* FIXME: Maybe need handling separately */
 		case SEX:
 			if (1 == instruction->dstA.indirect) {
 				value_id = inst_log1->value3.indirect_value_id;
@@ -2559,16 +2567,20 @@ int main(int argc, char *argv[])
 		case ADD:
 		case ADC:
 		case SUB:
+		case SBB:
 		case MUL:
+		case IMUL:
 		case OR:
 		case XOR:
 		case rAND:
 		case NOT:
+		case NEG:
 		case SHL:
 		case SHR:
 		case SAL:
 		case SAR:
 		case CMP:
+		case TEST:
 		case SEX:
 			value_id = label_redirect[value_id1].redirect;
 			if ((1 == labels[value_id].scope) &&

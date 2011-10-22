@@ -1174,6 +1174,10 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	uint64_t width = 4;
 	uint8_t rex = 0;
 	uint8_t p66 = 0;
+	uint8_t repz = 0;
+	uint8_t repz_handled = 0;
+	uint8_t repnz = 0;
+	uint8_t repnz_handled = 0;
 	instruction_t *instruction;
 
 	printf("inst[0]=0x%x\n",base_address[offset + 0]);
@@ -1183,6 +1187,20 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	byte = getbyte(base_address, offset + dis_instructions->bytes_used);
 	dis_instructions->bytes_used++;
 	printf("BYTE=%02x\n", byte);
+	if (byte == 0xf2) {
+		/* REPNZ */
+		repnz = 1;
+		byte = getbyte(base_address, offset + dis_instructions->bytes_used);
+		dis_instructions->bytes_used++;
+		printf("BYTE=%02x\n", byte);
+	}
+	if (byte == 0xf3) {
+		/* REPNZ */
+		repz = 1;
+		byte = getbyte(base_address, offset + dis_instructions->bytes_used);
+		dis_instructions->bytes_used++;
+		printf("BYTE=%02x\n", byte);
+	}
 	if (byte == 0x66) {
 		/* Detect Operand length prefix. */
 		p66 = 1;
@@ -2029,8 +2047,136 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		result = 1;
 		break;
 	case 0xa4:												/* MOVSB */
+		break;
 	case 0xa5:												/* MOVSW */
+		if (repz) {
+			/* FIXME not finished */
+			/* CMP ECX, 0 */
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			instruction->opcode = CMP;
+			instruction->flags = 1;
+			instruction->srcA.store = STORE_REG;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = REG_CX;
+			instruction->srcA.value_size = 4;
+			instruction->dstA.store = STORE_DIRECT;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = 0;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 4;
+			dis_instructions->instruction_number++;
+
+			/* IF: JZ next instruction */
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			instruction->opcode = IF;
+			instruction->flags = 0;
+			instruction->dstA.store = STORE_DIRECT;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			/* Should be to next amd64 instruction. FIXME: Is this next instruction or this one? */
+			instruction->dstA.index = 1;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 4;
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = 4; /* CONDITION JZ */
+			instruction->srcA.relocated = 0;
+			instruction->srcA.value_size = 4;
+			dis_instructions->instruction_number++;
+
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];
+			/* CX-- */
+			instruction->opcode = SUB;
+			instruction->flags = 0;
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			instruction->srcA.index = 1;
+			instruction->srcA.value_size = 4;
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_CX;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 4;
+			dis_instructions->instruction_number++;
+
+			repz_handled = 1;
+		}
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = MOV;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_REG;
+		instruction->srcA.indirect = IND_MEM;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = REG_SI;
+		instruction->srcA.value_size = 4;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_MEM;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.index = REG_DI;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 4;
+		dis_instructions->instruction_number++;
+		/* FIXME: Need to use direction flag */
+
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = ADD;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = 4;
+		instruction->srcA.value_size = 4;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.index = REG_SI;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 4;
+		dis_instructions->instruction_number++;
+
+		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+		instruction->opcode = ADD;
+		instruction->flags = 0;
+		instruction->srcA.store = STORE_DIRECT;
+		instruction->srcA.indirect = IND_DIRECT;
+		instruction->srcA.indirect_size = 8;
+		instruction->srcA.index = 4;
+		instruction->srcA.value_size = 4;
+		instruction->dstA.store = STORE_REG;
+		instruction->dstA.indirect = IND_DIRECT;
+		instruction->dstA.indirect_size = 8;
+		instruction->dstA.index = REG_DI;
+		instruction->dstA.relocated = 0;
+		instruction->dstA.value_size = 4;
+		dis_instructions->instruction_number++;
+
+		if (repz) {
+			instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
+			instruction->opcode = JMP;
+			instruction->flags = 0;
+			instruction->srcA.store = STORE_DIRECT;
+			instruction->srcA.indirect = IND_DIRECT;
+			instruction->srcA.indirect_size = 8;
+			/* JMP back to beginning of this amd64 instruction */
+			instruction->srcA.index = -(dis_instructions->bytes_used); 
+			instruction->srcA.value_size = 4;
+			instruction->dstA.store = STORE_REG;
+			instruction->dstA.indirect = IND_DIRECT;
+			instruction->dstA.indirect_size = 8;
+			instruction->dstA.index = REG_IP;
+			instruction->dstA.relocated = 0;
+			instruction->dstA.value_size = 4;
+			dis_instructions->instruction_number++;
+		}
+		result = 1;
+		break;
 	case 0xa6:												/* CMPSB */
+		break;
 	case 0xa7:												/* CMPSW */
 		break;
 	case 0xa8:												/* TEST AL,Ib */
