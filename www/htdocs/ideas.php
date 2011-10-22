@@ -6,7 +6,7 @@ include 'header.php'
       Ideas
     </h2>
     <h3>
-       1. Some ideas
+       1. Packet CPU
     </h3>
         <p>
            CPU that processes packets instead of instructions.
@@ -29,4 +29,24 @@ include 'header.php'
 
 	   
         </p>
+	<p>
+	   An alternative approach could be having normal packets with packet lengths, and so one packet would simply be processed after the previous one. Priorities could then be implemented using different approaches. For example, using packet queues based on priorities.
+
+        </p>
+    <h3>
+       2. Memory Processing Units
+    </h3>
+        <p>
+           Memory modules that have Processing Units on them.
+        </p>
+        <p>
+	   Most conventional CPU and RAM combination read some value from memory, do a calculation on it, and then return it to memory.
+Some operations could instead be done on the RAM chip itself. This would reduce the round trip time and increase efficiency. Due to the way that RAM chips are wired up as a sort of matrix, some operations could then be done on the memory in a massively parallel way. For example, XOR, AND, OR between two large blocks of memory.
+For example, if the RAM was accessed by sending a packet of data to it, one could for example, XOR an entire section of memory against the data contained in the packet and either store the result in RAM or return the result in a packet of data from it.
+	  This idea could be further expanded to a design where RAM and Processing Unit are always located on the same chip. And in order to expand RAM, you also expand the amount of PUs you have. These PUs could not really be called "Central Processing Units" as they will be distributed. One of the major bottlenecks in current CPU designs in the RAM to CPU link. With the RAM and CPU being on the same chip, this bottleneck can be overcome.
+	  This design would also move to a architecture that did not contain a large RAM that was accessible by all CPUs, but rather a more distributed CPU design with each CPU able to access a smaller RAM, and if they need to access more RAM, they make requests to other CPUs rather than access the RAM directly. Programming these types of machines is likely to be more difficult than the shared RAM machines, but the performance and power efficiencies would be worth the extra effort.
+
+        </p>
+
+
 
