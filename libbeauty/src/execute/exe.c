@@ -1553,17 +1553,32 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		value->offset_value = inst->value3.offset_value;
 		break;
 	case CALL:
+		/* On entry:
+		 * srcA = relative offset which is value 1.
+		 * dstA is destination EAX register which is value 2.
+		 * with associated value1 and value2 
+		 * On exit we have need:
+		 * relative value coverted to ABS value.
+		 * value1 = value1.  // Value 1 is useful for function pointer calls. 
+		 * value3 = value2
+		 * value2 = ESP
+		 */
+		/* Get value of srcA */
+		ret = get_value_RTL_instruction(self, process_state, &(instruction->srcA), &(inst->value1), 0);
+		value = search_store(memory_reg,
+				REG_IP,
+				4);
+		printf("EXE CALL 0x%"PRIx64"+%"PRIx64"\n",
+			value->offset_value, inst->value1.init_value);
+		/* Make init_value +  offset_value = abs value */
+		inst->value1.offset_value = inst->value1.init_value;
+		inst->value1.init_value = value->offset_value;
+ 
 		/* Get value of dstA */
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 1); 
-		/* Get the current ESP value so one can convert function params to locals */
-		operand.indirect = IND_DIRECT;
-		operand.store = STORE_REG;
-		operand.index = REG_SP;
-		/* Need to find out if the reg is 32bit or 64bit. Use the REG_AX return value size */
-		operand.value_size = instruction->dstA.value_size;
-		ret = get_value_RTL_instruction(self, process_state, &(operand), &(inst->value1), 1); 
 		printf("CALL local_counter = 0x%x\n", local_counter);
 		/* FIXME: Currently this is a NOP. */
+		/* Get value of dstA */
 		inst->value3.start_address = inst->value2.start_address;
 		inst->value3.length = inst->value2.length;
 		inst->value3.init_value_type = inst->value2.init_value_type;
@@ -1600,6 +1615,16 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 				inst->value3.init_value +
 					inst->value3.offset_value);
 		put_value_RTL_instruction(self, process_state, inst);
+		/* Once value3 is written, over write value2 with ESP */
+		/* Get the current ESP value so one can convert function params to locals */
+		operand.indirect = IND_DIRECT;
+		operand.store = STORE_REG;
+		operand.index = REG_SP;
+		/* Need to find out if the reg is 32bit or 64bit. Use the REG_AX return value size */
+		operand.value_size = instruction->dstA.value_size;
+
+		ret = get_value_RTL_instruction(self, process_state, &(operand), &(inst->value2), 1); 
+		printf("CALL local_counter = 0x%x\n", local_counter);
 		break;
 
 	default:

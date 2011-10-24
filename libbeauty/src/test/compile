@@ -24,3 +24,4 @@ gcc -c -g -o test24.o test24.c
 gcc -c -g -o test30.o test30.c
 gcc -c -g -o test33.o test33.c
 gcc -c -g -o test34.o test34.c
+gcc -c -g -o test35.o test35.c

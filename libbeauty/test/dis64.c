@@ -66,11 +66,15 @@ uint64_t inst_log = 1;	/* Pointer to the current free instruction log entry. */
 int local_counter = 1;
 struct self_s *self = NULL;
 
-#define REG_PARAMS_ORDER_MAX 3
+#define REG_PARAMS_ORDER_MAX 6
+/* RDI, RSI, RDX, RCX, R08, R09  */
 int reg_params_order[] = {
-	0x40,
-	0x38,
-	0x18
+	0x40, /* RDI */
+	0x38, /* RSI */
+	0x18, /* RDX */
+	0x10, /* RCX */
+	REG_08, /* R08 */
+	REG_09 /* R09 */
 };
 
 char *condition_table[] = {
@@ -134,9 +138,9 @@ struct extension_call_s {
 
 
 #define RELOCATION_SIZE 1000
-#define EXTERNAL_ENTRY_POINTS_SIZE 1000
+#define EXTERNAL_ENTRY_POINTS_MAX 1000
 struct relocation_s relocations[RELOCATION_SIZE];
-struct external_entry_point_s external_entry_points[EXTERNAL_ENTRY_POINTS_SIZE];
+struct external_entry_point_s external_entry_points[EXTERNAL_ENTRY_POINTS_MAX];
 
 /* For the .text segment. I.e. Instructions. */
 #define MEMORY_TEXT_SIZE 10000
@@ -268,11 +272,15 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 		ret = 0;
 		break;
 	case CALL:
-		if (instruction->srcA.index < 100) {
-			tmp = fprintf(fd, " %"PRIu64":%s(",
+		if ((instruction->srcA.indirect == IND_DIRECT) &&
+			(instruction->srcA.index < 0xa0)) {
+			tmp = fprintf(fd, " 0x%"PRIx64":%s(",
 				instruction->srcA.index,
 				external_entry_points[instruction->srcA.index].name);
 			tmp = fprintf(fd, ");\n");
+		} else if (instruction->srcA.indirect == IND_MEM) {
+			tmp = fprintf(fd, "(*r0x%"PRIx64") ();\n", 
+				instruction->srcA.index);
 		} else {
 			tmp = fprintf(fd, " CALL FAILED index=0x%"PRIx64"\n",
 				instruction->srcA.index);
@@ -1062,7 +1070,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 	const char *condition_string;
 
 	opcode = inst_log1_flagged->instruction.opcode;
-	printf("\t if opcode=%d, ",inst_log1_flagged->instruction.opcode);
+	printf("\t if opcode=0x%x, ",inst_log1_flagged->instruction.opcode);
 
 	switch (opcode) {
 	case CMP:
@@ -1107,8 +1115,50 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 		tmp = output_label(label, fd);
 		tmp = fprintf(fd, ") ");
 		break;
+	case TEST:
+		switch (condition) {
+		case EQUAL:
+			condition_string = " == 0";
+			break;
+		case NOT_EQUAL:
+			condition_string = " != 0";
+			break;
+		default:
+			printf("if_expression: non-yet-handled: 0x%x\n", condition);
+			err = 1;
+			break;
+		}
+
+		if ((!err) && (IND_DIRECT == inst_log1_flagged->instruction.srcA.indirect) && 
+			(IND_DIRECT == inst_log1_flagged->instruction.dstA.indirect) &&
+			(0 == inst_log1_flagged->value3.offset_value)) {
+			tmp = fprintf(fd, "((");
+			if (1 == inst_log1_flagged->instruction.dstA.indirect) {
+				tmp = fprintf(fd, "*");
+				value_id = inst_log1_flagged->value2.indirect_value_id;
+			} else {
+				value_id = inst_log1_flagged->value2.value_id;
+			}
+			tmp = label_redirect[value_id].redirect;
+			label = &labels[tmp];
+			//tmp = fprintf(fd, "0x%x:", tmp);
+			tmp = output_label(label, fd);
+			tmp = fprintf(fd, " AND ");
+			if (1 == inst_log1_flagged->instruction.srcA.indirect) {
+				tmp = fprintf(fd, "*");
+				value_id = inst_log1_flagged->value1.indirect_value_id;
+			} else {
+				value_id = inst_log1_flagged->value1.value_id;
+			}
+			tmp = label_redirect[value_id].redirect;
+			label = &labels[tmp];
+			//tmp = fprintf(fd, "0x%x:", tmp);
+			tmp = output_label(label, fd);
+			tmp = fprintf(fd, ")%s) ", condition_string);
+		}
+		break;
 	default:
-		printf("if_expression: CMP not present: opcode = 0x%x:0x%x, cond = 0x%x\n", CMP, opcode, condition);
+		printf("if_expression: Previous flags instruction not handled: opcode = 0x%x, cond = 0x%x\n", opcode, condition);
 		err = 1;
 		break;
 	}
@@ -1181,6 +1231,16 @@ int output_function_body(struct process_state_s *process_state,
 		instruction_prev =  &inst_log1_prev->instruction;
 
 		write_inst(fd, instruction, n);
+		
+		if (inst_log1->prev_size > 0) {
+			tmp = fprintf(fd, "// prev=0x%x",
+			inst_log1->prev[0]);
+		}
+		if (inst_log1->next_size > 0) {
+			tmp = fprintf(fd, ", next=0x%x",
+				inst_log1->next[0]);
+		}
+		tmp = fprintf(fd, "\n");
 		/* Output labels when this is a join point */
 		/* or when the previous instruction was some sort of jump */
 		if ((inst_log1->prev_size) > 1) {
@@ -1193,7 +1253,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, "label%04"PRIx32":\n", n);
 			}
 		}
-			
+		printf("\n");
 		/* Test to see if we have an instruction to output */
 		printf("Inst 0x%04x: %d: value_type = %d, %d, %d\n", n,
 			instruction->opcode,
@@ -1324,6 +1384,35 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = output_label(label, fd);
 				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
 				tmp = fprintf(fd, " -= ");
+				printf("\nstore=%d\n", instruction->srcA.store);
+				if (1 == instruction->srcA.indirect) {
+					tmp = fprintf(fd, "*");
+					value_id = inst_log1->value1.indirect_value_id;
+				} else {
+					value_id = inst_log1->value1.value_id;
+				}
+				tmp = label_redirect[value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
+				tmp = fprintf(fd, ";\n");
+				break;
+			case rAND:
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				if (1 == instruction->dstA.indirect) {
+					tmp = fprintf(fd, "*");
+					value_id = inst_log1->value3.indirect_value_id;
+				} else {
+					value_id = inst_log1->value3.value_id;
+				}
+				tmp = label_redirect[value_id].redirect;
+				label = &labels[tmp];
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
+				tmp = fprintf(fd, " &= ");
 				printf("\nstore=%d\n", instruction->srcA.store);
 				if (1 == instruction->srcA.indirect) {
 					tmp = fprintf(fd, "*");
@@ -1561,8 +1650,12 @@ int output_function_body(struct process_state_s *process_state,
 				if (print_inst(instruction, n))
 					return 1;
 				/* Search for EAX */
-				printf("call index = 0x%"PRIx64", params size = 0x%x\n", instruction->srcA.index,
-					external_entry_points[instruction->srcA.index].params_size);
+				printf("call index = 0x%"PRIx64"\n", instruction->srcA.index);
+				tmp = instruction->srcA.index;
+				if ((tmp >= 0) && (tmp < EXTERNAL_ENTRY_POINTS_MAX)) {
+					printf("params size = 0x%x\n",
+						external_entry_points[instruction->srcA.index].params_size);
+				}
 				printf("\t");
 				tmp = fprintf(fd, "\t");
 				tmp = label_redirect[inst_log1->value3.value_id].redirect;
@@ -1570,20 +1663,33 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = output_label(label, fd);
 				printf(" = ");
 				tmp = fprintf(fd, " = ");
+				if (IND_DIRECT == instruction->srcA.indirect) {
+					/* A direct call */
+					tmp = fprintf(fd, "%s(", 
+						external_entry_points[instruction->srcA.index].name);
+#if 0
+					/* FIXME: JCD test disabled */
+					call = inst_log1->extension;
 
-				tmp = fprintf(fd, "%s(", 
-					external_entry_points[instruction->srcA.index].name);
-				call = inst_log1->extension;
-				for (l = 0; l < call->params_size; l++) {
-					if (l > 0) {
-						fprintf(fd, ", ");
+					for (l = 0; l < call->params_size; l++) {
+						if (l > 0) {
+							fprintf(fd, ", ");
+						}
+						label = &labels[call->params[l]];
+						tmp = output_label(label, fd);
 					}
-					label = &labels[call->params[l]];
+#endif
+					tmp = fprintf(fd, ");\n");
+					printf("%s();\n",
+						external_entry_points[instruction->srcA.index].name);
+				} else {
+					/* A indirect call via a function pointer or call table. */
+					tmp = fprintf(fd, "(*");
+					tmp = label_redirect[inst_log1->value1.indirect_value_id].redirect;
+					label = &labels[tmp];
 					tmp = output_label(label, fd);
+					tmp = fprintf(fd, ") ()\n");
 				}
-				tmp = fprintf(fd, ");\n");
-				printf("%s();\n",
-					external_entry_points[instruction->srcA.index].name);
 //				tmp = fprintf(fd, "/* call(); */\n");
 //				printf("/* call(); */\n");
 				break;
@@ -1598,6 +1704,16 @@ int output_function_body(struct process_state_s *process_state,
 				printf("/* cmp; */\n");
 				break;
 
+			case TEST:
+				/* Don't do anything for this instruction. */
+				/* only does anything if combined with a branch instruction */
+				if (print_inst(instruction, n))
+					return 1;
+				tmp = fprintf(fd, "\t");
+				tmp = fprintf(fd, "/* test; */\n");
+				printf("/* test; */\n");
+				break;
+
 			case IF:
 				/* FIXME: Never gets here, why? */
 				/* Don't do anything for this instruction. */
@@ -1609,10 +1725,11 @@ int output_function_body(struct process_state_s *process_state,
 				printf("if ");
 				tmp = fprintf(fd, "if ");
 				found = 0;
-				tmp = 5; /* Limit the scan backwards */
+				tmp = 30; /* Limit the scan backwards */
 				l = inst_log1->prev[0];
 				do {
 					inst_log1_flags =  &inst_log_entry[l];
+					printf("Previous opcode 0x%x\n", inst_log1_flags->instruction.opcode);
 					printf("Previous flags 0x%x\n", inst_log1_flags->instruction.flags);
 					if (1 == inst_log1_flags->instruction.flags) {
 						found = 1;
@@ -1634,7 +1751,7 @@ int output_function_body(struct process_state_s *process_state,
 					
 				err = if_expression( instruction->srcA.index, inst_log1_flags, label_redirect, labels, fd);
 				printf("\t prev flags=%d, ",inst_log1_flags->instruction.flags);
-				printf("\t prev opcode=%d, ",inst_log1_flags->instruction.opcode);
+				printf("\t prev opcode=0x%x, ",inst_log1_flags->instruction.opcode);
 				printf("\t 0x%"PRIx64":%s", instruction->srcA.index, condition_table[instruction->srcA.index]);
 				printf("\t LHS=%d, ",inst_log1->prev[0]);
 				printf("goto label%04"PRIx32";\n", inst_log1->next[1]);
@@ -1663,7 +1780,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			default:
-				printf("Unhandled output instruction1\n");
+				printf("Unhandled output instruction1 opcode=0x%x\n", instruction->opcode);
 				if (print_inst(instruction, n))
 					return 1;
 				return 1;
@@ -1837,13 +1954,13 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			case SHR:
 			case SAL:
 			case SAR:
-				if (1 == instruction->dstA.indirect) {
+				if (IND_MEM == instruction->dstA.indirect) {
 					value_id = inst_log1->value3.indirect_value_id;
 				} else {
 					value_id = inst_log1->value3.value_id;
 				}
 				tmp = register_label(entry_point, value_id, &(inst_log1->value3), label_redirect, labels);
-				if (1 == instruction->srcA.indirect) {
+				if (IND_MEM == instruction->srcA.indirect) {
 					value_id = inst_log1->value1.indirect_value_id;
 				} else {
 					value_id = inst_log1->value1.value_id;
@@ -1853,23 +1970,27 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			case JMP:
 				break;
 			case CALL:
-				if (1 == instruction->dstA.indirect) {
+				if (IND_MEM == instruction->dstA.indirect) {
 					value_id = inst_log1->value3.indirect_value_id;
 				} else {
 					value_id = inst_log1->value3.value_id;
 				}
 				tmp = register_label(entry_point, value_id, &(inst_log1->value3), label_redirect, labels);
+				/* Special case for function pointers */
+				if (IND_MEM == instruction->srcA.indirect) {
+					value_id = inst_log1->value1.indirect_value_id;
+					tmp = register_label(entry_point, value_id, &(inst_log1->value1), label_redirect, labels);
+				}
 				break;
-
 			case CMP:
 			case TEST:
-				if (1 == instruction->dstA.indirect) {
+				if (IND_MEM == instruction->dstA.indirect) {
 					value_id = inst_log1->value2.indirect_value_id;
 				} else {
 					value_id = inst_log1->value2.value_id;
 				}
 				tmp = register_label(entry_point, value_id, &(inst_log1->value2), label_redirect, labels);
-				if (1 == instruction->srcA.indirect) {
+				if (IND_MEM == instruction->srcA.indirect) {
 					value_id = inst_log1->value1.indirect_value_id;
 				} else {
 					value_id = inst_log1->value1.value_id;
@@ -1884,7 +2005,7 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			case NOP:
 				break;
 			case RET:
-				if (1 == instruction->srcA.indirect) {
+				if (IND_MEM == instruction->srcA.indirect) {
 					value_id = inst_log1->value1.indirect_value_id;
 				} else {
 					value_id = inst_log1->value1.value_id;
@@ -2239,7 +2360,7 @@ int main(int argc, char *argv[])
 
 	}
 	printf("Number of functions = %d\n", n);
-	for (n = 0; n < EXTERNAL_ENTRY_POINTS_SIZE; n++) {
+	for (n = 0; n < EXTERNAL_ENTRY_POINTS_MAX; n++) {
 		if (external_entry_points[n].valid != 0) {
 		printf("type = %d, sect_offset = %d, sect_id = %d, sect_index = %d, &%s() = 0x%04"PRIx64"\n",
 			external_entry_points[n].type,
@@ -2254,7 +2375,7 @@ int main(int argc, char *argv[])
 		int len, len1;
 
 		len = strlen(handle->reloc_table_code[n].symbol_name);
-		for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
+		for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
 			if (external_entry_points[l].valid != 0) {
 				len1 = strlen(external_entry_points[l].name);
 				if (len != len1) {
@@ -2279,7 +2400,7 @@ int main(int argc, char *argv[])
 			handle->reloc_table_code[n].symbol_name);
 	}
 			
-	for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
 		if ((external_entry_points[l].valid != 0) &&
 			(external_entry_points[l].type == 1)) {
 			struct process_state_s *process_state;
@@ -2407,7 +2528,7 @@ int main(int argc, char *argv[])
 		case CMP:
 		case TEST: /* FIXME: Maybe need handling separately */
 		case SEX:
-			if (1 == instruction->dstA.indirect) {
+			if (IND_MEM == instruction->dstA.indirect) {
 				value_id = inst_log1->value3.indirect_value_id;
 			} else {
 				value_id = inst_log1->value3.value_id;
@@ -2435,7 +2556,7 @@ int main(int argc, char *argv[])
 				labels[value_id].value = label.value;
 			}
 
-			if (1 == instruction->srcA.indirect) {
+			if (IND_MEM == instruction->srcA.indirect) {
 				value_id = inst_log1->value1.indirect_value_id;
 			} else {
 				value_id = inst_log1->value1.value_id;
@@ -2465,7 +2586,7 @@ int main(int argc, char *argv[])
 			break;
 		case CALL:
 			printf("SSA CALL inst_log 0x%x\n", n);
-			if (1 == instruction->dstA.indirect) {
+			if (IND_MEM == instruction->dstA.indirect) {
 				value_id = inst_log1->value3.indirect_value_id;
 			} else {
 				value_id = inst_log1->value3.value_id;
@@ -2491,6 +2612,32 @@ int main(int argc, char *argv[])
 				labels[value_id].scope = label.scope;
 				labels[value_id].type = label.type;
 				labels[value_id].value = label.value;
+			}
+
+			if (IND_MEM == instruction->srcA.indirect) {
+				value_id = inst_log1->value1.indirect_value_id;
+				if (value_id > local_counter) {
+					printf("SSA Failed at inst_log 0x%x\n", n);
+					return 1;
+				}
+				tmp = log_to_label(instruction->srcA.store,
+					instruction->srcA.indirect,
+					instruction->srcA.index,
+					instruction->srcA.relocated,
+					inst_log1->value1.value_scope,
+					inst_log1->value1.value_id,
+					inst_log1->value1.indirect_offset_value,
+					inst_log1->value1.indirect_value_id,
+					&label);
+				if (tmp) {
+					printf("Inst:0x, value1 unknown label %x\n", n);
+				}
+				if (!tmp && value_id > 0) {
+					label_redirect[value_id].redirect = value_id;
+					labels[value_id].scope = label.scope;
+					labels[value_id].type = label.type;
+					labels[value_id].value = label.value;
+				}
 			}
 			break;
 		case IF:
@@ -2688,7 +2835,7 @@ int main(int argc, char *argv[])
 	 * 	Function params,
 	 *	local vars.
 	 ***************************************************/
-	for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
 		if (external_entry_points[l].valid &&
 			external_entry_points[l].type == 1) {
 		tmp = scan_for_labels_in_function_body(&external_entry_points[l],
@@ -2716,6 +2863,7 @@ int main(int argc, char *argv[])
 	 * e.g. Change local0011 = function(param_reg0040);
 	 *      to     local0011 = function(local0009);
 	 ***************************************************/
+#if 0
 	for (n = 1; n < inst_log; n++) {
 		struct label_s *label;
 		uint64_t value_id;
@@ -2738,6 +2886,8 @@ int main(int argc, char *argv[])
 		}
 		switch (instruction->opcode) {
 		case CALL:
+			printf("PRINTING INST CALL\n");
+			tmp = print_inst(instruction, n);
 			external_entry_point = &external_entry_points[instruction->srcA.index];
 			inst_log1->extension = calloc(1, sizeof(call));
 			call = inst_log1->extension;
@@ -2783,7 +2933,7 @@ int main(int argc, char *argv[])
 				tmp = fprintf(stdout, ");\n");
 				tmp = fprintf(stdout, "PARAM size = 0x%"PRIx64"\n", size);
 				if (size > 1) {
-					printf("number of param locals found too big at instruction 0x%x\n", n);
+					printf("number of param locals (0x%"PRIx64") found too big at instruction 0x%x\n", size, n);
 					return 1;
 					break;
 				}
@@ -2806,7 +2956,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
-
+#endif
 
 	/***************************************************
 	 * This section deals with outputting the .c file.
@@ -2821,7 +2971,7 @@ int main(int argc, char *argv[])
 	printf("writing out to file\n");
 	tmp = fprintf(fd, "#include <stdint.h>\n\n");
 	printf("\nPRINTING MEMORY_DATA\n");
-	for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
 		struct process_state_s *process_state;
 		if (external_entry_points[l].valid) {
 			process_state = &external_entry_points[l].process_state;
@@ -2879,7 +3029,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	for (l = 0; l < EXTERNAL_ENTRY_POINTS_SIZE; l++) {
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
 		          one function per .o file. */
