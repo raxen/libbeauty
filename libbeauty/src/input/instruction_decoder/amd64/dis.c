@@ -995,6 +995,9 @@ int dis_Gx_Ex(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instru
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
+	if (opcode == MOV) {
+		instruction->flags = 0;
+	}
 	instruction->dstA.store = STORE_REG;
 	instruction->dstA.indirect = IND_DIRECT;
 	instruction->dstA.indirect_size = 8;
@@ -1032,6 +1035,9 @@ int dis_Ex_Ix(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instru
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 	instruction->opcode = opcode;
 	instruction->flags = 1;
+	if (opcode == MOV) {
+		instruction->flags = 0;
+	}
 	instruction->srcA.store = STORE_DIRECT;
 	instruction->srcA.indirect = IND_DIRECT;
 	instruction->srcA.indirect_size = 8;

@@ -1086,6 +1086,9 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 		case GREATER:
 			condition_string = " > ";
 			break;
+		case NOT_EQUAL:
+			condition_string = " != ";
+			break;
 		default:
 			printf("if_expression: non-yet-handled: 0x%x\n", condition);
 			err = 1;
@@ -1665,8 +1668,10 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, " = ");
 				if (IND_DIRECT == instruction->srcA.indirect) {
 					/* A direct call */
-					tmp = fprintf(fd, "%s(", 
-						external_entry_points[instruction->srcA.index].name);
+					/* FIXME: Get the output right */
+					tmp = fprintf(fd, "CALL()\n"); 
+					//tmp = fprintf(fd, "%s(", 
+					//	external_entry_points[instruction->srcA.index].name);
 #if 0
 					/* FIXME: JCD test disabled */
 					call = inst_log1->extension;
@@ -1679,9 +1684,9 @@ int output_function_body(struct process_state_s *process_state,
 						tmp = output_label(label, fd);
 					}
 #endif
-					tmp = fprintf(fd, ");\n");
-					printf("%s();\n",
-						external_entry_points[instruction->srcA.index].name);
+					//tmp = fprintf(fd, ");\n");
+					//printf("%s();\n",
+					//	external_entry_points[instruction->srcA.index].name);
 				} else {
 					/* A indirect call via a function pointer or call table. */
 					tmp = fprintf(fd, "(*");
