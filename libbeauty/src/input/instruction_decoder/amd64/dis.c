@@ -2188,7 +2188,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	case 0xa8:												/* TEST AL,Ib */
 		instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
 		instruction->opcode = TEST;
-		instruction->flags = 0;
+		instruction->flags = 1;
 		instruction->srcA.store = STORE_DIRECT;
 		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 1;

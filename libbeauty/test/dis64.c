@@ -1080,20 +1080,29 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 			condition_string = " <= ";
 			break;
 		case GREATER_EQUAL: /* Signed */
-//		case ABOVE_EQUAL:   /* Unsigned */
+		case NOT_BELOW:   /* Unsigned */
 			condition_string = " >= ";
 			break;
 		case GREATER:
+		case ABOVE:
 			condition_string = " > ";
+			break;
+		case BELOW:
+		case LESS:
+			condition_string = " < ";
 			break;
 		case NOT_EQUAL:
 			condition_string = " != ";
+			break;
+		case EQUAL:
+			condition_string = " == ";
 			break;
 		default:
 			printf("if_expression: non-yet-handled: 0x%x\n", condition);
 			err = 1;
 			break;
 		}
+		if (err) break;
 		tmp = fprintf(fd, "(");
 		if (1 == inst_log1_flagged->instruction.dstA.indirect) {
 			tmp = fprintf(fd, "*");
@@ -1118,7 +1127,86 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 		tmp = output_label(label, fd);
 		tmp = fprintf(fd, ") ");
 		break;
+	case SUB:
+	case ADD:
+		switch (condition) {
+		case EQUAL:
+			condition_string = " == 0";
+			break;
+		case NOT_EQUAL:
+			condition_string = " != 0";
+			break;
+		default:
+			printf("if_expression: non-yet-handled: 0x%x\n", condition);
+			err = 1;
+			break;
+		}
+
+		if ((!err) && (IND_DIRECT == inst_log1_flagged->instruction.srcA.indirect) && 
+			(IND_DIRECT == inst_log1_flagged->instruction.dstA.indirect) &&
+			(0 == inst_log1_flagged->value3.offset_value)) {
+			tmp = fprintf(fd, "((");
+			if (1 == inst_log1_flagged->instruction.dstA.indirect) {
+				tmp = fprintf(fd, "*");
+				value_id = inst_log1_flagged->value2.indirect_value_id;
+			} else {
+				value_id = inst_log1_flagged->value2.value_id;
+			}
+			tmp = label_redirect[value_id].redirect;
+			label = &labels[tmp];
+			//tmp = fprintf(fd, "0x%x:", tmp);
+			tmp = output_label(label, fd);
+			tmp = fprintf(fd, "%s) ", condition_string);
+		}
+		break;
+
 	case TEST:
+		switch (condition) {
+		case EQUAL:
+			condition_string = " == 0";
+			break;
+		case NOT_EQUAL:
+			condition_string = " != 0";
+			break;
+		case LESS_EQUAL:
+			condition_string = " <= 0";
+			break;
+		default:
+			printf("if_expression: non-yet-handled: 0x%x\n", condition);
+			err = 1;
+			break;
+		}
+
+		if ((!err) && (IND_DIRECT == inst_log1_flagged->instruction.srcA.indirect) && 
+			(IND_DIRECT == inst_log1_flagged->instruction.dstA.indirect) &&
+			(0 == inst_log1_flagged->value3.offset_value)) {
+			tmp = fprintf(fd, "((");
+			if (1 == inst_log1_flagged->instruction.dstA.indirect) {
+				tmp = fprintf(fd, "*");
+				value_id = inst_log1_flagged->value2.indirect_value_id;
+			} else {
+				value_id = inst_log1_flagged->value2.value_id;
+			}
+			tmp = label_redirect[value_id].redirect;
+			label = &labels[tmp];
+			//tmp = fprintf(fd, "0x%x:", tmp);
+			tmp = output_label(label, fd);
+			tmp = fprintf(fd, " AND ");
+			if (1 == inst_log1_flagged->instruction.srcA.indirect) {
+				tmp = fprintf(fd, "*");
+				value_id = inst_log1_flagged->value1.indirect_value_id;
+			} else {
+				value_id = inst_log1_flagged->value1.value_id;
+			}
+			tmp = label_redirect[value_id].redirect;
+			label = &labels[tmp];
+			//tmp = fprintf(fd, "0x%x:", tmp);
+			tmp = output_label(label, fd);
+			tmp = fprintf(fd, ")%s) ", condition_string);
+		}
+		break;
+
+	case rAND:
 		switch (condition) {
 		case EQUAL:
 			condition_string = " == 0";
@@ -1160,6 +1248,7 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 			tmp = fprintf(fd, ")%s) ", condition_string);
 		}
 		break;
+
 	default:
 		printf("if_expression: Previous flags instruction not handled: opcode = 0x%x, cond = 0x%x\n", opcode, condition);
 		err = 1;
@@ -1311,6 +1400,48 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 
 				break;
+			case NEG:
+				if (inst_log1->value1.value_type == 6) {
+					printf("ERROR1\n");
+					break;
+				}
+				if (inst_log1->value1.value_type == 5) {
+					printf("ERROR2\n");
+					break;
+				}
+				if (print_inst(instruction, n))
+					return 1;
+				printf("\t");
+				tmp = fprintf(fd, "\t");
+				/* FIXME: Check limits */
+				if (1 == instruction->dstA.indirect) {
+					tmp = fprintf(fd, "*");
+					value_id = inst_log1->value3.indirect_value_id;
+				} else {
+					value_id = inst_log1->value3.value_id;
+				}
+				tmp = label_redirect[value_id].redirect;
+				label = &labels[tmp];
+				//tmp = fprintf(fd, "0x%x:", tmp);
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value3.value_id);
+				tmp = fprintf(fd, " = -");
+				printf("\nstore=%d\n", instruction->srcA.store);
+				if (1 == instruction->srcA.indirect) {
+					tmp = fprintf(fd, "*");
+					value_id = inst_log1->value1.indirect_value_id;
+				} else {
+					value_id = inst_log1->value1.value_id;
+				}
+				tmp = label_redirect[value_id].redirect;
+				label = &labels[tmp];
+				//tmp = fprintf(fd, "0x%x:", tmp);
+				tmp = output_label(label, fd);
+				//tmp = fprintf(fd, " /*(0x%"PRIx64")*/", inst_log1->value1.value_id);
+				tmp = fprintf(fd, ";\n");
+
+				break;
+
 			case ADD:
 				if (print_inst(instruction, n))
 					return 1;
@@ -1343,6 +1474,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case MUL:
+			case IMUL:
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
@@ -1372,6 +1504,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case SUB:
+			case SBB:
 				if (print_inst(instruction, n))
 					return 1;
 				printf("\t");
@@ -3151,7 +3284,7 @@ int main(int argc, char *argv[])
 			n += tmp;
 		}
 	}
-	
+	printf("END - FINISHED PROCESSING\n");
 	return 0;
 }
 
