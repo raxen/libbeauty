@@ -2595,6 +2595,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 		instruction->srcA.indirect = IND_DIRECT;
 		instruction->srcA.indirect_size = 8;
 		// Means get from rest of instruction
+		/* Adjust from REL to ABS value */
 		instruction->srcA.index = getdword(base_address, offset + dis_instructions->bytes_used);
 		tmp = relocated_code(handle, base_address, offset + dis_instructions->bytes_used, 4, &reloc_table_entry);
 		if (!tmp) {
@@ -2603,7 +2604,9 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			/* FIXME: Check it works for all related cases. E.g. jmp and call */
 
 			instruction->srcA.index = reloc_table_entry->external_functions_index;
+		} else {
 		}
+
 		dis_instructions->bytes_used+=4;
 		instruction->srcA.value_size = 4;
 		instruction->dstA.store = STORE_REG;

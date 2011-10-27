@@ -273,8 +273,8 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 		break;
 	case CALL:
 		if ((instruction->srcA.indirect == IND_DIRECT) &&
-			(instruction->srcA.index < 0xa0)) {
-			tmp = fprintf(fd, " 0x%"PRIx64":%s(",
+			(instruction->srcA.relocated == 1)) {
+			tmp = fprintf(fd, " CALL2 0x%"PRIx64":%s(",
 				instruction->srcA.index,
 				external_entry_points[instruction->srcA.index].name);
 			tmp = fprintf(fd, ");\n");
@@ -1352,6 +1352,7 @@ int output_function_body(struct process_state_s *process_state,
 			inst_log1->value1.value_type,
 			inst_log1->value2.value_type,
 			inst_log1->value3.value_type);
+		/* FIXME: JCD: This fails for some call instructions */
 		if ((0 == inst_log1->value3.value_type) ||
 			(1 == inst_log1->value3.value_type) ||
 			(2 == inst_log1->value3.value_type) ||
@@ -1783,8 +1784,10 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 			case CALL:
 				/* FIXME: This does nothing at the moment. */
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n)) {	
+					tmp = fprintf(fd, "exiting1\n");
 					return 1;
+				}
 				/* Search for EAX */
 				printf("call index = 0x%"PRIx64"\n", instruction->srcA.index);
 				tmp = instruction->srcA.index;
@@ -1802,9 +1805,13 @@ int output_function_body(struct process_state_s *process_state,
 				if (IND_DIRECT == instruction->srcA.indirect) {
 					/* A direct call */
 					/* FIXME: Get the output right */
-					tmp = fprintf(fd, "CALL()\n"); 
-					//tmp = fprintf(fd, "%s(", 
-					//	external_entry_points[instruction->srcA.index].name);
+					if (1 == instruction->srcA.relocated) {
+						tmp = fprintf(fd, "%s(", 
+							external_entry_points[instruction->srcA.index].name);
+						tmp = fprintf(fd, ");\n");
+					} else {
+						tmp = fprintf(fd, "CALL1()\n");
+					}
 #if 0
 					/* FIXME: JCD test disabled */
 					call = inst_log1->extension;
@@ -1919,6 +1926,7 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 			default:
 				printf("Unhandled output instruction1 opcode=0x%x\n", instruction->opcode);
+				tmp = fprintf(fd, "Unhandled output instruction\n");
 				if (print_inst(instruction, n))
 					return 1;
 				return 1;
@@ -2500,7 +2508,8 @@ int main(int argc, char *argv[])
 	printf("Number of functions = %d\n", n);
 	for (n = 0; n < EXTERNAL_ENTRY_POINTS_MAX; n++) {
 		if (external_entry_points[n].valid != 0) {
-		printf("type = %d, sect_offset = %d, sect_id = %d, sect_index = %d, &%s() = 0x%04"PRIx64"\n",
+		printf("%d: type = %d, sect_offset = %d, sect_id = %d, sect_index = %d, &%s() = 0x%04"PRIx64"\n",
+			n,
 			external_entry_points[n].type,
 			external_entry_points[n].section_offset,
 			external_entry_points[n].section_id,

@@ -1584,7 +1584,8 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		inst->value3.init_value_type = inst->value2.init_value_type;
 		inst->value3.init_value = inst->value2.init_value;
 		inst->value3.offset_value = inst->value2.offset_value;
-		inst->value3.value_type = inst->value2.value_type;
+		//inst->value3.value_type = inst->value2.value_type;
+		inst->value3.value_type = 0;
 		inst->value3.indirect_init_value =
 			inst->value2.indirect_init_value;
 		inst->value3.indirect_offset_value =
