@@ -272,6 +272,17 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 		ret = 0;
 		break;
 	case CALL:
+		if (instruction->srcA.relocated == 2) {
+			for (n = 0; n < EXTERNAL_ENTRY_POINTS_MAX; n++) {
+				if ((external_entry_points[n].valid != 0) &&
+					(external_entry_points[n].type == 1) &&
+					(external_entry_points[n].value == instruction->srcA.index)) {
+					instruction->srcA.index = n;
+					instruction->srcA.relocated = 1;
+					break;
+				}
+			}
+		}
 		if ((instruction->srcA.indirect == IND_DIRECT) &&
 			(instruction->srcA.relocated == 1)) {
 			tmp = fprintf(fd, " CALL2 0x%"PRIx64":%s(",
