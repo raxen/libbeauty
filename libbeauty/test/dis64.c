@@ -2249,6 +2249,7 @@ int search_back_local_reg_stack(uint64_t mid_start_size, struct mid_start_s *mid
 				*inst_list = realloc(*inst_list, tmp * sizeof(*inst_list));
 				(*inst_list)[tmp - 1] = inst_num;
 			}
+		/* REGISTER */
 		} else if ((reg_stack == 1) &&
 			(instruction->dstA.store == STORE_REG) &&
 			(instruction->dstA.indirect == IND_DIRECT) &&
@@ -2816,14 +2817,19 @@ int main(int argc, char *argv[])
 	/************************************************************
 	 * This section deals with correcting SSA for branches/joins.
 	 * It build bi-directional links to instruction operands.
-	 * This section does work for local_reg case.
+	 * This section does work for local_reg case. FIXME
 	 ************************************************************/
-#if 0
 	for (n = 1; n < inst_log; n++) {
 		struct label_s label;
+		uint64_t value_id;
 		uint64_t value_id1;
 		uint64_t value_id2;
+		uint64_t size;
+		uint64_t *inst_list;
+		uint64_t mid_start_size;
+		struct mid_start_s *mid_start;
 
+		size = 0;
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
 		value_id1 = inst_log1->value1.value_id;
@@ -2839,12 +2845,69 @@ int main(int argc, char *argv[])
 		case SHL:
 		case SHR:
 		case CMP:
+		/* FIXME: TODO */
+			value_id = label_redirect[value_id1].redirect;
+			if ((1 == labels[value_id].scope) &&
+				(1 == labels[value_id].type)) {
+				printf("Found local_reg Inst:0x%x:value_id:0x%"PRIx64"\n", n, value_id1);
+				if (0 == inst_log1->prev_size) {
+					printf("search_back ended\n");
+					return 1;
+				}
+				if (0 < inst_log1->prev_size) {
+					mid_start = calloc(inst_log1->prev_size, sizeof(struct mid_start_s));
+					mid_start_size = inst_log1->prev_size;
+					for (l = 0; l < inst_log1->prev_size; l++) {
+						mid_start[l].mid_start = inst_log1->prev[l];
+						mid_start[l].valid = 1;
+						printf("mid_start added 0x%"PRIx64" at 0x%x\n", mid_start[l].mid_start, l);
+					}
+				}
+				tmp = search_back_local_reg_stack(mid_start_size, mid_start, 1, inst_log1->instruction.srcA.index, 0, &size, &inst_list);
+				if (tmp) {
+					printf("SSA search_back Failed at inst_log 0x%x\n", n);
+					return 1;
+				}
+			}
+			printf("SSA inst:0x%x:size=0x%"PRIx64"\n", n, size);
+			/* Renaming is only needed if there are more than one label present */
+			if (size > 0) {
+				uint64_t value_id_highest = value_id;
+				inst_log1->value1.prev = calloc(size, sizeof(inst_log1->value1.prev));
+				inst_log1->value1.prev_size = size;
+				for (l = 0; l < size; l++) {
+					struct inst_log_entry_s *inst_log_l;
+					inst_log_l = &inst_log_entry[inst_list[l]];
+					inst_log1->value1.prev[l] = inst_list[l];
+					inst_log_l->value3.next = realloc(inst_log_l->value3.next, (inst_log_l->value3.next_size + 1) * sizeof(inst_log_l->value3.next));
+					inst_log_l->value3.next[inst_log_l->value3.next_size] =
+						 inst_list[l];
+					inst_log_l->value3.next_size++;
+					if (label_redirect[inst_log_l->value3.value_id].redirect > value_id_highest) {
+						value_id_highest = label_redirect[inst_log_l->value3.value_id].redirect;
+					}
+					printf("rel inst:0x%"PRIx64"\n", inst_list[l]);
+				}
+				printf("Renaming label 0x%"PRIx64" to 0x%"PRIx64"\n",
+					label_redirect[value_id1].redirect,
+					value_id_highest);
+				label_redirect[value_id1].redirect =
+					value_id_highest;
+				for (l = 0; l < size; l++) {
+					struct inst_log_entry_s *inst_log_l;
+					inst_log_l = &inst_log_entry[inst_list[l]];
+					printf("Renaming label 0x%"PRIx64" to 0x%"PRIx64"\n",
+						label_redirect[inst_log_l->value3.value_id].redirect,
+						value_id_highest);
+					label_redirect[inst_log_l->value3.value_id].redirect =
+						value_id_highest;
+				}
+			}
+			break;
 		default:
 			break;
-		/* FIXME: TODO */
 		}
 	}
-#endif
 	/************************************************************
 	 * This section deals with correcting SSA for branches/joins.
 	 * It build bi-directional links to instruction operands.
