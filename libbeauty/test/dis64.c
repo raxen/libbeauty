@@ -1335,13 +1335,18 @@ int output_function_body(struct process_state_s *process_state,
 
 		write_inst(fd, instruction, n);
 		
+		tmp = fprintf(fd, "// ");
 		if (inst_log1->prev_size > 0) {
-			tmp = fprintf(fd, "// prev=0x%x",
-			inst_log1->prev[0]);
+			for (l = 0; l < inst_log1->prev_size; l++) {
+				tmp = fprintf(fd, "prev=0x%x, ",
+				inst_log1->prev[l]);
+			}
 		}
 		if (inst_log1->next_size > 0) {
-			tmp = fprintf(fd, ", next=0x%x",
-				inst_log1->next[0]);
+			for (l = 0; l < inst_log1->next_size; l++) {
+				tmp = fprintf(fd, "next=0x%x, ",
+				inst_log1->next[l]);
+			}
 		}
 		tmp = fprintf(fd, "\n");
 		/* Output labels when this is a join point */
@@ -1782,16 +1787,17 @@ int output_function_body(struct process_state_s *process_state,
 				if (print_inst(instruction, n))
 					return 1;
 				tmp = fprintf(fd, "\t");
-				if (instruction->srcA.relocated) {
-					printf("goto rel%08"PRIx64";\n", instruction->srcA.index);
-					tmp = fprintf(fd, "goto rel%08"PRIx64";\n",
-						instruction->srcA.index);
-				} else {
-					printf("goto label%04"PRIx32";\n",
+
+//				if (instruction->srcA.relocated) {
+//					printf("JMP goto rel%08"PRIx64";\n", instruction->srcA.index);
+//					tmp = fprintf(fd, "JMP goto rel%08"PRIx64";\n",
+//						instruction->srcA.index);
+//				} else {
+					printf("JMP2 goto label%04"PRIx32";\n",
 						inst_log1->next[0]);
-					tmp = fprintf(fd, "goto label%04"PRIx32";\n",
+					tmp = fprintf(fd, "JMP2 goto label%04"PRIx32";\n",
 						inst_log1->next[0]);
-				}
+//				}
 				break;
 			case CALL:
 				/* FIXME: This does nothing at the moment. */
@@ -1910,12 +1916,12 @@ int output_function_body(struct process_state_s *process_state,
 				printf("\t prev opcode=0x%x, ",inst_log1_flags->instruction.opcode);
 				printf("\t 0x%"PRIx64":%s", instruction->srcA.index, condition_table[instruction->srcA.index]);
 				printf("\t LHS=%d, ",inst_log1->prev[0]);
-				printf("goto label%04"PRIx32";\n", inst_log1->next[1]);
+				printf("IF goto label%04"PRIx32";\n", inst_log1->next[1]);
 				if (err) {
 					printf("IF CONDITION unknown\n");	
 					return 1;
 				}
-				tmp = fprintf(fd, "goto label%04"PRIx32";\n", inst_log1->next[1]);
+				tmp = fprintf(fd, "IF goto label%04"PRIx32";\n", inst_log1->next[1]);
 				break;
 
 			case NOP:
@@ -1946,8 +1952,8 @@ int output_function_body(struct process_state_s *process_state,
 		}
 	}
 	if (0 < inst_log1->next_size && inst_log1->next[0]) {		
-		printf("\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
-		tmp = fprintf(fd, "\tgoto label%04"PRIx32";\n", inst_log1->next[0]);
+		printf("\tTMP1 goto label%04"PRIx32";\n", inst_log1->next[0]);
+		tmp = fprintf(fd, "\tTMP1 goto label%04"PRIx32";\n", inst_log1->next[0]);
 	}
 	tmp = fprintf(fd, "}\n\n");
 	return 0;
