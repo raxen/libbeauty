@@ -1115,18 +1115,22 @@ int if_expression( int condition, struct inst_log_entry_s *inst_log1_flagged,
 		}
 		if (err) break;
 		tmp = fprintf(fd, "(");
-		if (1 == inst_log1_flagged->instruction.dstA.indirect) {
+		if (IND_MEM == inst_log1_flagged->instruction.dstA.indirect) {
 			tmp = fprintf(fd, "*");
 			value_id = inst_log1_flagged->value2.indirect_value_id;
 		} else {
 			value_id = inst_log1_flagged->value2.value_id;
 		}
-		tmp = label_redirect[value_id].redirect;
-		label = &labels[tmp];
-		//tmp = fprintf(fd, "0x%x:", tmp);
-		tmp = output_label(label, fd);
+		if (STORE_DIRECT == inst_log1_flagged->instruction.dstA.store) {
+			tmp = fprintf(fd, "0x%"PRIx64, inst_log1_flagged->instruction.dstA.index);
+		} else {
+			tmp = label_redirect[value_id].redirect;
+			label = &labels[tmp];
+			//tmp = fprintf(fd, "0x%x:", tmp);
+			tmp = output_label(label, fd);
+		}
 		tmp = fprintf(fd, "%s", condition_string);
-		if (1 == inst_log1_flagged->instruction.srcA.indirect) {
+		if (IND_MEM == inst_log1_flagged->instruction.srcA.indirect) {
 			tmp = fprintf(fd, "*");
 			value_id = inst_log1_flagged->value1.indirect_value_id;
 		} else {
