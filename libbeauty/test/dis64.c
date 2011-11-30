@@ -209,11 +209,12 @@ struct label_s {
 	char *name;
 } ;
 
-int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_number)
+int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_number, struct label_s *labels)
 {
 	int ret = 1; /* Default to failed */
 	int tmp;
-	int n;
+	int tmp_state = 0;
+	int n, m, l;
 	tmp = fprintf(fd, "// 0x%04x:%s%s",
 		instruction_number,
 		opcode_table[instruction->opcode],
@@ -288,6 +289,26 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 			tmp = fprintf(fd, " CALL2 0x%"PRIx64":%s(",
 				instruction->srcA.index,
 				external_entry_points[instruction->srcA.index].name);
+			tmp_state = 0;
+			l = instruction->srcA.index;
+			for (m = 0; m < REG_PARAMS_ORDER_MAX; m++) {
+				struct label_s *label;
+				for (n = 0; n < external_entry_points[l].params_size; n++) {
+					label = &labels[external_entry_points[l].params[n]];
+					printf("reg_params_order = 0x%x, label->value = 0x%"PRIx64"\n", reg_params_order[m], label->value);
+					if ((label->scope == 2) &&
+						(label->type == 1) &&
+						(label->value == reg_params_order[m])) {
+						if (tmp_state > 0) {
+							fprintf(fd, ", ");
+						}
+						fprintf(fd, "int%"PRId64"_t ",
+							label->size_bits);
+						tmp = output_label(label, fd);
+						tmp_state++;
+					}
+				}
+			}
 			tmp = fprintf(fd, ");\n");
 		} else if (instruction->srcA.indirect == IND_MEM) {
 			tmp = fprintf(fd, "(*r0x%"PRIx64") ();\n", 
@@ -310,11 +331,11 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 	return ret;
 }
 
-int print_inst(struct instruction_s *instruction, int instruction_number)
+int print_inst(struct instruction_s *instruction, int instruction_number, struct label_s *labels)
 {
 	int ret;
 
-	ret = write_inst(stdout, instruction, instruction_number);
+	ret = write_inst(stdout, instruction, instruction_number, labels);
 	return ret;
 }
 
@@ -326,7 +347,7 @@ int print_dis_instructions(void)
 	for (n = 1; n <= inst_log; n++) {
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
-		if (print_inst(instruction, n))
+		if (print_inst(instruction, n, NULL))
 			return 1;
 		printf("start_address:%"PRIx64", %"PRIx64" -> %"PRIx64"\n",
 			inst_log1->value1.start_address,
@@ -700,7 +721,7 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 		for (n = 0; n < dis_instructions.instruction_number; n++) {
 			instruction = &dis_instructions.instruction[n];
 			printf( "Printing inst1111:%d, %d, %"PRId64"\n",instruction_offset, n, inst_log);
-			err = print_inst(instruction, instruction_offset + n + 1);
+			err = print_inst(instruction, instruction_offset + n + 1, NULL);
 			if (err) {
 				printf("print_inst failed\n");
 				return err;
@@ -1304,7 +1325,8 @@ uint32_t output_function_name(FILE *fd,
 int output_function_body(struct process_state_s *process_state,
 			 FILE *fd, int start, int end, struct label_redirect_s *label_redirect, struct label_s *labels)
 {
-	int tmp, n,l;
+	int tmp, l, m, n, n2;
+	int tmp_state;
 	int err;
 	int found;
 	uint64_t value_id;
@@ -1337,7 +1359,7 @@ int output_function_body(struct process_state_s *process_state,
 		instruction =  &inst_log1->instruction;
 		instruction_prev =  &inst_log1_prev->instruction;
 
-		write_inst(fd, instruction, n);
+		write_inst(fd, instruction, n, labels);
 		
 		tmp = fprintf(fd, "// ");
 		if (inst_log1->prev_size > 0) {
@@ -1389,7 +1411,7 @@ int output_function_body(struct process_state_s *process_state,
 					printf("ERROR2\n");
 					break;
 				}
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1430,7 +1452,7 @@ int output_function_body(struct process_state_s *process_state,
 					printf("ERROR2\n");
 					break;
 				}
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1464,7 +1486,7 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 
 			case ADD:
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1496,7 +1518,7 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 			case MUL:
 			case IMUL:
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1526,7 +1548,7 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 			case SUB:
 			case SBB:
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1555,7 +1577,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case rAND:
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1584,7 +1606,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case OR:
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1613,7 +1635,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case XOR:
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1642,7 +1664,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case NOT:
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1671,7 +1693,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case SHL: //TODO: UNSIGNED
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1700,7 +1722,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case SHR: //TODO: UNSIGNED
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1729,7 +1751,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case SAL: //TODO: SIGNED
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1758,7 +1780,7 @@ int output_function_body(struct process_state_s *process_state,
 				tmp = fprintf(fd, ";\n");
 				break;
 			case SAR: //TODO: SIGNED
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1788,7 +1810,7 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 			case JMP:
 				printf("JMP reached XXXX\n");
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				tmp = fprintf(fd, "\t");
 
@@ -1805,7 +1827,7 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 			case CALL:
 				/* FIXME: This does nothing at the moment. */
-				if (print_inst(instruction, n)) {	
+				if (print_inst(instruction, n, labels)) {
 					tmp = fprintf(fd, "exiting1\n");
 					return 1;
 				}
@@ -1822,13 +1844,35 @@ int output_function_body(struct process_state_s *process_state,
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
 				printf(" = ");
-				tmp = fprintf(fd, " = ");
+				tmp = fprintf(fd, " xxxx= ");
 				if (IND_DIRECT == instruction->srcA.indirect) {
 					/* A direct call */
 					/* FIXME: Get the output right */
 					if (1 == instruction->srcA.relocated) {
-						tmp = fprintf(fd, "%s(", 
-							external_entry_points[instruction->srcA.index].name);
+						tmp = fprintf(fd, "%s(%d", 
+							external_entry_points[instruction->srcA.index].name,
+							external_entry_points[instruction->srcA.index].params_size);
+						tmp_state = 0;
+						l = instruction->srcA.index;
+						for (m = 0; m < REG_PARAMS_ORDER_MAX; m++) {
+							struct label_s *label;
+							
+							for (n2 = 0; n2 < external_entry_points[l].params_size; n2++) {
+								label = &labels[external_entry_points[l].params[n2]];
+								printf("reg_params_order = 0x%x, label->value = 0x%"PRIx64"\n", reg_params_order[m], label->value);
+								if ((label->scope == 2) &&
+									(label->type == 1) &&
+									(label->value == reg_params_order[m])) {
+									if (tmp_state > 0) {
+										fprintf(fd, ", ");
+									}
+									fprintf(fd, "int%"PRId64"_t ",
+										label->size_bits);
+									tmp = output_label(label, fd);
+									tmp_state++;
+								}
+							}
+						}
 						tmp = fprintf(fd, ");\n");
 					} else {
 						tmp = fprintf(fd, "CALL1()\n");
@@ -1836,13 +1880,14 @@ int output_function_body(struct process_state_s *process_state,
 #if 0
 					/* FIXME: JCD test disabled */
 					call = inst_log1->extension;
-
-					for (l = 0; l < call->params_size; l++) {
-						if (l > 0) {
-							fprintf(fd, ", ");
+					if (call) {
+						for (l = 0; l < call->params_size; l++) {
+							if (l > 0) {
+								fprintf(fd, ", ");
+							}
+							label = &labels[call->params[l]];
+							tmp = output_label(label, fd);
 						}
-						label = &labels[call->params[l]];
-						tmp = output_label(label, fd);
 					}
 #endif
 					//tmp = fprintf(fd, ");\n");
@@ -1863,7 +1908,7 @@ int output_function_body(struct process_state_s *process_state,
 			case CMP:
 				/* Don't do anything for this instruction. */
 				/* only does anything if combined with a branch instruction */
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				tmp = fprintf(fd, "\t");
 				tmp = fprintf(fd, "/* cmp; */\n");
@@ -1873,7 +1918,7 @@ int output_function_body(struct process_state_s *process_state,
 			case TEST:
 				/* Don't do anything for this instruction. */
 				/* only does anything if combined with a branch instruction */
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				tmp = fprintf(fd, "\t");
 				tmp = fprintf(fd, "/* test; */\n");
@@ -1884,7 +1929,7 @@ int output_function_body(struct process_state_s *process_state,
 				/* FIXME: Never gets here, why? */
 				/* Don't do anything for this instruction. */
 				/* only does anything if combined with a branch instruction */
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1929,11 +1974,11 @@ int output_function_body(struct process_state_s *process_state,
 				break;
 
 			case NOP:
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				break;
 			case RET:
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				printf("\t");
 				tmp = fprintf(fd, "\t");
@@ -1948,7 +1993,7 @@ int output_function_body(struct process_state_s *process_state,
 			default:
 				printf("Unhandled output instruction1 opcode=0x%x\n", instruction->opcode);
 				tmp = fprintf(fd, "Unhandled output instruction\n");
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				return 1;
 				break;
@@ -2181,7 +2226,7 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 				break;
 			default:
 				printf("Unhandled scan instruction1\n");
-				if (print_inst(instruction, n))
+				if (print_inst(instruction, n, labels))
 					return 1;
 				return 1;
 				break;
