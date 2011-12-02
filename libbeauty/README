@@ -1,5 +1,10 @@
+This needs the following package installed:
+libbfd-dev
+
 To see current status do:
 In the tree root, do:
+
+./autogen.sh
 
 ./configure
 make
@@ -11,6 +16,6 @@ then:
 cd test
 make
 
-This will build the test programs dis and bf.
+This will build the test programs dis32, dis64 and bf.
 
-run "./dis" to see the current working state. 
+run "./dis64" to see the current working state. 
