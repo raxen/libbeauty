@@ -309,6 +309,21 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 					}
 				}
 			}
+			for (n = 0; n < external_entry_points[l].params_size; n++) {
+				struct label_s *label;
+				label = &labels[external_entry_points[l].params[n]];
+				if ((label->scope == 2) &&
+					(label->type == 1)) {
+					continue;
+				}
+				if (tmp_state > 0) {
+					fprintf(fd, ", ");
+				}
+				fprintf(fd, "int%"PRId64"_t ",
+					label->size_bits);
+				tmp = output_label(label, fd);
+				tmp_state++;
+			}
 			tmp = fprintf(fd, ");\n");
 		} else if (instruction->srcA.indirect == IND_MEM) {
 			tmp = fprintf(fd, "(*r0x%"PRIx64") ();\n", 
@@ -1872,6 +1887,21 @@ int output_function_body(struct process_state_s *process_state,
 									tmp_state++;
 								}
 							}
+						}
+						for (n2 = 0; n2 < external_entry_points[l].params_size; n2++) {
+							struct label_s *label;
+							label = &labels[external_entry_points[l].params[n2]];
+							if ((label->scope == 2) &&
+								(label->type == 1)) {
+								continue;
+							}
+							if (tmp_state > 0) {
+								fprintf(fd, ", ");
+							}
+							fprintf(fd, "int%"PRId64"_t ",
+							label->size_bits);
+							tmp = output_label(label, fd);
+							tmp_state++;
 						}
 						tmp = fprintf(fd, ");\n");
 					} else {
