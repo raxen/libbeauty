@@ -1,6 +1,4 @@
-Start implementing instruction executions for the simple test.obj case.
-
-Make POP/PUSH use stack segment.
-Implement more ia32 instructions.
+TODO:
+1) For call(), need to search back for the local_regNNNN name, from the param_regNNNN in the function params.
 
 
