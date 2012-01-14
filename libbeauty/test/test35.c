@@ -17,15 +17,15 @@ int test35(int *value1, int *value2, int *value3, int *value4, int *value5, int 
 
 int main()
 {
-	int *value1;
-	int *value2;
-	int *value3;
-	int *value4;
-	int *value5;
-	int *value6;
-	int *value7;
-	int *value8;
+	int value1;
+	int value2;
+	int value3;
+	int value4;
+	int value5;
+	int value6;
+	int value7;
+	int value8;
 
-	return test35(value1, value2, value3, value4, value5, value6, value7, value8);
+	return test35(&value1, &value2, &value3, &value4, &value5, &value6, &value7, &value8);
 }
 
