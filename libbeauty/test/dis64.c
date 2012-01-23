@@ -3269,8 +3269,8 @@ int main(int argc, char *argv[])
 				tmp = fprintf(stdout, "PARAM size = 0x%"PRIx64"\n", size);
 				if (size > 1) {
 					printf("number of param locals (0x%"PRIx64") found too big at instruction 0x%x\n", size, n);
-					return 1;
-					break;
+//					return 1;
+//					break;
 				}
 				if (size > 0) {
 					for (l = 0; l < size; l++) {

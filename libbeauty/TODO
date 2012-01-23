@@ -1,4 +1,7 @@
 TODO:
 1) For call(), need to search back for the local_regNNNN name, from the param_regNNNN in the function params.
+2) Might need to separate out types. One index into the type/struct, and another for the pointer or not.
+   Also have a separate out for if it is likely to be signed or unsigned int
+
 
 
