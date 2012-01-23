@@ -291,22 +291,19 @@ int write_inst(FILE *fd, struct instruction_s *instruction, int instruction_numb
 				external_entry_points[instruction->srcA.index].name);
 			tmp_state = 0;
 			l = instruction->srcA.index;
-			for (m = 0; m < REG_PARAMS_ORDER_MAX; m++) {
+			for (n = 0; n < external_entry_points[l].params_size; n++) {
 				struct label_s *label;
-				for (n = 0; n < external_entry_points[l].params_size; n++) {
-					label = &labels[external_entry_points[l].params[n]];
-					printf("reg_params_order = 0x%x, label->value = 0x%"PRIx64"\n", reg_params_order[m], label->value);
-					if ((label->scope == 2) &&
-						(label->type == 1) &&
-						(label->value == reg_params_order[m])) {
-						if (tmp_state > 0) {
-							fprintf(fd, ", ");
-						}
-						fprintf(fd, "int%"PRId64"_t ",
-							label->size_bits);
-						tmp = output_label(label, fd);
-						tmp_state++;
+				label = &labels[external_entry_points[l].params[n]];
+				printf("reg_params_order = 0x%x, label->value = 0x%"PRIx64"\n", reg_params_order[m], label->value);
+				if ((label->scope == 2) &&
+					(label->type == 1)) {
+					if (tmp_state > 0) {
+						fprintf(fd, ", ");
 					}
+					fprintf(fd, "int%"PRId64"_t ",
+						label->size_bits);
+					tmp = output_label(label, fd);
+					tmp_state++;
 				}
 			}
 			for (n = 0; n < external_entry_points[l].params_size; n++) {
@@ -1864,30 +1861,29 @@ int output_function_body(struct process_state_s *process_state,
 					/* A direct call */
 					/* FIXME: Get the output right */
 					if (1 == instruction->srcA.relocated) {
+						struct extension_call_s *call;
+						call = inst_log1->extension;
 						tmp = fprintf(fd, "%s(%d", 
 							external_entry_points[instruction->srcA.index].name,
 							external_entry_points[instruction->srcA.index].params_size);
 						tmp_state = 0;
-						l = instruction->srcA.index;
-						for (m = 0; m < REG_PARAMS_ORDER_MAX; m++) {
+						for (n2 = 0; n2 < call->params_size; n2++) {
 							struct label_s *label;
-							
-							for (n2 = 0; n2 < external_entry_points[l].params_size; n2++) {
-								label = &labels[external_entry_points[l].params[n2]];
-								printf("reg_params_order = 0x%x, label->value = 0x%"PRIx64"\n", reg_params_order[m], label->value);
-								if ((label->scope == 2) &&
-									(label->type == 1) &&
-									(label->value == reg_params_order[m])) {
-									if (tmp_state > 0) {
-										fprintf(fd, ", ");
-									}
-									fprintf(fd, "int%"PRId64"_t ",
-										label->size_bits);
-									tmp = output_label(label, fd);
-									tmp_state++;
-								}
+							tmp = label_redirect[call->params[n2]].redirect;
+							label = &labels[tmp];
+							//printf("reg_params_order = 0x%x, label->value = 0x%"PRIx64"\n", reg_params_order[m], label->value);
+							//if ((label->scope == 2) &&
+							//	(label->type == 1)) {
+							if (tmp_state > 0) {
+								fprintf(fd, ", ");
 							}
+							fprintf(fd, "int%"PRId64"_t ",
+								label->size_bits);
+							tmp = output_label(label, fd);
+							tmp_state++;
+						//	}
 						}
+#if 0
 						for (n2 = 0; n2 < external_entry_points[l].params_size; n2++) {
 							struct label_s *label;
 							label = &labels[external_entry_points[l].params[n2]];
@@ -1903,6 +1899,7 @@ int output_function_body(struct process_state_s *process_state,
 							tmp = output_label(label, fd);
 							tmp_state++;
 						}
+#endif
 						tmp = fprintf(fd, ");\n");
 					} else {
 						tmp = fprintf(fd, "CALL1()\n");
@@ -2345,6 +2342,7 @@ int search_back_local_reg_stack(uint64_t mid_start_size, struct mid_start_s *mid
 			if (tmp == 1) {
 				*inst_list = malloc(sizeof(*inst_list));
 				(*inst_list)[0] = inst_num;
+				printf("JCD2: inst_list[0] = 0x%"PRIx64"\n", inst_num);
 			} else {
 				*inst_list = realloc(*inst_list, tmp * sizeof(*inst_list));
 				(*inst_list)[tmp - 1] = inst_num;
@@ -3164,12 +3162,41 @@ int main(int argc, char *argv[])
 	}
 
 	/***************************************************
+	 * This section sorts the external entry point params to the correct order
+	 ***************************************************/
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
+		for (m = 0; m < REG_PARAMS_ORDER_MAX; m++) {
+			struct label_s *label;
+			for (n = 0; n < external_entry_points[l].params_size; n++) {
+				uint64_t tmp_param;
+				label = &labels[external_entry_points[l].params[n]];
+				printf("reg_params_order = 0x%x, label->value = 0x%"PRIx64"\n", reg_params_order[m], label->value);
+				if ((label->scope == 2) &&
+					(label->type == 1) &&
+					(label->value == reg_params_order[m])) {
+					/* Swap params */
+					printf("JCD4: swapping n=0x%x and m=0x%x\n", n, m);
+					if (n != m) {
+						tmp_param = external_entry_points[l].params[n];
+						external_entry_points[l].params[n] =
+							external_entry_points[l].params[m];
+						external_entry_points[l].params[m] = tmp_param;
+					}
+				}
+			}
+		}
+	}
+
+
+
+
+	/***************************************************
 	 * This section, PARAM, deals with converting
 	 * function params to reference locals.
 	 * e.g. Change local0011 = function(param_reg0040);
 	 *      to     local0011 = function(local0009);
 	 ***************************************************/
-#if 0
+// FIXME: Working on this
 	for (n = 1; n < inst_log; n++) {
 		struct label_s *label;
 		uint64_t value_id;
@@ -3193,7 +3220,7 @@ int main(int argc, char *argv[])
 		switch (instruction->opcode) {
 		case CALL:
 			printf("PRINTING INST CALL\n");
-			tmp = print_inst(instruction, n);
+			tmp = print_inst(instruction, n, labels);
 			external_entry_point = &external_entry_points[instruction->srcA.index];
 			inst_log1->extension = calloc(1, sizeof(call));
 			call = inst_log1->extension;
@@ -3223,7 +3250,9 @@ int main(int argc, char *argv[])
 				/* param_regXXX */
 				if ((2 == label->scope) &&
 					(1 == label->type)) {
+					printf("PARAM: Searching for REG0x%"PRIx64":0x%"PRIx64" + label->value(0x%"PRIx64")\n", inst_log1->value1.init_value, inst_log1->value1.offset_value, label->value);
 					tmp = search_back_local_reg_stack(mid_start_size, mid_start, 1, label->value, 0, &size, &inst_list);
+					printf("search_backJCD1: tmp = %d\n", tmp);
 				} else {
 				/* param_stackXXX */
 				/* SP value held in value1 */
@@ -3248,6 +3277,17 @@ int main(int argc, char *argv[])
 						struct inst_log_entry_s *inst_log_l;
 						inst_log_l = &inst_log_entry[inst_list[l]];
 						call->params[m] = inst_log_l->value3.value_id;
+						// FIXME: Check next line. Force value type to unknown.
+						printf("JCD3: Setting value_type to 0, was 0x%x\n", inst_log_l->value3.value_type);
+						if (6 == inst_log_l->value3.value_type) {	
+							inst_log_l->value1.value_type = 3;
+							inst_log_l->value3.value_type = 3;
+						}
+						printf("JCD1: Param = 0x%"PRIx64", inst_list[0x%x] = 0x%"PRIx64"\n",
+
+							inst_log_l->value3.value_id,
+							l,
+							inst_list[l]);
 						//tmp = label_redirect[inst_log_l->value3.value_id].redirect;
 						//label = &labels[tmp];
 						//tmp = output_label(label, stdout);
@@ -3262,7 +3302,6 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
-#endif
 
 	/***************************************************
 	 * This section deals with outputting the .c file.
