@@ -1,0 +1,23 @@
+1)
+Local stack variables.
+Pointers to local stack variables will be %ebp - NNN.
+Need to somehow identify that they are not stack any more, and should be output in the C code as local variables.
+How do you get from stack address to local stack label?
+It is the absolute stack address that helps, but local variables of a call to one function
+is overwritten then calling the next function.
+So, the labels to address mapping for the stack will have to be a mapping table per function.
+2)
+Definition of a function scope? I.e. How do we identify when we have moved from one function to another?
+and therefore need to use a different stack address to label mapping table.
+
+3)
+Memory architectures will need separate considerations.
+Unified address architectures such as x64 that has a linear address space and no segment registers when working in user space.
+Segmented architectures such as 16 bit x86 mode will have to be handled differently. How do we represent those in C code?
+
+4)
+How to handle ARM architectures, that have essentually an "IF FLAG X" expression in front of every instruction.
+Maybe group instructions with the same "FLAG X" and put the if expression round the whole group?
+
+
+
