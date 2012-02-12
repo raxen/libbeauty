@@ -572,13 +572,13 @@ int stack_init(struct memory_s *memory_stack)
 	 * 6 - Stack pointer.
 	 */
 	memory_stack[n].value_type = 5;
-	memory_reg[n].value_unsigned = 0;
-	memory_reg[n].value_signed = 0;
-	memory_reg[n].value_instruction = 0;
-	memory_reg[n].value_pointer = 1;
-	memory_reg[n].value_normal = 0;
+	memory_stack[n].value_unsigned = 0;
+	memory_stack[n].value_signed = 0;
+	memory_stack[n].value_instruction = 0;
+	memory_stack[n].value_pointer = 1;
+	memory_stack[n].value_normal = 0;
 	/* Index into the various structure tables */
-	memory_reg[n].value_struct = 0;
+	memory_stack[n].value_struct = 0;
 	memory_stack[n].ref_memory = 0;
 	memory_stack[n].ref_log = 0;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
