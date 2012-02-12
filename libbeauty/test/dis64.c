@@ -460,6 +460,14 @@ int reg_init(struct memory_s *memory_reg)
 	 * 6 - Stack pointer.
 	 */
 	memory_reg[0].value_type = 6;
+	memory_reg[0].value_unsigned = 0;
+	memory_reg[0].value_signed = 0;
+	memory_reg[0].value_instruction = 0;
+	memory_reg[0].value_pointer = 1;
+	memory_reg[0].value_normal = 0;
+	/* Index into the various structure tables */
+	memory_reg[0].value_struct = 0;
+	/* last_accessed_from_instruction_at_memory_location */
 	memory_reg[0].ref_memory = 0;
 	memory_reg[0].ref_log = 0;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
@@ -488,6 +496,13 @@ int reg_init(struct memory_s *memory_reg)
 	 * 6 - Stack pointer.
 	 */
 	memory_reg[1].value_type = 6;
+	memory_reg[1].value_unsigned = 0;
+	memory_reg[1].value_signed = 0;
+	memory_reg[1].value_instruction = 0;
+	memory_reg[1].value_pointer = 1;
+	memory_reg[1].value_normal = 0;
+	/* Index into the various structure tables */
+	memory_reg[1].value_struct = 0;
 	memory_reg[1].ref_memory = 0;
 	memory_reg[1].ref_log = 0;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
@@ -516,6 +531,14 @@ int reg_init(struct memory_s *memory_reg)
 	 * 6 - Stack pointer.
 	 */
 	memory_reg[2].value_type = 5;
+	memory_reg[2].value_type = 6;
+	memory_reg[2].value_unsigned = 0;
+	memory_reg[2].value_signed = 0;
+	memory_reg[2].value_instruction = 0;
+	memory_reg[2].value_pointer = 1;
+	memory_reg[2].value_normal = 0;
+	/* Index into the various structure tables */
+	memory_reg[2].value_struct = 0;
 	memory_reg[2].ref_memory = 0;
 	memory_reg[2].ref_log = 0;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
@@ -549,6 +572,13 @@ int stack_init(struct memory_s *memory_stack)
 	 * 6 - Stack pointer.
 	 */
 	memory_stack[n].value_type = 5;
+	memory_reg[n].value_unsigned = 0;
+	memory_reg[n].value_signed = 0;
+	memory_reg[n].value_instruction = 0;
+	memory_reg[n].value_pointer = 1;
+	memory_reg[n].value_normal = 0;
+	/* Index into the various structure tables */
+	memory_reg[n].value_struct = 0;
 	memory_stack[n].ref_memory = 0;
 	memory_stack[n].ref_log = 0;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */

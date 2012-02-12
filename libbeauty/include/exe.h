@@ -29,6 +29,17 @@ struct memory_s {
 	 * 6 - Stack pointer.
 	 */
 	int	value_type;
+	/* Moving to: */
+	/* 0 - Unlikely
+	 * 1 or above - more likely
+	 */
+	int	value_unsigned;
+	int	value_signed;
+	int	value_instruction;
+	int	value_pointer;
+	int	value_normal;
+	/* Index into the various structure tables */
+	int	value_struct;
 	/* last_accessed_from_instruction_at_memory_location */
 	uint32_t ref_memory;
 	/* last_accessed_from_instruction_log_at_location */
