@@ -582,9 +582,9 @@ int stack_init(struct memory_s *memory_stack)
 	memory_stack[n].ref_memory = 0;
 	memory_stack[n].ref_log = 0;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
-	memory_stack[n].value_scope = 0;
+	memory_stack[n].value_scope = 2;
 	/* Each time a new value is assigned, this value_id increases */
-	memory_stack[n].value_id = 0;
+	memory_stack[n].value_id = 3;
 	/* valid: 0 - Not used yet, 1 - Used */
 	memory_stack[n].valid = 1;
 	n++;
