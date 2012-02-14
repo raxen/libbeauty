@@ -63,7 +63,7 @@ struct disassemble_info disasm_info;
 disassembler_ftype disassemble_fn;
 char *dis_flags_table[] = { " ", "f" };
 uint64_t inst_log = 1;	/* Pointer to the current free instruction log entry. */
-int local_counter = 1;
+int local_counter = 0x100;
 struct self_s *self = NULL;
 
 #define REG_PARAMS_ORDER_MAX 6
@@ -190,7 +190,7 @@ struct label_redirect_s {
 } ;
 
 struct label_s {
-	/* local = 1, param = 2, data = 3, mem = 4 */
+	/* local = 1, param = 2, data = 3, mem = 4, sp_bp = 5 */
 	uint64_t scope;
 	/* For local or param: reg = 1, stack = 2 */
 	/* For data: data = 1, &data = 2, value = 3 */
@@ -471,9 +471,9 @@ int reg_init(struct memory_s *memory_reg)
 	memory_reg[0].ref_memory = 0;
 	memory_reg[0].ref_log = 0;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
-	memory_reg[0].value_scope = 0;
+	memory_reg[0].value_scope = 2;
 	/* Each time a new value is assigned, this value_id increases */
-	memory_reg[0].value_id = 0;
+	memory_reg[0].value_id = 1;
 	/* valid: 0 - Entry Not used yet, 1 - Entry Used */
 	memory_reg[0].valid = 1;
 
@@ -506,9 +506,9 @@ int reg_init(struct memory_s *memory_reg)
 	memory_reg[1].ref_memory = 0;
 	memory_reg[1].ref_log = 0;
 	/* value_scope: 0 - unknown, 1 - Param, 2 - Local, 3 - Mem */
-	memory_reg[1].value_scope = 0;
+	memory_reg[1].value_scope = 2;
 	/* Each time a new value is assigned, this value_id increases */
-	memory_reg[1].value_id = 0;
+	memory_reg[1].value_id = 2;
 	/* valid: 0 - entry Not used yet, 1 - entry Used */
 	memory_reg[1].valid = 1;
 
@@ -901,6 +901,8 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 				label->type = 1;
 				label->value = index;
 				printf("PARAM_REG^\n"); 
+			} else {
+				printf("JCD: UNKNOWN PARAMS\n");
 			}
 			break;
 		case 2:
@@ -913,6 +915,8 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 				label->scope = 1;
 				label->type = 1;
 				label->value = value_id;
+			} else {
+				printf("JCD: UNKNOWN LOCAL\n");
 			}
 			break;
 		case 3: /* Data */
@@ -1021,7 +1025,7 @@ int output_label(struct label_s *label, FILE *fd) {
 				label->value);
 			break;
 		default:
-			printf("output_label error\n");
+			printf("output_label error type=%"PRIx64"\n", label->type);
 			return 1;
 			break;
 		}
@@ -1441,17 +1445,19 @@ int output_function_body(struct process_state_s *process_state,
 			(1 == inst_log1->value3.value_type) ||
 			(2 == inst_log1->value3.value_type) ||
 			(3 == inst_log1->value3.value_type) ||
+			(4 == inst_log1->value3.value_type) ||
+			(6 == inst_log1->value3.value_type) ||
 			(5 == inst_log1->value3.value_type)) {
 			switch (instruction->opcode) {
 			case MOV:
 			case SEX:
 				if (inst_log1->value1.value_type == 6) {
-					printf("ERROR1\n");
-					break;
+					printf("ERROR1 %d\n", instruction->opcode);
+					//break;
 				}
 				if (inst_log1->value1.value_type == 5) {
 					printf("ERROR2\n");
-					break;
+					//break;
 				}
 				if (print_inst(instruction, n, labels))
 					return 1;
@@ -1488,11 +1494,11 @@ int output_function_body(struct process_state_s *process_state,
 			case NEG:
 				if (inst_log1->value1.value_type == 6) {
 					printf("ERROR1\n");
-					break;
+					//break;
 				}
 				if (inst_log1->value1.value_type == 5) {
 					printf("ERROR2\n");
-					break;
+					//break;
 				}
 				if (print_inst(instruction, n, labels))
 					return 1;
@@ -2075,7 +2081,8 @@ int register_label(struct external_entry_point_s *entry_point, uint64_t value_id
 	label_offset = label_redirect[value_id].redirect;
 	label = &labels[label_offset];
 	label->size_bits = value->length * 8;
-	printf("Registering label: 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
+	printf("Registering label: value_id = 0x%"PRIx64", scope 0x%"PRIx64", type 0x%"PRIx64", value 0x%"PRIx64", size 0x%"PRIx64", pointer 0x%"PRIx64", signed 0x%"PRIx64", unsigned 0x%"PRIx64"\n",
+		value_id,
 		label->scope,
 		label->type,
 		label->value,
@@ -2182,18 +2189,21 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 			(1 == inst_log1->value3.value_type) ||
 			(2 == inst_log1->value3.value_type) ||
 			(3 == inst_log1->value3.value_type) ||
+			(4 == inst_log1->value3.value_type) ||
+			(6 == inst_log1->value3.value_type) ||
 			(5 == inst_log1->value3.value_type)) {
+			printf("Instruction Opcode = 0x%x\n", instruction->opcode);
 			switch (instruction->opcode) {
 			case MOV:
 			case SEX:
-				printf("SEX\n");
+				printf("SEX or MOV\n");
 				if (inst_log1->value1.value_type == 6) {
-					printf("ERROR1\n");
-					break;
+					printf("ERROR1 %d\n", instruction->opcode);
+					//break;
 				}
 				if (inst_log1->value1.value_type == 5) {
 					printf("ERROR2\n");
-					break;
+					//break;
 				}
 				if (1 == instruction->dstA.indirect) {
 					value_id = inst_log1->value3.indirect_value_id;
@@ -2228,12 +2238,14 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 				} else {
 					value_id = inst_log1->value3.value_id;
 				}
+				printf("value3\n");
 				tmp = register_label(entry_point, value_id, &(inst_log1->value3), label_redirect, labels);
 				if (IND_MEM == instruction->srcA.indirect) {
 					value_id = inst_log1->value1.indirect_value_id;
 				} else {
 					value_id = inst_log1->value1.value_id;
 				}
+				printf("value1\n");
 				tmp = register_label(entry_point, value_id, &(inst_log1->value1), label_redirect, labels);
 				break;
 			case JMP:

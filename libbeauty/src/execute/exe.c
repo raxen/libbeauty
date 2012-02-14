@@ -235,6 +235,8 @@ static int get_value_RTL_instruction(
 					source->index,
 					source->value_size);
 			printf("GET:EXE value=%p\n", value);
+			if (value)
+				printf("value_id = 0x%"PRIx64"\n", value->value_id);
 			/* FIXME what to do in NULL */
 			if (!value) {
 				value = add_new_store(memory_reg,
