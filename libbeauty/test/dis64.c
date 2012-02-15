@@ -1899,7 +1899,7 @@ int output_function_body(struct process_state_s *process_state,
 					if (1 == instruction->srcA.relocated) {
 						struct extension_call_s *call;
 						call = inst_log1->extension;
-						tmp = fprintf(fd, "%s(%d", 
+						tmp = fprintf(fd, "%s(%d:", 
 							external_entry_points[instruction->srcA.index].name,
 							external_entry_points[instruction->srcA.index].params_size);
 						tmp_state = 0;
@@ -1913,8 +1913,8 @@ int output_function_body(struct process_state_s *process_state,
 							if (tmp_state > 0) {
 								fprintf(fd, ", ");
 							}
-							fprintf(fd, "int%"PRId64"_t ",
-								label->size_bits);
+							//fprintf(fd, "int%"PRId64"_t ",
+							//	label->size_bits);
 							tmp = output_label(label, fd);
 							tmp_state++;
 						//	}
