@@ -849,10 +849,14 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 	return 0;
 }
 
+/************************************************************
+ * This function uses information from instruction log entries
+ * and creates labels.
+ ************************************************************/
 int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, uint64_t indirect_value_id, struct label_s *label) {
 	int tmp;
 	/* FIXME: May handle by using first switch as switch (indirect) */
-	printf("value in log_to_label: 0x%x, 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
+	printf("value in log_to_label: store=0x%x, indirect=0x%x, index=0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
 				store,
 				indirect,
 				index,
