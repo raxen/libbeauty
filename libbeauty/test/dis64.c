@@ -856,7 +856,7 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, uint64_t indirect_value_id, struct label_s *label) {
 	int tmp;
 	/* FIXME: May handle by using first switch as switch (indirect) */
-	printf("value in log_to_label: store=0x%x, indirect=0x%x, index=0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
+	printf("value in log_to_label: store=0x%x, indirect=0x%x, index=0x%"PRIx64", relocated = 0x%"PRIx64", scope = 0x%"PRIx64", id = 0x%"PRIx64", ind_off_value = 0x%"PRIx64", ind_val_id = 0x%"PRIx64"\n",
 				store,
 				indirect,
 				index,
@@ -880,14 +880,17 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 		if (indirect == IND_MEM) {
 			label->scope = 3;
 			label->type = 1;
+			label->lab_pointer = 1;
 			label->value = index;
 		} else if (relocated) {
 			label->scope = 3;
 			label->type = 2;
+			label->lab_pointer = 0;
 			label->value = index;
 		} else {
 			label->scope = 3;
 			label->type = 3;
+			label->lab_pointer = 0;
 			label->value = index;
 		}
 		break;
@@ -898,11 +901,13 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 			if (IND_STACK == indirect) {
 				label->scope = 2;
 				label->type = 2;
+				label->lab_pointer = 1;
 				label->value = indirect_offset_value;
 				printf("PARAM_STACK^\n"); 
 			} else if (0 == indirect) {
 				label->scope = 2;
 				label->type = 1;
+				label->lab_pointer = 0;
 				label->value = index;
 				printf("PARAM_REG^\n"); 
 			} else {
@@ -914,10 +919,12 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 			if (IND_STACK == indirect) {
 				label->scope = 1;
 				label->type = 2;
+				label->lab_pointer = 1;
 				label->value = value_id;
 			} else if (0 == indirect) {
 				label->scope = 1;
 				label->type = 1;
+				label->lab_pointer = 0;
 				label->value = value_id;
 			} else {
 				printf("JCD: UNKNOWN LOCAL\n");
@@ -934,6 +941,7 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 			/* FIXME: get the label->value right */
 			label->scope = 1;
 			label->type = 1;
+			label->lab_pointer = 1;
 			label->value = indirect_value_id;
 			break;
 		default:
@@ -2786,7 +2794,7 @@ int main(int argc, char *argv[])
 
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
-		printf("value to log_to_label:0x%x: 0x%x, 0x%"PRIx64", 0x%x, 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
+		printf("value to log_to_label:n = 0x%x: 0x%x, 0x%"PRIx64", 0x%x, 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
 				n,
 				instruction->srcA.indirect,
 				instruction->srcA.index,
@@ -2841,6 +2849,7 @@ int main(int argc, char *argv[])
 				label_redirect[value_id].redirect = value_id;
 				labels[value_id].scope = label.scope;
 				labels[value_id].type = label.type;
+				labels[value_id].lab_pointer = label.lab_pointer;
 				labels[value_id].value = label.value;
 			}
 
@@ -2869,6 +2878,7 @@ int main(int argc, char *argv[])
 				label_redirect[value_id].redirect = value_id;
 				labels[value_id].scope = label.scope;
 				labels[value_id].type = label.type;
+				labels[value_id].lab_pointer = label.lab_pointer;
 				labels[value_id].value = label.value;
 			}
 			break;
@@ -2899,6 +2909,7 @@ int main(int argc, char *argv[])
 				label_redirect[value_id].redirect = value_id;
 				labels[value_id].scope = label.scope;
 				labels[value_id].type = label.type;
+				labels[value_id].lab_pointer = label.lab_pointer;
 				labels[value_id].value = label.value;
 			}
 
@@ -2924,6 +2935,7 @@ int main(int argc, char *argv[])
 					label_redirect[value_id].redirect = value_id;
 					labels[value_id].scope = label.scope;
 					labels[value_id].type = label.type;
+					labels[value_id].lab_pointer = label.lab_pointer;
 					labels[value_id].value = label.value;
 				}
 			}
@@ -2939,8 +2951,8 @@ int main(int argc, char *argv[])
 		}
 	}
 	for (n = 0; n < local_counter; n++) {
-		printf("labels 0x%x: redirect=0x%"PRIx64", scope=0x%"PRIx64", type=0x%"PRIx64", value=0x%"PRIx64"\n",
-			n, label_redirect[n].redirect, labels[n].scope, labels[n].type, labels[n].value);
+		printf("labels 0x%x: redirect=0x%"PRIx64", scope=0x%"PRIx64", type=0x%"PRIx64", lab_pointer=0x%"PRIx64", value=0x%"PRIx64"\n",
+			n, label_redirect[n].redirect, labels[n].scope, labels[n].type, labels[n].lab_pointer, labels[n].value);
 	}
 	
 	/************************************************************
@@ -3451,6 +3463,9 @@ int main(int argc, char *argv[])
 						}
 						fprintf(fd, "int%"PRId64"_t ",
 							label->size_bits);
+						if (label->lab_pointer) {
+							fprintf(fd, "*");
+						}
 						tmp = output_label(label, fd);
 						tmp_state++;
 					}
@@ -3468,6 +3483,9 @@ int main(int argc, char *argv[])
 				}
 				fprintf(fd, "int%"PRId64"_t ",
 					label->size_bits);
+				if (label->lab_pointer) {
+					fprintf(fd, "*");
+				}
 				tmp = output_label(label, fd);
 				tmp_state++;
 			}
@@ -3477,6 +3495,9 @@ int main(int argc, char *argv[])
 				label = &labels[external_entry_points[l].locals[n]];
 				fprintf(fd, "\tint%"PRId64"_t ",
 					label->size_bits);
+				if (label->lab_pointer) {
+					fprintf(fd, "*");
+				}
 				tmp = output_label(label, fd);
 				fprintf(fd, ";\n");
 			}
@@ -3491,8 +3512,9 @@ int main(int argc, char *argv[])
 			if (tmp) {
 				return 1;
 			}
-			for (n = external_entry_points[l].inst_log; n <= external_entry_points[l].inst_log_end; n++) {
-			}			
+//   This code is not doing anything, so comment it out
+//			for (n = external_entry_points[l].inst_log; n <= external_entry_points[l].inst_log_end; n++) {
+//			}			
 		}
 	}
 
