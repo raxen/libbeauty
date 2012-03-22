@@ -901,7 +901,7 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 			if (IND_STACK == indirect) {
 				label->scope = 2;
 				label->type = 2;
-				label->lab_pointer = 1;
+				label->lab_pointer = 0;
 				label->value = indirect_offset_value;
 				printf("PARAM_STACK^\n"); 
 			} else if (0 == indirect) {
@@ -919,7 +919,7 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 			if (IND_STACK == indirect) {
 				label->scope = 1;
 				label->type = 2;
-				label->lab_pointer = 1;
+				label->lab_pointer = 0;
 				label->value = value_id;
 			} else if (0 == indirect) {
 				label->scope = 1;
