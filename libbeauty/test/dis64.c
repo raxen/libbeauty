@@ -947,6 +947,7 @@ int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, ui
 		default:
 			label->scope = 0;
 			label->type = value_scope;
+			label->lab_pointer = 0;
 			label->value = 0;
 			printf("unknown value scope: %04"PRIx64";\n", (value_scope));
 			return 1;
@@ -2787,11 +2788,16 @@ int main(int argc, char *argv[])
 	printf("Number of labels = 0x%x\n", local_counter);
 	label_redirect = calloc(local_counter, sizeof(struct label_redirect_s));
 	labels = calloc(local_counter, sizeof(struct label_s));
+	labels[0].lab_pointer = 1; /* EIP */
+	labels[1].lab_pointer = 1; /* ESP */
+	labels[2].lab_pointer = 1; /* EBP */
 	/* n <= inst_log verified to be correct limit */
 	for (n = 1; n <= inst_log; n++) {
 		struct label_s label;
 		uint64_t value_id;
+		uint64_t value_id3;
 
+		memset(&label, 0, sizeof(struct label_s));
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
 		printf("value to log_to_label:n = 0x%x: 0x%x, 0x%"PRIx64", 0x%x, 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
@@ -2825,11 +2831,11 @@ int main(int argc, char *argv[])
 		case TEST: /* FIXME: Maybe need handling separately */
 		case SEX:
 			if (IND_MEM == instruction->dstA.indirect) {
-				value_id = inst_log1->value3.indirect_value_id;
+				value_id3 = inst_log1->value3.indirect_value_id;
 			} else {
-				value_id = inst_log1->value3.value_id;
+				value_id3 = inst_log1->value3.value_id;
 			}
-			if (value_id > local_counter) {
+			if (value_id3 > local_counter) {
 				printf("SSA Failed at inst_log 0x%x\n", n);
 				return 1;
 			}
@@ -2845,12 +2851,12 @@ int main(int argc, char *argv[])
 			if (tmp) {
 				printf("Inst:0x, value3 unknown label %x\n", n);
 			}
-			if (!tmp && value_id > 0) {
-				label_redirect[value_id].redirect = value_id;
-				labels[value_id].scope = label.scope;
-				labels[value_id].type = label.type;
-				labels[value_id].lab_pointer = label.lab_pointer;
-				labels[value_id].value = label.value;
+			if (!tmp && value_id3 > 0) {
+				label_redirect[value_id3].redirect = value_id3;
+				labels[value_id3].scope = label.scope;
+				labels[value_id3].type = label.type;
+				labels[value_id3].lab_pointer += label.lab_pointer;
+				labels[value_id3].value = label.value;
 			}
 
 			if (IND_MEM == instruction->srcA.indirect) {
@@ -2878,7 +2884,8 @@ int main(int argc, char *argv[])
 				label_redirect[value_id].redirect = value_id;
 				labels[value_id].scope = label.scope;
 				labels[value_id].type = label.type;
-				labels[value_id].lab_pointer = label.lab_pointer;
+				labels[value_id].lab_pointer += label.lab_pointer;
+				labels[value_id3].lab_pointer += label.lab_pointer;
 				labels[value_id].value = label.value;
 			}
 			break;
@@ -2909,7 +2916,7 @@ int main(int argc, char *argv[])
 				label_redirect[value_id].redirect = value_id;
 				labels[value_id].scope = label.scope;
 				labels[value_id].type = label.type;
-				labels[value_id].lab_pointer = label.lab_pointer;
+				labels[value_id].lab_pointer += label.lab_pointer;
 				labels[value_id].value = label.value;
 			}
 
@@ -2935,7 +2942,7 @@ int main(int argc, char *argv[])
 					label_redirect[value_id].redirect = value_id;
 					labels[value_id].scope = label.scope;
 					labels[value_id].type = label.type;
-					labels[value_id].lab_pointer = label.lab_pointer;
+					labels[value_id].lab_pointer += label.lab_pointer;
 					labels[value_id].value = label.value;
 				}
 			}
@@ -2970,6 +2977,7 @@ int main(int argc, char *argv[])
 		uint64_t mid_start_size;
 		struct mid_start_s *mid_start;
 
+		memset(&label, 0, sizeof(struct label_s));
 		size = 0;
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
