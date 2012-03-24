@@ -855,6 +855,7 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
  ************************************************************/
 int log_to_label(int store, int indirect, uint64_t index, uint64_t relocated, uint64_t value_scope, uint64_t value_id, uint64_t indirect_offset_value, uint64_t indirect_value_id, struct label_s *label) {
 	int tmp;
+
 	/* FIXME: May handle by using first switch as switch (indirect) */
 	printf("value in log_to_label: store=0x%x, indirect=0x%x, index=0x%"PRIx64", relocated = 0x%"PRIx64", scope = 0x%"PRIx64", id = 0x%"PRIx64", ind_off_value = 0x%"PRIx64", ind_val_id = 0x%"PRIx64"\n",
 				store,
@@ -2797,7 +2798,6 @@ int main(int argc, char *argv[])
 		uint64_t value_id;
 		uint64_t value_id3;
 
-		memset(&label, 0, sizeof(struct label_s));
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
 		printf("value to log_to_label:n = 0x%x: 0x%x, 0x%"PRIx64", 0x%x, 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
@@ -2839,6 +2839,7 @@ int main(int argc, char *argv[])
 				printf("SSA Failed at inst_log 0x%x\n", n);
 				return 1;
 			}
+			memset(&label, 0, sizeof(struct label_s));
 			tmp = log_to_label(instruction->dstA.store,
 				instruction->dstA.indirect,
 				instruction->dstA.index,
@@ -2868,6 +2869,7 @@ int main(int argc, char *argv[])
 				printf("SSA Failed at inst_log 0x%x\n", n);
 				return 1;
 			}
+			memset(&label, 0, sizeof(struct label_s));
 			tmp = log_to_label(instruction->srcA.store,
 				instruction->srcA.indirect,
 				instruction->srcA.index,
@@ -2885,10 +2887,10 @@ int main(int argc, char *argv[])
 				labels[value_id].scope = label.scope;
 				labels[value_id].type = label.type;
 				labels[value_id].lab_pointer += label.lab_pointer;
-				labels[value_id3].lab_pointer += label.lab_pointer;
 				labels[value_id].value = label.value;
 			}
 			break;
+
 		case CALL:
 			printf("SSA CALL inst_log 0x%x\n", n);
 			if (IND_MEM == instruction->dstA.indirect) {
@@ -2900,6 +2902,7 @@ int main(int argc, char *argv[])
 				printf("SSA Failed at inst_log 0x%x\n", n);
 				return 1;
 			}
+			memset(&label, 0, sizeof(struct label_s));
 			tmp = log_to_label(instruction->dstA.store,
 				instruction->dstA.indirect,
 				instruction->dstA.index,
@@ -2926,6 +2929,7 @@ int main(int argc, char *argv[])
 					printf("SSA Failed at inst_log 0x%x\n", n);
 					return 1;
 				}
+				memset(&label, 0, sizeof(struct label_s));
 				tmp = log_to_label(instruction->srcA.store,
 					instruction->srcA.indirect,
 					instruction->srcA.index,
@@ -2968,7 +2972,6 @@ int main(int argc, char *argv[])
 	 * This section does work for local_reg case. FIXME
 	 ************************************************************/
 	for (n = 1; n < inst_log; n++) {
-		struct label_s label;
 		uint64_t value_id;
 		uint64_t value_id1;
 		uint64_t value_id2;
@@ -2977,7 +2980,6 @@ int main(int argc, char *argv[])
 		uint64_t mid_start_size;
 		struct mid_start_s *mid_start;
 
-		memset(&label, 0, sizeof(struct label_s));
 		size = 0;
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
@@ -3363,6 +3365,98 @@ int main(int argc, char *argv[])
 			//printf("SSA2 failed for inst:0x%x, CALL\n", n);
 			//return 1;
 			break;
+
+		default:
+			break;
+		}
+	}
+
+	/**************************************************
+	 * This section deals with variable types, scanning forwards
+	 **************************************************/
+	for (n = 1; n <= inst_log; n++) {
+		struct label_s label;
+		uint64_t value_id;
+		uint64_t value_id3;
+
+		inst_log1 =  &inst_log_entry[n];
+		instruction =  &inst_log1->instruction;
+		printf("value to log_to_label:n = 0x%x: 0x%x, 0x%"PRIx64", 0x%x, 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
+				n,
+				instruction->srcA.indirect,
+				instruction->srcA.index,
+				instruction->srcA.relocated,
+				inst_log1->value1.value_scope,
+				inst_log1->value1.value_id,
+				inst_log1->value1.indirect_offset_value,
+				inst_log1->value1.indirect_value_id);
+
+		switch (instruction->opcode) {
+		case MOV:
+			if (IND_MEM == instruction->dstA.indirect) {
+				value_id3 = inst_log1->value3.indirect_value_id;
+			} else {
+				value_id3 = inst_log1->value3.value_id;
+			}
+
+			if (IND_MEM == instruction->srcA.indirect) {
+				value_id = inst_log1->value1.indirect_value_id;
+			} else {
+				value_id = inst_log1->value1.value_id;
+			}
+
+			if (labels[value_id3].lab_pointer != labels[value_id].lab_pointer) {
+				labels[value_id3].lab_pointer += labels[value_id].lab_pointer;
+				labels[value_id].lab_pointer = labels[value_id3].lab_pointer;
+			}
+			printf("JCD4: value_id = 0x%"PRIx64", lab_pointer = 0x%"PRIx64", value_id3 = 0x%"PRIx64", lab_pointer = 0x%"PRIx64"\n",
+				value_id, labels[value_id].lab_pointer, value_id3, labels[value_id3].lab_pointer);
+
+		default:
+			break;
+		}
+	}
+
+	/**************************************************
+	 * This section deals with variable types, scanning backwards
+	 **************************************************/
+	for (n = inst_log; n > 0; n--) {
+		struct label_s label;
+		uint64_t value_id;
+		uint64_t value_id3;
+
+		inst_log1 =  &inst_log_entry[n];
+		instruction =  &inst_log1->instruction;
+		printf("value to log_to_label:n = 0x%x: 0x%x, 0x%"PRIx64", 0x%x, 0x%x, 0x%"PRIx64", 0x%"PRIx64", 0x%"PRIx64"\n",
+				n,
+				instruction->srcA.indirect,
+				instruction->srcA.index,
+				instruction->srcA.relocated,
+				inst_log1->value1.value_scope,
+				inst_log1->value1.value_id,
+				inst_log1->value1.indirect_offset_value,
+				inst_log1->value1.indirect_value_id);
+
+		switch (instruction->opcode) {
+		case MOV:
+			if (IND_MEM == instruction->dstA.indirect) {
+				value_id3 = inst_log1->value3.indirect_value_id;
+			} else {
+				value_id3 = inst_log1->value3.value_id;
+			}
+
+			if (IND_MEM == instruction->srcA.indirect) {
+				value_id = inst_log1->value1.indirect_value_id;
+			} else {
+				value_id = inst_log1->value1.value_id;
+			}
+
+			if (labels[value_id3].lab_pointer != labels[value_id].lab_pointer) {
+				labels[value_id3].lab_pointer += labels[value_id].lab_pointer;
+				labels[value_id].lab_pointer = labels[value_id3].lab_pointer;
+			}
+			printf("JCD4: value_id = 0x%"PRIx64", lab_pointer = 0x%"PRIx64", value_id3 = 0x%"PRIx64", lab_pointer = 0x%"PRIx64"\n",
+				value_id, labels[value_id].lab_pointer, value_id3, labels[value_id3].lab_pointer);
 
 		default:
 			break;
