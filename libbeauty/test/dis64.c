@@ -3373,6 +3373,11 @@ int main(int argc, char *argv[])
 
 	/**************************************************
 	 * This section deals with variable types, scanning forwards
+	 * FIXME: Need to make this a little more intelligent
+	 * It might fall over with complex loops and program flow.
+	 * Maybe iterate up and down until no more changes need doing.
+	 * Problem with iterations, is that it could suffer from bistable flips
+	 * causing the iteration to never exit.
 	 **************************************************/
 	for (n = 1; n <= inst_log; n++) {
 		struct label_s label;
