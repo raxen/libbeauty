@@ -1,7 +1,15 @@
 TODO:
-1) For call(), need to search back for the local_regNNNN name, from the param_regNNNN in the function params.
+3) A pointer on 64bit will be 64 bits, but it might point to an int32_t type.
+   Need to decide how to handle these pointer types.
+   A size of a pointer is always 64 bits, but the type it points too can be any type or structure.
+   Need to preserve 64bit pointer width at the RTL level.
+   Probably try assigning a type to the label. 
+
+WIP
 2) Might need to separate out types. One index into the type/struct, and another for the pointer or not.
    Also have a separate out for if it is likely to be signed or unsigned int
 
+DONE
+1) For call(), need to search back for the local_regNNNN name, from the param_regNNNN in the function params.
 
 
