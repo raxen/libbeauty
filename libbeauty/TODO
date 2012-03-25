@@ -3,7 +3,9 @@ TODO:
    Need to decide how to handle these pointer types.
    A size of a pointer is always 64 bits, but the type it points too can be any type or structure.
    Need to preserve 64bit pointer width at the RTL level.
-   Probably try assigning a type to the label. 
+   Probably try assigning a type to the label.
+4) Need to move a lot of the functions in dis64.c into the lib, such as the SSA processing etc.
+   Move the functions common to dis64 and dis32. 
 
 WIP
 2) Might need to separate out types. One index into the type/struct, and another for the pointer or not.
