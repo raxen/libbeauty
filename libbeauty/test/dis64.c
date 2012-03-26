@@ -1906,16 +1906,18 @@ int output_function_body(struct process_state_s *process_state,
 				label = &labels[tmp];
 				tmp = output_label(label, fd);
 				printf(" = ");
-				tmp = fprintf(fd, " xxxx= ");
+				tmp = fprintf(fd, " = ");
 				if (IND_DIRECT == instruction->srcA.indirect) {
 					/* A direct call */
 					/* FIXME: Get the output right */
 					if (1 == instruction->srcA.relocated) {
 						struct extension_call_s *call;
 						call = inst_log1->extension;
-						tmp = fprintf(fd, "%s(%d:", 
-							external_entry_points[instruction->srcA.index].name,
-							external_entry_points[instruction->srcA.index].params_size);
+						//tmp = fprintf(fd, "%s(%d:", 
+						//	external_entry_points[instruction->srcA.index].name,
+						//	external_entry_points[instruction->srcA.index].params_size);
+						tmp = fprintf(fd, "%s(", 
+							external_entry_points[instruction->srcA.index].name);
 						tmp_state = 0;
 						for (n2 = 0; n2 < call->params_size; n2++) {
 							struct label_s *label;
