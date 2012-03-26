@@ -10,6 +10,8 @@ TODO:
    Variables can be "read" and "written" but also touched. "touched" means pointed to but not read or written to.
    A pointer can be printed as a pointer "*local_reg0101" or a reference "&local_stack0105".
    The method used to detect the difference will be based on whether the pointer is a constant or not. Constant in the sense of at that point in the program, it always points to "&local_stack0105". If it is constant, output "&local_stack0105" instead of "*local_reg0101".
+6) Method to help detect types:
+   When an instruction does something to a pointer, store details regarding what it "touches" with it at that instruction log location.
 
 WIP
 2) Might need to separate out types. One index into the type/struct, and another for the pointer or not.
