@@ -6,6 +6,10 @@ TODO:
    Probably try assigning a type to the label.
 4) Need to move a lot of the functions in dis64.c into the lib, such as the SSA processing etc.
    Move the functions common to dis64 and dis32. 
+5) Method to detect types:
+   Variables can be "read" and "written" but also touched. "touched" means pointed to but not read or written to.
+   A pointer can be printed as a pointer "*local_reg0101" or a reference "&local_stack0105".
+   The method used to detect the difference will be based on whether the pointer is a constant or not. Constant in the sense of at that point in the program, it always points to "&local_stack0105". If it is constant, output "&local_stack0105" instead of "*local_reg0101".
 
 WIP
 2) Might need to separate out types. One index into the type/struct, and another for the pointer or not.
