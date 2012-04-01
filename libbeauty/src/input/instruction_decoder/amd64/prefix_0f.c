@@ -102,7 +102,7 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 		instruction->srcA.value_size = 4;
 		printf("JCD7: Before: %d\n", dis_instructions->instruction_number);
 		dis_instructions->instruction_number++;
-		result = dis_Ex_Gx(handle, MOV, rex, dis_instructions, base_address, offset, &reg, size);
+		result = dis_Gx_Ex(handle, MOV, rex, dis_instructions, base_address, offset, &reg, size);
 		printf("JCD7: After: %d\n", dis_instructions->instruction_number);
 		break;
 	/* JMP */
