@@ -658,7 +658,7 @@ int print_mem(struct memory_s *memory, int location) {
 int process_block(struct process_state_s *process_state, struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry, uint64_t eip_offset_limit) {
 	uint64_t offset = 0;
 	int result;
-	int n = 0;
+	int n, m;
 	int err;
 	struct inst_log_entry_s *inst_exe_prev;
 	struct inst_log_entry_s *inst_exe;
@@ -793,6 +793,46 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 			}
 			inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
 
+			if (IF == instruction->opcode) {
+				printf("IF FOUND\n");
+				//printf("Breaking at IF\n");
+				printf("IF: this EIP = 0x%"PRIx64"\n",
+					memory_reg[2].offset_value);
+				printf("IF: jump dst abs EIP = 0x%"PRIx64"\n",
+					inst_exe->value3.offset_value);
+				printf("IF: inst_log = %"PRId64"\n",
+					inst_log);
+				for (m = 0; m < list_length; m++ ) {
+					if (0 == entry[m].used) {
+						entry[m].esp_init_value = memory_reg[0].init_value;
+						entry[m].esp_offset_value = memory_reg[0].offset_value;
+						entry[m].ebp_init_value = memory_reg[1].init_value;
+						entry[m].ebp_offset_value = memory_reg[1].offset_value;
+						entry[m].eip_init_value = memory_reg[2].init_value;
+						entry[m].eip_offset_value = memory_reg[2].offset_value;
+						entry[m].previous_instuction = inst_log;
+						entry[m].used = 1;
+						printf("JCD:8 used 1\n");
+						
+						break;
+					}
+				}
+				/* FIXME: Would starting a "m" be better here? */
+				for (m = 0; m < list_length; m++ ) {
+					if (0 == entry[m].used) {
+						entry[m].esp_init_value = memory_reg[0].init_value;
+						entry[m].esp_offset_value = memory_reg[0].offset_value;
+						entry[m].ebp_init_value = memory_reg[1].init_value;
+						entry[m].ebp_offset_value = memory_reg[1].offset_value;
+						entry[m].eip_init_value = inst_exe->value3.init_value;
+						entry[m].eip_offset_value = inst_exe->value3.offset_value;
+						entry[m].previous_instuction = inst_log;
+						entry[m].used = 1;
+						printf("JCD:8 used 2\n");
+						break;
+					}
+				}
+			}
 			inst_log_prev = inst_log;
 			inst_log++;
 			if (0 == memory_reg[2].offset_value) {
@@ -808,6 +848,7 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 			printf("Breaking\n");
 			break;
 		}
+#if 0
 		if (IF == instruction->opcode) {
 			printf("Breaking at IF\n");
 			printf("IF: this EIP = 0x%"PRIx64"\n",
@@ -845,6 +886,7 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 			}
 			break;
 		}
+#endif
 	}
 	return 0;
 }
