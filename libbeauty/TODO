@@ -12,6 +12,8 @@ TODO:
    The method used to detect the difference will be based on whether the pointer is a constant or not. Constant in the sense of at that point in the program, it always points to "&local_stack0105". If it is constant, output "&local_stack0105" instead of "*local_reg0101".
 6) Method to help detect types:
    When an instruction does something to a pointer, store details regarding what it "touches" with it at that instruction log location.
+10) test36.c -O2: Register r0x8 not handled correction.
+    The label before and after the IF are different, but they should be the same.
 
 WIP
 2) Might need to separate out types. One index into the type/struct, and another for the pointer or not.
