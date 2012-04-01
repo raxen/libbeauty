@@ -553,7 +553,7 @@ static int put_value_RTL_instruction(
 			value->value_scope = inst->value3.value_scope;
 			/* 1 - Ids */
 			value->value_id = inst->value3.value_id;
-			printf("Saving to reg value_id of %"PRIu64"\n", value->value_id);
+			printf("Saving to reg value_id of 0x%"PRIx64"\n", value->value_id);
 			/* 1 - Entry Used */
 			value->valid = 1;
 			printf("value=0x%"PRIx64"+0x%"PRIx64"=0x%"PRIx64"\n",
@@ -779,6 +779,16 @@ int execute_instruction(void *self, struct process_state_s *process_state, struc
 		ret = get_value_RTL_instruction(self, process_state, &(instruction->dstA), &(inst->value2), 0); 
 		/* Create result */
 		printf("CMP\n");
+		//printf("value1 = 0x%x, value2 = 0x%x\n", inst->value1, inst->value2);
+		printf("value_scope1=0x%"PRIx32", value_scope2=0x%"PRIx32"\n",
+			inst->value1.value_scope,
+			inst->value2.value_scope);
+		printf("value_type1=0x%"PRIx32", value_type2=0x%"PRIx32"\n",
+			inst->value1.value_type,
+			inst->value2.value_type);
+		printf("value_id1=0x%"PRIx32", value_id2=0x%"PRIx32"\n",
+			inst->value1.value_id,
+			inst->value2.value_id);
 		/* A CMP does not save any values */
 		//put_value_RTL_instruction(self, inst);
 		break;

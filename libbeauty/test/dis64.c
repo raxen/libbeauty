@@ -2286,12 +2286,14 @@ int scan_for_labels_in_function_body(struct external_entry_point_s *entry_point,
 				} else {
 					value_id = inst_log1->value2.value_id;
 				}
+				printf("JCD6: Registering CMP label, value_id = 0x%"PRIx64"\n", value_id);
 				tmp = register_label(entry_point, value_id, &(inst_log1->value2), label_redirect, labels);
 				if (IND_MEM == instruction->srcA.indirect) {
 					value_id = inst_log1->value1.indirect_value_id;
 				} else {
 					value_id = inst_log1->value1.value_id;
 				}
+				printf("JCD6: Registering CMP label, value_id = 0x%"PRIx64"\n", value_id);
 				tmp = register_label(entry_point, value_id, &(inst_log1->value1), label_redirect, labels);
 				break;
 
@@ -2778,10 +2780,12 @@ int main(int argc, char *argv[])
 	print_dis_instructions();
 	if (entry_point_list_length > 0) {
 		for (n = 0; n < entry_point_list_length; n++ ) {
-			printf("%d, eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
-				entry_point[n].used,
-				entry_point[n].eip_offset_value,
-				entry_point[n].previous_instuction);
+			if (entry_point[n].used) {
+				printf("%d, eip = 0x%"PRIx64", prev_inst = 0x%"PRIx64"\n",
+					entry_point[n].used,
+					entry_point[n].eip_offset_value,
+					entry_point[n].previous_instuction);
+			}
 		}
 	}
 	/************************************************************
@@ -2791,6 +2795,7 @@ int main(int argc, char *argv[])
 	printf("Number of labels = 0x%x\n", local_counter);
 	label_redirect = calloc(local_counter, sizeof(struct label_redirect_s));
 	labels = calloc(local_counter, sizeof(struct label_s));
+	printf("JCD6: local_counter=%d\n", local_counter);
 	labels[0].lab_pointer = 1; /* EIP */
 	labels[1].lab_pointer = 1; /* ESP */
 	labels[2].lab_pointer = 1; /* EBP */
@@ -2798,6 +2803,7 @@ int main(int argc, char *argv[])
 	for (n = 1; n <= inst_log; n++) {
 		struct label_s label;
 		uint64_t value_id;
+		uint64_t value_id2;
 		uint64_t value_id3;
 
 		inst_log1 =  &inst_log_entry[n];
@@ -2829,8 +2835,6 @@ int main(int argc, char *argv[])
 		case SHR:
 		case SAL:
 		case SAR:
-		case CMP:
-		case TEST: /* FIXME: Maybe need handling separately */
 		case SEX:
 			if (IND_MEM == instruction->dstA.indirect) {
 				value_id3 = inst_log1->value3.indirect_value_id;
@@ -2860,6 +2864,70 @@ int main(int argc, char *argv[])
 				labels[value_id3].type = label.type;
 				labels[value_id3].lab_pointer += label.lab_pointer;
 				labels[value_id3].value = label.value;
+			}
+
+			if (IND_MEM == instruction->srcA.indirect) {
+				value_id = inst_log1->value1.indirect_value_id;
+			} else {
+				value_id = inst_log1->value1.value_id;
+			}
+			if (value_id > local_counter) {
+				printf("SSA Failed at inst_log 0x%x\n", n);
+				return 1;
+			}
+			memset(&label, 0, sizeof(struct label_s));
+			tmp = log_to_label(instruction->srcA.store,
+				instruction->srcA.indirect,
+				instruction->srcA.index,
+				instruction->srcA.relocated,
+				inst_log1->value1.value_scope,
+				inst_log1->value1.value_id,
+				inst_log1->value1.indirect_offset_value,
+				inst_log1->value1.indirect_value_id,
+				&label);
+			if (tmp) {
+				printf("Inst:0x, value1 unknown label %x\n", n);
+			}
+			if (!tmp && value_id > 0) {
+				label_redirect[value_id].redirect = value_id;
+				labels[value_id].scope = label.scope;
+				labels[value_id].type = label.type;
+				labels[value_id].lab_pointer += label.lab_pointer;
+				labels[value_id].value = label.value;
+			}
+			break;
+
+		/* Specially handled because value3 is not assigned and writen to a destination. */
+		case TEST:
+		case CMP:
+			if (IND_MEM == instruction->dstA.indirect) {
+				value_id2 = inst_log1->value2.indirect_value_id;
+			} else {
+				value_id2 = inst_log1->value2.value_id;
+			}
+			if (value_id2 > local_counter) {
+				printf("SSA Failed at inst_log 0x%x\n", n);
+				return 1;
+			}
+			memset(&label, 0, sizeof(struct label_s));
+			tmp = log_to_label(instruction->dstA.store,
+				instruction->dstA.indirect,
+				instruction->dstA.index,
+				instruction->dstA.relocated,
+				inst_log1->value2.value_scope,
+				inst_log1->value2.value_id,
+				inst_log1->value2.indirect_offset_value,
+				inst_log1->value2.indirect_value_id,
+				&label);
+			if (tmp) {
+				printf("Inst:0x, value3 unknown label %x\n", n);
+			}
+			if (!tmp && value_id2 > 0) {
+				label_redirect[value_id2].redirect = value_id2;
+				labels[value_id2].scope = label.scope;
+				labels[value_id2].type = label.type;
+				labels[value_id2].lab_pointer += label.lab_pointer;
+				labels[value_id2].value = label.value;
 			}
 
 			if (IND_MEM == instruction->srcA.indirect) {
@@ -3239,14 +3307,35 @@ int main(int argc, char *argv[])
 			struct label_s *label;
 			for (n = 0; n < external_entry_points[l].params_size; n++) {
 				uint64_t tmp_param;
-				label = &labels[external_entry_points[l].params[n]];
-				printf("reg_params_order = 0x%x, label->value = 0x%"PRIx64"\n", reg_params_order[m], label->value);
+				tmp = external_entry_points[l].params[n];
+				printf("JCD5: labels 0x%x, params_size=%d\n", tmp, external_entry_points[l].params_size);
+				if (tmp >= local_counter) {
+					printf("Invalid entry point 0x%x, l=%d, m=%d, n=%d, params_size=%d\n",
+						tmp, l, m, n, external_entry_points[l].params_size);
+					return 0;
+				}
+				label = &labels[tmp];
+				printf("JCD5: labels 0x%x\n", external_entry_points[l].params[n]);
+				printf("JCD5: label=%p, l=%d, m=%d, n=%d\n", label, l, m, n);
+				printf("reg_params_order = 0x%x,", reg_params_order[m]);
+				printf(" label->value = 0x%"PRIx64"\n", label->value);
 				if ((label->scope == 2) &&
 					(label->type == 1) &&
 					(label->value == reg_params_order[m])) {
 					/* Swap params */
-					printf("JCD4: swapping n=0x%x and m=0x%x\n", n, m);
+					/* FIXME: How to handle the case of params_size <= n or m */
 					if (n != m) {
+						printf("JCD4: swapping n=0x%x and m=0x%x\n", n, m);
+						tmp = external_entry_points[l].params_size;
+						if ((m >= tmp || n >= tmp)) { 
+							external_entry_points[l].params_size++;
+							external_entry_points[l].params =
+								realloc(external_entry_points[l].params, external_entry_points[l].params_size * sizeof(int));
+							/* FIXME: Need to get label right */
+							external_entry_points[l].params[external_entry_points[l].params_size - 1] =
+								local_counter;
+							local_counter++;
+						}
 						tmp_param = external_entry_points[l].params[n];
 						external_entry_points[l].params[n] =
 							external_entry_points[l].params[m];
@@ -3545,10 +3634,12 @@ int main(int argc, char *argv[])
 		/* FIXME: value == 0 for the first function in the .o file. */
 		/*        We need to be able to handle more than
 		          one function per .o file. */
-		printf("%d:%s:start=%"PRIu64", end=%"PRIu64"\n", l,
-				external_entry_points[l].name,
-				external_entry_points[l].inst_log,
-				external_entry_points[l].inst_log_end);
+		if (external_entry_points[l].valid) {
+			printf("%d:%s:start=%"PRIu64", end=%"PRIu64"\n", l,
+					external_entry_points[l].name,
+					external_entry_points[l].inst_log,
+					external_entry_points[l].inst_log_end);
+		}
 		if (external_entry_points[l].valid &&
 			external_entry_points[l].type == 1) {
 			struct process_state_s *process_state;

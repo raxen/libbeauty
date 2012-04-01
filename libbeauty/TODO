@@ -12,6 +12,7 @@ TODO:
    The method used to detect the difference will be based on whether the pointer is a constant or not. Constant in the sense of at that point in the program, it always points to "&local_stack0105". If it is constant, output "&local_stack0105" instead of "*local_reg0101".
 6) Method to help detect types:
    When an instruction does something to a pointer, store details regarding what it "touches" with it at that instruction log location.
+7) test36.c causes dis64 to segfault
 
 WIP
 2) Might need to separate out types. One index into the type/struct, and another for the pointer or not.
@@ -19,5 +20,6 @@ WIP
 
 DONE
 1) For call(), need to search back for the local_regNNNN name, from the param_regNNNN in the function params.
+8) a CMP with one input being a reg PARAM causes a problem with non registration of the register PARAM.
 
 

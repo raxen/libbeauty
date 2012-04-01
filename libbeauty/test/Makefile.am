@@ -21,7 +21,7 @@ dis64_SOURCES = \
 
 dis64_LDADD = -L$(libdir) -lbeauty_input_bfd -lbeauty_decoder_amd64 -lopcodes -liberty -lbeauty_exe -lbfd -lz
 
-dis64_LDFLAGS = @MODULE_LDFLAGS@
+dis64_LDFLAGS = @MODULE_LDFLAGS@ -O0
 
 #bf_SOURCES = \
 #	bf.c
