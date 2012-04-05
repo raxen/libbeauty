@@ -1465,12 +1465,16 @@ int output_function_body(struct process_state_s *process_state,
 		
 		tmp = fprintf(fd, "// ");
 		if (inst_log1->prev_size > 0) {
+			tmp = fprintf(fd, "prev_size=0x%x: ",
+				inst_log1->prev_size);
 			for (l = 0; l < inst_log1->prev_size; l++) {
 				tmp = fprintf(fd, "prev=0x%x, ",
 				inst_log1->prev[l]);
 			}
 		}
 		if (inst_log1->next_size > 0) {
+			tmp = fprintf(fd, "next_size=0x%x: ",
+				inst_log1->next_size);
 			for (l = 0; l < inst_log1->next_size; l++) {
 				tmp = fprintf(fd, "next=0x%x, ",
 				inst_log1->next[l]);

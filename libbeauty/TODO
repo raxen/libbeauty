@@ -14,6 +14,16 @@ TODO:
    When an instruction does something to a pointer, store details regarding what it "touches" with it at that instruction log location.
 10) test36.c -O2: Register r0x8 not handled correction.
     The label before and after the IF are different, but they should be the same.
+11) Need to implement a dominator tree in order to fix 10).
+12) Implement/FIX process blocks.
+    A process block has a starting point (at a JOIN point, or function start point) , and finished with a JMP (IF for conditional or JMP otherwise)  or RET instruction.
+    We will need to implement each IF with two JMPs.
+    if ... goto A; else ... goto B
+    This will then properly end a process block.
+    Also a process block can end at the instruction just before a JOIN point. Maybe we need to add a JMP before each JOIN point.
+13) Implement loop detection. How?
+14) 11,12,13 need to be done before any more work on type detection can be done.
+    
 
 WIP
 2) Might need to separate out types. One index into the type/struct, and another for the pointer or not.
