@@ -658,8 +658,9 @@ int print_mem(struct memory_s *memory, int location) {
 int process_block(struct process_state_s *process_state, struct rev_eng *handle, uint64_t inst_log_prev, uint64_t list_length, struct entry_point_s *entry, uint64_t eip_offset_limit) {
 	uint64_t offset = 0;
 	int result;
-	int n, m;
+	int n, m, l;
 	int err;
+	int found;
 	struct inst_log_entry_s *inst_exe_prev;
 	struct inst_log_entry_s *inst_exe;
 	struct instruction_s *instruction;
@@ -722,13 +723,26 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 				inst_exe->prev = realloc(inst_exe->prev, sizeof(inst_exe->prev) * inst_exe->prev_size);
 			}
 			inst_exe->prev[inst_exe->prev_size - 1] = inst_log_prev;
-			inst_exe_prev->next_size++;
-			if (inst_exe_prev->next_size == 1) {
+			if (inst_exe_prev->next_size > 0) {
+				printf("JCD8a: next_size = 0x%x\n", inst_exe_prev->next_size);
+			}
+			if (inst_exe_prev->next_size == 0) {
+				inst_exe_prev->next_size++;
 				inst_exe_prev->next = malloc(sizeof(inst_exe_prev->next));
 				inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_this;
 			} else {
-				inst_exe_prev->next = realloc(inst_exe_prev->next, sizeof(inst_exe_prev->next) * inst_exe_prev->next_size);
-				inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_this;
+				found = 0;
+				for (l = 0; l < inst_exe_prev->next_size; l++) {
+					if (inst_exe_prev->next[inst_exe_prev->next_size - 1] == inst_this) {
+						found = 1;
+						break;
+					}
+				}
+				if (!found) {
+					inst_exe_prev->next_size++;
+					inst_exe_prev->next = realloc(inst_exe_prev->next, sizeof(inst_exe_prev->next) * inst_exe_prev->next_size);
+					inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_this;
+				}
 			}
 			break;
 		}	
@@ -784,6 +798,9 @@ int process_block(struct process_state_s *process_state, struct rev_eng *handle,
 			}
 			inst_exe->prev[inst_exe->prev_size - 1] = inst_log_prev;
 			inst_exe_prev->next_size++;
+			if (inst_exe_prev->next_size > 1) {
+				printf("JCD8b: next_size = 0x%x\n", inst_exe_prev->next_size);
+			}
 			if (inst_exe_prev->next_size == 1) {
 				inst_exe_prev->next = malloc(sizeof(inst_exe_prev->next));
 				inst_exe_prev->next[inst_exe_prev->next_size - 1] = inst_log;
@@ -2095,7 +2112,14 @@ int output_function_body(struct process_state_s *process_state,
 					printf("IF CONDITION unknown\n");	
 					return 1;
 				}
-				tmp = fprintf(fd, "IF goto label%04"PRIx32";\n", inst_log1->next[1]);
+				tmp = fprintf(fd, "IF goto ");
+//				for (l = 0; l < inst_log1->next_size; l++) { 
+//					tmp = fprintf(fd, ", label%04"PRIx32"", inst_log1->next[l]);
+//				}
+				tmp = fprintf(fd, "label%04"PRIx32";", inst_log1->next[1]);
+				tmp = fprintf(fd, "\n");
+				tmp = fprintf(fd, "\telse goto label%04"PRIx32";\n", inst_log1->next[0]);
+
 				break;
 
 			case NOP:
