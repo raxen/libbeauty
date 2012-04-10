@@ -2614,6 +2614,8 @@ int main(int argc, char *argv[])
 	printf("sizeof struct self_s = 0x%"PRIx64"\n", sizeof *self);
 	self->data_size = data_size;
 	self->data = data;
+	/* valgrind does not know about bf_copy_data_section */
+	memset(data, 0, data_size);
 	bf_copy_data_section(handle, data, data_size);
 	printf("dis:.data Data at %p, size=0x%"PRIx64"\n", data, data_size);
 	for (n = 0; n < data_size; n++) {
@@ -2863,8 +2865,9 @@ int main(int argc, char *argv[])
 	 * This bit creates the labels table, ready for the next step.
 	 ************************************************************/
 	printf("Number of labels = 0x%x\n", local_counter);
-	label_redirect = calloc(local_counter, sizeof(struct label_redirect_s));
-	labels = calloc(local_counter, sizeof(struct label_s));
+	/* FIXME: +1 added as a result of running valgrind, but need a proper fix */
+	label_redirect = calloc(local_counter + 1, sizeof(struct label_redirect_s));
+	labels = calloc(local_counter + 1, sizeof(struct label_s));
 	printf("JCD6: local_counter=%d\n", local_counter);
 	labels[0].lab_pointer = 1; /* EIP */
 	labels[1].lab_pointer = 1; /* ESP */
@@ -3164,7 +3167,7 @@ int main(int argc, char *argv[])
 			/* Renaming is only needed if there are more than one label present */
 			if (size > 0) {
 				uint64_t value_id_highest = value_id;
-				inst_log1->value1.prev = calloc(size, sizeof(inst_log1->value1.prev));
+				inst_log1->value1.prev = calloc(size, sizeof(int *));
 				inst_log1->value1.prev_size = size;
 				for (l = 0; l < size; l++) {
 					struct inst_log_entry_s *inst_log_l;
@@ -3268,7 +3271,7 @@ int main(int argc, char *argv[])
 			/* Renaming is only needed if there are more than one label present */
 			if (size > 0) {
 				uint64_t value_id_highest = value_id;
-				inst_log1->value1.prev = calloc(size, sizeof(inst_log1->value1.prev));
+				inst_log1->value1.prev = calloc(size, sizeof(int *));
 				inst_log1->value1.prev_size = size;
 				for (l = 0; l < size; l++) {
 					struct inst_log_entry_s *inst_log_l;
@@ -3451,10 +3454,11 @@ int main(int argc, char *argv[])
 			printf("PRINTING INST CALL\n");
 			tmp = print_inst(instruction, n, labels);
 			external_entry_point = &external_entry_points[instruction->srcA.index];
-			inst_log1->extension = calloc(1, sizeof(call));
+			inst_log1->extension = calloc(1, sizeof(struct extension_call_s));
 			call = inst_log1->extension;
 			call->params_size = external_entry_point->params_size;
-			call->params = calloc(call->params_size, sizeof(call->params));
+			/* FIXME: use struct in sizeof bit here */
+			call->params = calloc(call->params_size, sizeof(int *));
 			if (!call) {
 				printf("PARAM failed for inst:0x%x, CALL. Out of memory\n", n);
 				return 1;
