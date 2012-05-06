@@ -16,7 +16,7 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include <dis.h>
+#include <rev.h>
 #include "internal.h"
 
 int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint64_t size, uint8_t rex) {
@@ -28,7 +28,7 @@ int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instruction
 	int8_t rel8 = 0;
 	int32_t rel32 = 0;
 	int64_t rel64 = 0;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 	byte = base_address[offset + dis_instructions->bytes_used++]; 
 	switch (byte) {
 	case 0x00:												/* GRP 6 Exxx */

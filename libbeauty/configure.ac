@@ -105,6 +105,7 @@ src/input/instruction_decoder/Makefile
 src/input/instruction_decoder/ia32/Makefile
 src/input/instruction_decoder/amd64/Makefile
 src/execute/Makefile
+src/output/Makefile
 test/Makefile
 include/Makefile
 ])

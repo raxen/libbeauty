@@ -42,11 +42,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <dis.h>
-#include <bfl.h>
 #include <rev.h>
-#include <exe.h>
-#include <dis-asm.h>
 
 
 uint64_t read_data(struct self_s *self, uint64_t offset, int size) {
@@ -153,10 +149,10 @@ exit_add_new_store:
 	return result;
 }
 
-static int source_equals_dest(operand_t *srcA, operand_t *dstA)
+static int source_equals_dest(struct operand_s *srcA, struct operand_s *dstA)
 {
 	int tmp, ret;
-	tmp = memcmp(srcA, dstA, sizeof(operand_t));
+	tmp = memcmp(srcA, dstA, sizeof(struct operand_s));
 	ret = 0;
 	if (tmp == 0) ret = 1;
 	return ret;
@@ -165,7 +161,7 @@ static int source_equals_dest(operand_t *srcA, operand_t *dstA)
 static int get_value_RTL_instruction(
 	struct self_s *self,
 	struct process_state_s *process_state,
-	operand_t *source,
+	struct operand_s *source,
 	struct memory_s *destination,
 	int info_id )
 {

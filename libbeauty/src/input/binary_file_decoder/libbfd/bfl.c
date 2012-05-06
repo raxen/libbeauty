@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <inttypes.h>
 
+#include <rev.h>
 #include <bfl.h>
 
 /* The symbol table.  */

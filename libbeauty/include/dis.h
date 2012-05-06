@@ -26,12 +26,26 @@
  Naming convention taked from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
 
+
+#ifndef __DIS__
+#define __DIS__
+
 #include <stdio.h>
 #include <inttypes.h>
-#include <rev.h>
-#include <opcodes.h>
 
-typedef struct operand_s operand_t;
+#define EXTERNAL_ENTRY_POINTS_MAX 1000
+#define RELOCATION_SIZE 1000
+/* For the .text segment. I.e. Instructions. */
+#define MEMORY_TEXT_SIZE 10000
+#define MEMORY_STACK_SIZE 10000
+#define MEMORY_REG_SIZE 100
+/* For the .data segment. I.e. Static data */
+#define MEMORY_DATA_SIZE 10000
+#define MEMORY_USED_SIZE 10000
+#define INST_LOG_ENTRY_SIZE 10000
+#define ENTRY_POINTS_SIZE 1000
+
+//typedef struct operand_s operand_t;
 struct operand_s {
 	/* 0 = immeadiate value. ( e.g. MOV AX,0x0),
 	 * 1 = register value. (e.g. MOV AX,BX),
@@ -64,15 +78,15 @@ struct operand_s {
 } ;
 
 /* A single RTL instruction */
-typedef struct instruction_s instruction_t;
+//typedef struct instruction_s instruction_t;
 
 struct instruction_s {
 	int opcode;
 	/* Set to 1 if this instruction should effect flags. */
 	int flags;
-	operand_t srcA; /* Used */
-	operand_t srcB; /* Not currently used */
-	operand_t dstA; /* Used */
+	struct operand_s srcA; /* Used */
+	struct operand_s srcB; /* Not currently used */
+	struct operand_s dstA; /* Used */
 } ;
 
 //typedef struct dis_instructions_s instructions_t;
@@ -80,7 +94,7 @@ struct dis_instructions_s {
 	int bytes_used;
 	uint8_t bytes[16];
 	int instruction_number;
-	instruction_t instruction[10];
+	struct instruction_s instruction[10];
 } ;
 
 /* Little endian */
@@ -90,3 +104,4 @@ uint32_t getdword(uint8_t *base_address, uint64_t offset);
 
 int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset);
 
+#endif /* __DIS__ */

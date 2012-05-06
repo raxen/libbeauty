@@ -19,7 +19,7 @@ bin_PROGRAMS = dis64
 dis64_SOURCES = \
 	dis64.c
 
-dis64_LDADD = -L$(libdir) -lbeauty_input_bfd -lbeauty_decoder_amd64 -lopcodes -liberty -lbeauty_exe -lbfd -lz
+dis64_LDADD = -L$(libdir) -lbeauty_input_bfd -lbeauty_decoder_amd64 -lopcodes -liberty -lbeauty_exe -lbeauty_output -lbfd -lz
 
 dis64_LDFLAGS = @MODULE_LDFLAGS@ -O0
 

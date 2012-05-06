@@ -5,7 +5,7 @@ AM_CFLAGS = -O0 -g3 -Wall
 #CFLAGS = -O0 -g3 -Wall
 
 #modulesdir = $(pkglibdir)/beauty_exe
-lib_LTLIBRARIES = libbeauty_exe.la
+lib_LTLIBRARIES = libbeauty_output.la
 #bin_PROGRAMS = dis
 
 #include_HEADERS = \
@@ -14,8 +14,8 @@ lib_LTLIBRARIES = libbeauty_exe.la
 #noinst_HEADERS = \
 #	exe.h
 
-libbeauty_exe_la_SOURCES = \
-	exe.c process_block.c
+libbeauty_output_la_SOURCES = \
+	print_inst.c output_label.c
 
-libbeauty_exe_la_LDFLAGS = \
+libbeauty_output_la_LDFLAGS = \
 	 -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)

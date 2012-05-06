@@ -25,7 +25,6 @@
 
 #include <bfd.h>
 #include <inttypes.h>
-#include <rev.h>
 
 const char *bfd_err(void);
 

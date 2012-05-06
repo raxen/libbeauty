@@ -26,7 +26,7 @@
  Naming convention taken from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
 #include <stdlib.h>
-#include <dis.h>
+#include <rev.h>
 #include "internal.h"
 
 /* Little endian */
@@ -118,7 +118,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 	uint8_t reg_mem;
 	uint8_t mod;
 	uint8_t mul, index, base;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 	int	tmp;
 	int	result = 0;
 	struct reloc_table *reloc_table_entry;
@@ -947,7 +947,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 int dis_Ex_Gx(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half;
 	int tmp;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 	/* FIXME: Cannot handle 89 16 */
 
 	tmp = rmb(handle, dis_instructions, base_address, offset, size, rex, reg, &half);
@@ -986,7 +986,7 @@ int dis_Ex_Gx(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instru
 int dis_Gx_Ex(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half=0;
 	int tmp;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 
 	tmp = rmb(handle, dis_instructions, base_address, offset, size, rex, reg, &half);
 	if (!tmp) {
@@ -1026,7 +1026,7 @@ int dis_Ex_Ix(struct rev_eng *handle, int opcode, uint8_t rex, struct dis_instru
 	int half;
 	int tmp;
 	struct reloc_table *reloc_table_entry;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 
 	tmp = rmb(handle, dis_instructions, base_address, offset, size, rex, reg, &half);
 	if (!tmp) {
@@ -1097,7 +1097,7 @@ int dis_Ex(struct rev_eng *handle, int *table, uint8_t rex, struct dis_instructi
 	int tmp;
 	int result = 0;
 	struct reloc_table *reloc_table_entry;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 
 	number = dis_instructions->instruction_number;
 	split_ModRM(getbyte(base_address, offset + dis_instructions->bytes_used), rex, &reg, &reg_mem, &mod);
@@ -1184,7 +1184,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	uint8_t repz_handled = 0;
 	uint8_t repnz = 0;
 	uint8_t repnz_handled = 0;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 
 	printf("inst[0]=0x%x\n",base_address[offset + 0]);
 	dis_instructions->instruction[dis_instructions->instruction_number].opcode = NOP; /* Un-supported OPCODE */

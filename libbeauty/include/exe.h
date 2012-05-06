@@ -1,3 +1,7 @@
+
+#ifndef __EXE__
+#define __EXE__
+
 /* Memory and Registers are a list of accessed stores. */
 /* A record is only valid when it has been accessed. */
 /* Initially the search algorithm will be slow,
@@ -60,6 +64,18 @@ struct memory_s {
 	int *next;
 } ;
 
+struct entry_point_s {
+	int used;
+	/* FIXME: Is this enough, or will full register backup be required */
+	uint64_t esp_init_value;
+	uint64_t esp_offset_value;
+	uint64_t ebp_init_value;
+	uint64_t ebp_offset_value;
+	uint64_t eip_init_value;
+	uint64_t eip_offset_value;
+	uint64_t previous_instuction;
+} ;
+
 struct inst_log_entry_s {
 	struct instruction_s instruction;	/* The instruction */
 	int prev_size;
@@ -72,10 +88,36 @@ struct inst_log_entry_s {
 	void *extension;		/* Instruction specific extention */
 } ;
 
-int execute_instruction(void *self, struct process_state_s *process_state, struct inst_log_entry_s *inst);
-struct memory_s *search_store(
+/* redirect is used for SSA correction, when one needs to rename a variable */
+/* renaming the variable within the log entries would take too long. */
+/* so use log entry value_id -> redirect -> label_s */
+struct label_redirect_s {
+	uint64_t redirect;
+} ;
+
+struct label_s {
+	/* local = 1, param = 2, data = 3, mem = 4, sp_bp = 5 */
+	uint64_t scope;
+	/* For local or param: reg = 1, stack = 2 */
+	/* For data: data = 1, &data = 2, value = 3 */
+	uint64_t type;
+	/* value */
+	uint64_t value;
+	/* size in bits */
+	uint64_t size_bits;
+	/* is it a pointer */
+	uint64_t lab_pointer;
+	/* is it a signed */
+	uint64_t lab_signed;
+	/* is it a unsigned */
+	uint64_t lab_unsigned;
+	/* human readable name */
+	char *name;
+} ;
+
+extern struct memory_s *search_store(
         struct memory_s *memory, uint64_t index, int size);
-struct memory_s *add_new_store(
+extern struct memory_s *add_new_store(
 	struct memory_s *memory, uint64_t index, int size);
 
 //extern instructions_t instructions;
@@ -86,4 +128,6 @@ extern char *dis_flags_table[];
 extern uint64_t inst_log;      /* Pointer to the current free instruction log entry. */
 extern char out_buf[1024];
 extern int local_counter;
+extern size_t inst_size;
 
+#endif /* __EXE__ */

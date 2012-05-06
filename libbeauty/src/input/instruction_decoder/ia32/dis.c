@@ -26,7 +26,7 @@
  Naming convention taken from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
 
-#include <dis.h>
+#include <rev.h>
 #include "internal.h"
 
 /* Little endian */
@@ -89,7 +89,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 	uint8_t reg_mem;
 	uint8_t mod;
 	uint8_t mul, index, base;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 	int	tmp;
 	uint64_t extern_index;
 	/* Does not always start at zero.
@@ -324,7 +324,7 @@ int rmb(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uin
 
 void dis_Ex_Gx(struct rev_eng *handle, int opcode, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 
 	half = rmb(handle, dis_instructions, base_address, offset, reg);
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
@@ -353,7 +353,7 @@ void dis_Ex_Gx(struct rev_eng *handle, int opcode, struct dis_instructions_s *di
 
 void dis_Gx_Ex(struct rev_eng *handle, int opcode, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset, uint8_t *reg, int size) {
 	int half=0;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 
 	half = rmb(handle, dis_instructions, base_address, offset, reg);
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
@@ -385,7 +385,7 @@ void dis_Ex_Ix(struct rev_eng *handle, int opcode, struct dis_instructions_s *di
 	int half;
 	int tmp;
 	uint64_t extern_index;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 
 	half = rmb(handle, dis_instructions, base_address, offset, reg);
 	instruction = &dis_instructions->instruction[dis_instructions->instruction_number];	
@@ -427,7 +427,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 	int8_t relative = 0;
 	int tmp;
 	uint64_t extern_index;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 
 	printf("inst[0]=0x%x\n",base_address[offset + 0]);
 	dis_instructions->instruction[dis_instructions->instruction_number].opcode = NOP; /* Un-supported OPCODE */

@@ -26,7 +26,7 @@
  Naming convention taked from Intel Instruction set manual, Appendix A. 25366713.pdf
 */
 
-#include <dis.h>
+#include <rev.h>
 #include "internal.h"
 
 char * opcode_table[] = {

@@ -16,13 +16,13 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include <dis.h>
+#include <rev.h>
 #include "internal.h"
 
 int prefix_0f(struct rev_eng *handle, struct dis_instructions_s *dis_instructions, uint8_t *base_address, uint64_t offset) {
 	int half;
 	uint8_t reg=0;
-	instruction_t *instruction;
+	struct instruction_s *instruction;
 	switch (base_address[offset + dis_instructions->bytes_used++]) {
 	case 0x00:												/* GRP 6 Exxx */
 	case 0x01:												/* Group 7 Ev */
