@@ -109,20 +109,6 @@ int memory_used[MEMORY_USED_SIZE];
 /* Used to keep a non bfd version of the relocation entries */
 int memory_relocation[MEMORY_USED_SIZE];
 
-#if 0
-struct entry_point_s {
-	int used;
-	/* FIXME: Is this enough, or will full register backup be required */
-	uint64_t esp_init_value;
-	uint64_t esp_offset_value;
-	uint64_t ebp_init_value;
-	uint64_t ebp_offset_value;
-	uint64_t eip_init_value;
-	uint64_t eip_offset_value;
-	uint64_t previous_instuction;
-} ;
-#endif
-
 /* This is used to hold return values from process block */
 struct entry_point_s entry_point[ENTRY_POINTS_SIZE];
 uint64_t entry_point_list_length = ENTRY_POINTS_SIZE;
