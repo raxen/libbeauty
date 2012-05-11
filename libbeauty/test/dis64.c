@@ -119,7 +119,8 @@ int print_dis_instructions(struct self_s *self)
 	struct instruction_s *instruction;
 	struct inst_log_entry_s *inst_log1;
 	struct inst_log_entry_s *inst_log_entry = self->inst_log_entry;
-	
+
+	printf("print_dis_instructions:\n");
 	for (n = 1; n <= inst_log; n++) {
 		inst_log1 =  &inst_log_entry[n];
 		instruction =  &inst_log1->instruction;
@@ -176,6 +177,177 @@ int print_dis_instructions(struct self_s *self)
 					n,
 					inst_log1->next[n]);
 			}
+		}
+	}
+	return 0;
+}
+
+/* This scans for duplicates in the inst_log1->next[] and inst_log1->prev[n] lists. */
+int tidy_inst_log(struct self_s *self)
+{
+	struct inst_log_entry_s *inst_log1;
+	struct inst_log_entry_s *inst_log_entry = self->inst_log_entry;
+	int l,m,n;
+
+	for (n = 1; n <= inst_log; n++) {
+		inst_log1 =  &inst_log_entry[n];
+		if (inst_log1->next_size > 1) {
+			for (m = 0; m < (inst_log1->next_size - 1); m++) {
+				for (l = m + 1; l < inst_log1->next_size; l++) {
+					printf("next: 0x%x: m=0x%x, l=0x%x\n", n, inst_log1->next[m],inst_log1->next[l]);
+					if (inst_log1->next[m] == inst_log1->next[l]) {
+						inst_log1->next[m] = 0;
+					}
+				}
+			}
+			for (m = 0; m < (inst_log1->next_size - 1); m++) {
+				if (inst_log1->next[m] == 0) {
+					for (l = m + 1; l < (inst_log1->next_size); l++) {
+						inst_log1->next[l - 1] = inst_log1->next[l];
+					}
+					inst_log1->next_size--;
+					inst_log1->next = realloc(inst_log1->next, inst_log1->next_size * sizeof(int));
+				}
+			}
+		}
+		if (inst_log1->prev_size > 1) {
+			for (m = 0; m < (inst_log1->prev_size - 1); m++) {
+				for (l = m + 1; l < inst_log1->prev_size; l++) {
+					printf("prev: 0x%x: m=0x%x, l=0x%x\n", n, inst_log1->prev[m],inst_log1->prev[l]);
+					if (inst_log1->prev[m] == inst_log1->prev[l]) {
+						inst_log1->prev[m] = 0;
+					}
+				}
+			}
+			for (m = 0; m < (inst_log1->prev_size - 1); m++) {
+				if (inst_log1->prev[m] == 0) {
+					for (l = m + 1; l < (inst_log1->prev_size); l++) {
+						inst_log1->prev[l - 1] = inst_log1->prev[l];
+					}
+					inst_log1->prev_size--;
+					inst_log1->prev = realloc(inst_log1->prev, inst_log1->prev_size * sizeof(int));
+				}
+			}
+		}
+
+	}
+	return 0;
+}
+
+int find_block_from_inst(struct self_s *self, struct control_flow_block_s *blocks, int *block_size, int inst)
+{
+	int n;
+	int found = 0;
+	for (n = 1; n <= *block_size; n++) {
+		if ((blocks[n].inst_start <= inst) &&
+			(blocks[n].inst_end >= inst)) {
+			found = n;
+			break;
+		}
+	}
+	return found;
+}
+
+
+int build_control_flow_blocks(struct self_s *self, struct control_flow_block_s *blocks, int *block_size)
+{
+	struct inst_log_entry_s *inst_log1;
+	struct inst_log_entry_s *inst_log_entry = self->inst_log_entry;
+	int block = 1;
+	int inst_start = 1;
+	int inst_end;
+	int n;
+	int m;
+	int tmp;
+
+	printf("build_control_flow_blocks:\n");	
+	for (n = 1; n <= inst_log; n++) {
+		inst_log1 =  &inst_log_entry[n];
+		/* Test for end of block */
+		if ((inst_log1->next_size > 1) ||
+			(inst_log1->next_size == 0) ||
+			((inst_log1->next_size == 1) && (inst_log1->next[0] != (n + 1)))) {
+			inst_end = n;
+			/* Handle special case of duplicate prev_inst */
+			/* FIXME: Stop duplicate prev_inst being created in the first place */
+			if (inst_end >= inst_start) {
+				blocks[block].inst_start = inst_start;
+				blocks[block].inst_end = inst_end;
+				block++;
+				inst_start = n + 1;
+			}
+		}
+		if (inst_log1->prev_size > 1) {
+			inst_end = n - 1;
+			/* Handle special case of duplicate prev_inst */
+			/* FIXME: Stop duplicate prev_inst being created in the first place */
+			if (inst_end >= inst_start) {
+				blocks[block].inst_start = inst_start;
+				blocks[block].inst_end = inst_end;
+				block++;
+				inst_start = n;
+			}
+		}
+	}
+	*block_size = block - 1;
+
+	for (n = 1; n <= *block_size; n++) {
+		inst_log1 =  &inst_log_entry[blocks[n].inst_start];
+		if (inst_log1->prev_size > 0) {
+			blocks[n].prev_block = calloc(inst_log1->prev_size, sizeof(int));
+			blocks[n].prev_size = inst_log1->prev_size;
+
+			for (m = 0; m < inst_log1->prev_size; m++) {
+				tmp = find_block_from_inst(self, blocks, block_size, inst_log1->prev[m]);
+				blocks[n].prev_block[m] = tmp;
+			}
+		}
+		inst_log1 =  &inst_log_entry[blocks[n].inst_end];
+		if (inst_log1->next_size > 0) {
+			blocks[n].next_block = calloc(inst_log1->next_size, sizeof(int));
+			blocks[n].next_size = inst_log1->next_size;
+
+			for (m = 0; m < inst_log1->next_size; m++) {
+				tmp = find_block_from_inst(self, blocks, block_size, inst_log1->next[m]);
+				printf("n=%d, m=%d\n", n, m);
+				blocks[n].next_block[m] = tmp;
+			}
+		}
+	}
+
+
+
+
+	return 0;
+}
+
+int print_control_flow_blocks(struct self_s *self, struct control_flow_block_s *blocks, int *block_size)
+{
+	struct inst_log_entry_s *inst_log1;
+	struct inst_log_entry_s *inst_log_entry = self->inst_log_entry;
+	int n;
+	int m;
+
+	for (n = 1; n <= *block_size; n++) {
+		printf("Block:0x%x, inst_start=0x%x, inst_end=0x%x\n",
+			n,
+			blocks[n].inst_start,
+			blocks[n].inst_end);
+		inst_log1 =  &inst_log_entry[blocks[n].inst_start];
+		for (m = 0; m < inst_log1->prev_size; m++) {
+			printf("inst_start->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
+			printf("blocks[0x%x].prev_block[%d] = 0x%x\n", n, m, blocks[n].prev_block[m]);
+		}
+//		for (m = 0; m < inst_log1->next_size; m++) {
+//			printf("inst_start->next[%d] = 0x%x\n", m, inst_log1->next[m]);
+//		}
+		inst_log1 =  &inst_log_entry[blocks[n].inst_end];
+//		for (m = 0; m < inst_log1->prev_size; m++) {
+//			printf("inst_end->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
+//		}
+		for (m = 0; m < inst_log1->next_size; m++) {
+			printf("inst_end->next[%d] = 0x%x\n", m, inst_log1->next[m]);
+			printf("blocks[0x%x].next_block[%d] = 0x%x\n", n, m, blocks[n].next_block[m]);
 		}
 	}
 	return 0;
@@ -2078,6 +2250,8 @@ int main(int argc, char *argv[])
 	disassembler_ftype disassemble_fn;
 	struct relocation_s *relocations;
 	struct external_entry_point_s *external_entry_points;
+	struct control_flow_block_s *blocks;
+	int block_size;
 
 	expression = malloc(1000); /* Buffer for if expressions */
 
@@ -2139,6 +2313,8 @@ int main(int argc, char *argv[])
 	self->inst_log_entry = inst_log_entry;
 	self->relocations = relocations;
 	self->external_entry_points = external_entry_points;
+	blocks = calloc(1000, sizeof(struct control_flow_block_s));
+	block_size = 0;
 	
 	/* valgrind does not know about bf_copy_data_section */
 	memset(data, 0, data_size);
@@ -2376,7 +2552,14 @@ int main(int argc, char *argv[])
 
 	/* Correct inst_log to identify how many dis_instructions there have been */
 	inst_log--;
+
+	tmp = tidy_inst_log(self);
+	tmp = build_control_flow_blocks(self, blocks, &block_size);
+	tmp = print_control_flow_blocks(self, blocks, &block_size);
+
 	print_dis_instructions(self);
+
+
 	if (entry_point_list_length > 0) {
 		for (n = 0; n < entry_point_list_length; n++ ) {
 			if (entry_point[n].used) {
