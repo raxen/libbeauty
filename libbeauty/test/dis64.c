@@ -309,7 +309,6 @@ int build_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 
 			for (m = 0; m < inst_log1->next_size; m++) {
 				tmp = find_node_from_inst(self, nodes, node_size, inst_log1->next[m]);
-				printf("n=%d, m=%d\n", n, m);
 				nodes[n].next_node[m] = tmp;
 			}
 		}
@@ -329,13 +328,13 @@ int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 	int m;
 
 	for (n = 1; n <= *node_size; n++) {
-		printf("Block:0x%x, inst_start=0x%x, inst_end=0x%x\n",
+		printf("Node:0x%x, inst_start=0x%x, inst_end=0x%x\n",
 			n,
 			nodes[n].inst_start,
 			nodes[n].inst_end);
 		inst_log1 =  &inst_log_entry[nodes[n].inst_start];
 		for (m = 0; m < inst_log1->prev_size; m++) {
-			printf("inst_start->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
+//			printf("inst_start->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
 			printf("nodes[0x%x].prev_node[%d] = 0x%x\n", n, m, nodes[n].prev_node[m]);
 		}
 //		for (m = 0; m < inst_log1->next_size; m++) {
@@ -346,7 +345,7 @@ int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 //			printf("inst_end->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
 //		}
 		for (m = 0; m < inst_log1->next_size; m++) {
-			printf("inst_end->next[%d] = 0x%x\n", m, inst_log1->next[m]);
+//			printf("inst_end->next[%d] = 0x%x\n", m, inst_log1->next[m]);
 			printf("nodes[0x%x].next_node[%d] = 0x%x\n", n, m, nodes[n].next_node[m]);
 		}
 	}

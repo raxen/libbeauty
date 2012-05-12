@@ -102,8 +102,13 @@ struct control_flow_node_s {
 	int inst_end;
 	int prev_size;
 	int *prev_node;
+	int *prev_type; /* Is previous a loop edge? 1 = Normal, 2 =  loop_edge */
 	int next_size;
 	int *next_node;
+	int *next_type; /* Is next a loop exit? 1 = Normal, 2 = loop_edge, 3 = loop_exit */
+	int dominator; /* Node that dominates this node */
+	int type; /* 0 =  Normal, 1 =  Part of a loop */
+	int loop_head; /* 0 = Normal, 1 = Loop head */
 };
 
 struct external_entry_point_s {
