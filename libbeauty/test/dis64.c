@@ -248,6 +248,135 @@ int find_node_from_inst(struct self_s *self, struct control_flow_node_s *nodes, 
 	return found;
 }
 
+struct path_s {
+	int path_prev;
+	int path_prev_index;
+	int path_size;
+	int *path;
+};
+
+struct node_mid_start_s {
+	int path_prev;
+	int path_prev_index;
+	int node;
+};
+
+int node_mid_start_add(struct control_flow_node_s *node, struct node_mid_start_s *node_mid_start, int path, int step)
+{
+	int n;
+	int limit = node->next_size;
+	int index = 1;
+
+	for (n = 0; n < 1000; n++) {
+		if (node_mid_start[n].node == 0) {
+			node_mid_start[n].node = node->next_node[index];
+			node_mid_start[n].path_prev = path;
+			node_mid_start[n].path_prev_index = step;
+			index++;
+			if (index >= limit) {
+				break;
+			}
+		}
+	}
+}
+
+int path_loop_check(struct path_s *paths, int path, int step, int node)
+{
+	int tmp;
+
+	while (1) {
+		printf("loop_check: path=0x%x, step=0x%x\n", path, step);
+		step--;
+		if (step < 0) {
+			printf("step < 0: 0x%x, 0x%x\n", paths[path].path_prev, paths[path].path_prev_index);
+			if ((paths[path].path_prev != 0) ||
+				(paths[path].path_prev_index != 0)) {
+				tmp = paths[path].path_prev;
+				step = paths[path].path_prev_index;
+				path = tmp;
+			} else {
+				printf("No loop\n");
+				return 0;
+			}
+		}
+		if (paths[path].path[step] ==  node) {
+			printf("Loop found\n");
+			return 1;
+		}
+	};
+	return 0;
+}
+
+
+
+int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *nodes, int *node_size)
+{
+	struct path_s *paths;
+	struct node_mid_start_s *node_mid_start;
+	int found = 0;
+	int path = 0;
+	int step = 0;
+	int n;
+	int l;
+	int m;
+	int node = 1;
+	int tmp;
+	int loop = 0;
+
+	paths = calloc(10, sizeof(struct path_s));
+	for (n = 0; n < 10; n++) {
+		paths[n].path = calloc(1000, sizeof(int));
+	}
+	node_mid_start = calloc(1000, sizeof(struct node_mid_start_s));
+
+	node_mid_start[0].node = 1;
+	node_mid_start[0].path_prev = 0;
+	node_mid_start[0].path_prev_index = 0;
+
+	do {
+		found = 0;
+		for (n = 0; n < 1000; n++) {
+			if (node_mid_start[n].node != 0) {
+				found = 1;
+				break;
+			}
+		}
+		if (found == 1) {
+			step = 0;
+			node = node_mid_start[n].node;
+			paths[path].path[step] = node;
+			paths[path].path_prev = node_mid_start[n].path_prev;
+			paths[path].path_prev_index = node_mid_start[n].path_prev_index;
+			printf("JCD1: path %d:0x%x\n", path, node_mid_start[n].node);
+			node_mid_start[n].node = 0;
+			step++;
+			loop = 0;
+			do {
+				if (nodes[node].next_size == 1) {
+					printf("JCD2: path %d:0x%x -> 0x%x\n", path, node, nodes[node].next_node[0]);
+					node = nodes[node].next_node[0];
+					paths[path].path[step] = node;
+					step++;
+				} else if (nodes[node].next_size > 1) {
+					tmp = node_mid_start_add(&nodes[node], node_mid_start, path, step);
+					printf("JCD3: path %d:0x%x -> 0x%x\n", path, node, nodes[node].next_node[0]);
+					node = nodes[node].next_node[0];
+					paths[path].path[step] = node;
+					step++;
+				}
+				loop = path_loop_check(paths, path, step - 1, node);
+			} while ((nodes[node].next_size > 0) && (loop == 0));
+			paths[path].path_size = step;
+			path++;
+		}
+	} while (found == 1);
+	for (m = 0; m < path; m++) {
+		printf("Path %d: prev 0x%x:0x%x\n", m, paths[m].path_prev, paths[m].path_prev_index);
+		for (n = 0; n < paths[m].path_size; n++) {
+			printf("Path %d=0x%x\n", m, paths[m].path[n]);
+		}
+	}
+}
 
 int build_control_flow_nodes(struct self_s *self, struct control_flow_node_s *nodes, int *node_size)
 {
@@ -2555,8 +2684,10 @@ int main(int argc, char *argv[])
 	tmp = tidy_inst_log(self);
 	tmp = build_control_flow_nodes(self, nodes, &nodes_size);
 	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
+	tmp = build_control_flow_paths(self, nodes, &nodes_size);
 
 	print_dis_instructions(self);
+	exit(0);
 
 
 	if (entry_point_list_length > 0) {
