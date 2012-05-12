@@ -234,13 +234,13 @@ int tidy_inst_log(struct self_s *self)
 	return 0;
 }
 
-int find_block_from_inst(struct self_s *self, struct control_flow_block_s *blocks, int *block_size, int inst)
+int find_node_from_inst(struct self_s *self, struct control_flow_node_s *nodes, int *node_size, int inst)
 {
 	int n;
 	int found = 0;
-	for (n = 1; n <= *block_size; n++) {
-		if ((blocks[n].inst_start <= inst) &&
-			(blocks[n].inst_end >= inst)) {
+	for (n = 1; n <= *node_size; n++) {
+		if ((nodes[n].inst_start <= inst) &&
+			(nodes[n].inst_end >= inst)) {
 			found = n;
 			break;
 		}
@@ -249,21 +249,21 @@ int find_block_from_inst(struct self_s *self, struct control_flow_block_s *block
 }
 
 
-int build_control_flow_blocks(struct self_s *self, struct control_flow_block_s *blocks, int *block_size)
+int build_control_flow_nodes(struct self_s *self, struct control_flow_node_s *nodes, int *node_size)
 {
 	struct inst_log_entry_s *inst_log1;
 	struct inst_log_entry_s *inst_log_entry = self->inst_log_entry;
-	int block = 1;
+	int node = 1;
 	int inst_start = 1;
 	int inst_end;
 	int n;
 	int m;
 	int tmp;
 
-	printf("build_control_flow_blocks:\n");	
+	printf("build_control_flow_nodes:\n");	
 	for (n = 1; n <= inst_log; n++) {
 		inst_log1 =  &inst_log_entry[n];
-		/* Test for end of block */
+		/* Test for end of node */
 		if ((inst_log1->next_size > 1) ||
 			(inst_log1->next_size == 0) ||
 			((inst_log1->next_size == 1) && (inst_log1->next[0] != (n + 1)))) {
@@ -271,9 +271,9 @@ int build_control_flow_blocks(struct self_s *self, struct control_flow_block_s *
 			/* Handle special case of duplicate prev_inst */
 			/* FIXME: Stop duplicate prev_inst being created in the first place */
 			if (inst_end >= inst_start) {
-				blocks[block].inst_start = inst_start;
-				blocks[block].inst_end = inst_end;
-				block++;
+				nodes[node].inst_start = inst_start;
+				nodes[node].inst_end = inst_end;
+				node++;
 				inst_start = n + 1;
 			}
 		}
@@ -282,35 +282,35 @@ int build_control_flow_blocks(struct self_s *self, struct control_flow_block_s *
 			/* Handle special case of duplicate prev_inst */
 			/* FIXME: Stop duplicate prev_inst being created in the first place */
 			if (inst_end >= inst_start) {
-				blocks[block].inst_start = inst_start;
-				blocks[block].inst_end = inst_end;
-				block++;
+				nodes[node].inst_start = inst_start;
+				nodes[node].inst_end = inst_end;
+				node++;
 				inst_start = n;
 			}
 		}
 	}
-	*block_size = block - 1;
+	*node_size = node - 1;
 
-	for (n = 1; n <= *block_size; n++) {
-		inst_log1 =  &inst_log_entry[blocks[n].inst_start];
+	for (n = 1; n <= *node_size; n++) {
+		inst_log1 =  &inst_log_entry[nodes[n].inst_start];
 		if (inst_log1->prev_size > 0) {
-			blocks[n].prev_block = calloc(inst_log1->prev_size, sizeof(int));
-			blocks[n].prev_size = inst_log1->prev_size;
+			nodes[n].prev_node = calloc(inst_log1->prev_size, sizeof(int));
+			nodes[n].prev_size = inst_log1->prev_size;
 
 			for (m = 0; m < inst_log1->prev_size; m++) {
-				tmp = find_block_from_inst(self, blocks, block_size, inst_log1->prev[m]);
-				blocks[n].prev_block[m] = tmp;
+				tmp = find_node_from_inst(self, nodes, node_size, inst_log1->prev[m]);
+				nodes[n].prev_node[m] = tmp;
 			}
 		}
-		inst_log1 =  &inst_log_entry[blocks[n].inst_end];
+		inst_log1 =  &inst_log_entry[nodes[n].inst_end];
 		if (inst_log1->next_size > 0) {
-			blocks[n].next_block = calloc(inst_log1->next_size, sizeof(int));
-			blocks[n].next_size = inst_log1->next_size;
+			nodes[n].next_node = calloc(inst_log1->next_size, sizeof(int));
+			nodes[n].next_size = inst_log1->next_size;
 
 			for (m = 0; m < inst_log1->next_size; m++) {
-				tmp = find_block_from_inst(self, blocks, block_size, inst_log1->next[m]);
+				tmp = find_node_from_inst(self, nodes, node_size, inst_log1->next[m]);
 				printf("n=%d, m=%d\n", n, m);
-				blocks[n].next_block[m] = tmp;
+				nodes[n].next_node[m] = tmp;
 			}
 		}
 	}
@@ -321,33 +321,33 @@ int build_control_flow_blocks(struct self_s *self, struct control_flow_block_s *
 	return 0;
 }
 
-int print_control_flow_blocks(struct self_s *self, struct control_flow_block_s *blocks, int *block_size)
+int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *nodes, int *node_size)
 {
 	struct inst_log_entry_s *inst_log1;
 	struct inst_log_entry_s *inst_log_entry = self->inst_log_entry;
 	int n;
 	int m;
 
-	for (n = 1; n <= *block_size; n++) {
+	for (n = 1; n <= *node_size; n++) {
 		printf("Block:0x%x, inst_start=0x%x, inst_end=0x%x\n",
 			n,
-			blocks[n].inst_start,
-			blocks[n].inst_end);
-		inst_log1 =  &inst_log_entry[blocks[n].inst_start];
+			nodes[n].inst_start,
+			nodes[n].inst_end);
+		inst_log1 =  &inst_log_entry[nodes[n].inst_start];
 		for (m = 0; m < inst_log1->prev_size; m++) {
 			printf("inst_start->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
-			printf("blocks[0x%x].prev_block[%d] = 0x%x\n", n, m, blocks[n].prev_block[m]);
+			printf("nodes[0x%x].prev_node[%d] = 0x%x\n", n, m, nodes[n].prev_node[m]);
 		}
 //		for (m = 0; m < inst_log1->next_size; m++) {
 //			printf("inst_start->next[%d] = 0x%x\n", m, inst_log1->next[m]);
 //		}
-		inst_log1 =  &inst_log_entry[blocks[n].inst_end];
+		inst_log1 =  &inst_log_entry[nodes[n].inst_end];
 //		for (m = 0; m < inst_log1->prev_size; m++) {
 //			printf("inst_end->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
 //		}
 		for (m = 0; m < inst_log1->next_size; m++) {
 			printf("inst_end->next[%d] = 0x%x\n", m, inst_log1->next[m]);
-			printf("blocks[0x%x].next_block[%d] = 0x%x\n", n, m, blocks[n].next_block[m]);
+			printf("nodes[0x%x].next_node[%d] = 0x%x\n", n, m, nodes[n].next_node[m]);
 		}
 	}
 	return 0;
@@ -2250,8 +2250,8 @@ int main(int argc, char *argv[])
 	disassembler_ftype disassemble_fn;
 	struct relocation_s *relocations;
 	struct external_entry_point_s *external_entry_points;
-	struct control_flow_block_s *blocks;
-	int block_size;
+	struct control_flow_node_s *nodes;
+	int nodes_size;
 
 	expression = malloc(1000); /* Buffer for if expressions */
 
@@ -2313,8 +2313,8 @@ int main(int argc, char *argv[])
 	self->inst_log_entry = inst_log_entry;
 	self->relocations = relocations;
 	self->external_entry_points = external_entry_points;
-	blocks = calloc(1000, sizeof(struct control_flow_block_s));
-	block_size = 0;
+	nodes = calloc(1000, sizeof(struct control_flow_node_s));
+	nodes_size = 0;
 	
 	/* valgrind does not know about bf_copy_data_section */
 	memset(data, 0, data_size);
@@ -2554,8 +2554,8 @@ int main(int argc, char *argv[])
 	inst_log--;
 
 	tmp = tidy_inst_log(self);
-	tmp = build_control_flow_blocks(self, blocks, &block_size);
-	tmp = print_control_flow_blocks(self, blocks, &block_size);
+	tmp = build_control_flow_nodes(self, nodes, &nodes_size);
+	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 
 	print_dis_instructions(self);
 

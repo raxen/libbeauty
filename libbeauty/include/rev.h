@@ -97,13 +97,13 @@ struct process_state_s {
 	int *memory_used;
 };
 
-struct control_flow_block_s {
+struct control_flow_node_s {
 	int inst_start;
 	int inst_end;
 	int prev_size;
-	int *prev_block;
+	int *prev_node;
 	int next_size;
-	int *next_block;
+	int *next_node;
 };
 
 struct external_entry_point_s {
