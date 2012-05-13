@@ -371,6 +371,21 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 				if (loop) {
 					nodes[node].type = 1;
 					nodes[node].loop_head = 1;
+					if (step >= 2) {
+						int node1 = paths[path].path[step - 2];
+						int node2 = paths[path].path[step - 1];
+						printf("JCD4:loop: 0x%x, 0x%x\n", paths[path].path[step - 2], paths[path].path[step - 1]);
+						for (n = 0; n < nodes[node2].prev_size; n++) {
+							if (nodes[node2].prev_node[n] == node1) {
+								nodes[node2].prev_type[n] = 2;
+							}
+						}
+						for (n = 0; n < nodes[node1].next_size; n++) {
+							if (nodes[node1].next_node[n] == node2) {
+								nodes[node1].next_type[n] = 2;
+							}
+						}
+					}
 				}
 			} while ((nodes[node].next_size > 0) && (loop == 0));
 			paths[path].path_size = step;
@@ -431,6 +446,7 @@ int build_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 		inst_log1 =  &inst_log_entry[nodes[n].inst_start];
 		if (inst_log1->prev_size > 0) {
 			nodes[n].prev_node = calloc(inst_log1->prev_size, sizeof(int));
+			nodes[n].prev_type = calloc(inst_log1->prev_size, sizeof(int));
 			nodes[n].prev_size = inst_log1->prev_size;
 
 			for (m = 0; m < inst_log1->prev_size; m++) {
@@ -441,6 +457,7 @@ int build_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 		inst_log1 =  &inst_log_entry[nodes[n].inst_end];
 		if (inst_log1->next_size > 0) {
 			nodes[n].next_node = calloc(inst_log1->next_size, sizeof(int));
+			nodes[n].next_type = calloc(inst_log1->next_size, sizeof(int));
 			nodes[n].next_size = inst_log1->next_size;
 
 			for (m = 0; m < inst_log1->next_size; m++) {
@@ -473,7 +490,7 @@ int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 		inst_log1 =  &inst_log_entry[nodes[n].inst_start];
 		for (m = 0; m < inst_log1->prev_size; m++) {
 //			printf("inst_start->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
-			printf("nodes[0x%x].prev_node[%d] = 0x%x\n", n, m, nodes[n].prev_node[m]);
+			printf("nodes[0x%x].prev_node[%d] = 0x%x, prev_type=%d\n", n, m, nodes[n].prev_node[m], nodes[n].prev_type[m]);
 		}
 //		for (m = 0; m < inst_log1->next_size; m++) {
 //			printf("inst_start->next[%d] = 0x%x\n", m, inst_log1->next[m]);
@@ -484,7 +501,7 @@ int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 //		}
 		for (m = 0; m < inst_log1->next_size; m++) {
 //			printf("inst_end->next[%d] = 0x%x\n", m, inst_log1->next[m]);
-			printf("nodes[0x%x].next_node[%d] = 0x%x\n", n, m, nodes[n].next_node[m]);
+			printf("nodes[0x%x].next_node[%d] = 0x%x, next_type=%d\n", n, m, nodes[n].next_node[m], nodes[n].next_type[m]);
 		}
 	}
 	return 0;
@@ -2696,7 +2713,7 @@ int main(int argc, char *argv[])
 	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 
 	print_dis_instructions(self);
-	exit(0);
+//	exit(0);
 
 
 	if (entry_point_list_length > 0) {
