@@ -18,4 +18,6 @@ make
 
 This will build the test programs dis32, dis64 and bf.
 
-run "./dis64" to see the current working state. 
+run "./dis64" to see the current working state.
+dis64 takes, as input, a .o format file with filename "test.obj" and creates, as output, a .c file "test.c".
+
