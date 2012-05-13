@@ -252,6 +252,7 @@ struct path_s {
 	int path_prev;
 	int path_prev_index;
 	int path_size;
+	int type; /* 0 = Unknown, 1 = Loop */
 	int *path;
 };
 
@@ -283,6 +284,7 @@ int node_mid_start_add(struct control_flow_node_s *node, struct node_mid_start_s
 int path_loop_check(struct path_s *paths, int path, int step, int node)
 {
 	int tmp;
+	int path1 = path;
 
 	while (1) {
 		printf("loop_check: path=0x%x, step=0x%x\n", path, step);
@@ -301,6 +303,7 @@ int path_loop_check(struct path_s *paths, int path, int step, int node)
 		}
 		if (paths[path].path[step] ==  node) {
 			printf("Loop found\n");
+			paths[path1].type = 1;
 			return 1;
 		}
 	};
@@ -365,13 +368,17 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 					step++;
 				}
 				loop = path_loop_check(paths, path, step - 1, node);
+				if (loop) {
+					nodes[node].type = 1;
+					nodes[node].loop_head = 1;
+				}
 			} while ((nodes[node].next_size > 0) && (loop == 0));
 			paths[path].path_size = step;
 			path++;
 		}
 	} while (found == 1);
 	for (m = 0; m < path; m++) {
-		printf("Path %d: prev 0x%x:0x%x\n", m, paths[m].path_prev, paths[m].path_prev_index);
+		printf("Path %d: type=%d, prev 0x%x:0x%x\n", m, paths[m].type, paths[m].path_prev, paths[m].path_prev_index);
 		for (n = 0; n < paths[m].path_size; n++) {
 			printf("Path %d=0x%x\n", m, paths[m].path[n]);
 		}
@@ -457,8 +464,10 @@ int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 	int m;
 
 	for (n = 1; n <= *node_size; n++) {
-		printf("Node:0x%x, inst_start=0x%x, inst_end=0x%x\n",
+		printf("Node:0x%x, type=%d, loop_head=%d, inst_start=0x%x, inst_end=0x%x\n",
 			n,
+			nodes[n].type,
+			nodes[n].loop_head,
 			nodes[n].inst_start,
 			nodes[n].inst_end);
 		inst_log1 =  &inst_log_entry[nodes[n].inst_start];
@@ -2683,8 +2692,8 @@ int main(int argc, char *argv[])
 
 	tmp = tidy_inst_log(self);
 	tmp = build_control_flow_nodes(self, nodes, &nodes_size);
-	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 	tmp = build_control_flow_paths(self, nodes, &nodes_size);
+	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 
 	print_dis_instructions(self);
 	exit(0);
