@@ -253,6 +253,7 @@ struct path_s {
 	int path_prev_index;
 	int path_size;
 	int type; /* 0 = Unknown, 1 = Loop */
+	int loop_head; /* Index to the node that is the loop head for this path. */
 	int *path;
 };
 
@@ -369,6 +370,7 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 				}
 				loop = path_loop_check(paths, path, step - 1, node);
 				if (loop) {
+					paths[path].loop_head = node;
 					nodes[node].type = 1;
 					nodes[node].loop_head = 1;
 					if (step >= 2) {
@@ -393,7 +395,7 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 		}
 	} while (found == 1);
 	for (m = 0; m < path; m++) {
-		printf("Path %d: type=%d, prev 0x%x:0x%x\n", m, paths[m].type, paths[m].path_prev, paths[m].path_prev_index);
+		printf("Path %d: type=%d, loop_head=%d, prev 0x%x:0x%x\n", m, paths[m].type, paths[m].loop_head, paths[m].path_prev, paths[m].path_prev_index);
 		for (n = 0; n < paths[m].path_size; n++) {
 			printf("Path %d=0x%x\n", m, paths[m].path[n]);
 		}

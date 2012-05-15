@@ -19,5 +19,10 @@ Segmented architectures such as 16 bit x86 mode will have to be handled differen
 How to handle ARM architectures, that have essentually an "IF FLAG X" expression in front of every instruction.
 Maybe group instructions with the same "FLAG X" and put the if expression round the whole group?
 
+5) CMOV - Contitional Move instruction not correctly working, do to branch in RTL within one ASM instruction.
+Need to be able to start execution of instructions from RTL instruction offset.
+This is because, the CMOV creates 2 Nodes. One node up until the branch, and one node for the MOV.
+
+
 
 
