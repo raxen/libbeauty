@@ -248,6 +248,12 @@ int find_node_from_inst(struct self_s *self, struct control_flow_node_s *nodes, 
 	return found;
 }
 
+struct loop_s {
+	int head; /* The associated loop_head node */
+	int size;
+	int *loop;
+};
+
 struct path_s {
 	int path_prev;
 	int path_prev_index;
@@ -312,10 +318,59 @@ int path_loop_check(struct path_s *paths, int path, int step, int node)
 }
 
 
-
-int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *nodes, int *node_size)
+int merge_path_into_loop(struct path_s *paths, struct loop_s *loop, int path)
 {
-	struct path_s *paths;
+	int index;
+	loop->head = paths[path].loop_head;
+	index = paths[path].path_size - 1; /* convert size to index */
+	printf("loop_head=%d, path index = %d\n", loop->head, paths[path].path[index]);
+//	for (n = 0; n  < loop->size; n++) {
+		
+
+	return 0;
+}
+
+
+/* This is used to merge all the nodes of a loop with a particular loop_head */
+/* It is then used to detect which node prev/next links exit the loop */
+/* Work then then be done to scan the loops, and if only one loop_head exists in the loop, it is a single loop. */
+/* If more than one loop_head exists in the loop, then it is a nested loop, or a disjointed loop */
+
+int build_control_flow_loops(struct self_s *self, struct path_s *paths, int *paths_size, struct loop_s *loops, int *loop_size)
+{
+	int n;
+	int m;
+	int found = -1;
+
+	for (n = 0; n < *paths_size; n++) {
+		if (paths[n].loop_head != 0) {
+			for(m = 0; m < *loop_size; m++) {
+				if (loops[m].head == paths[n].loop_head) {
+					found = m;
+					break;
+				}
+			}
+			if (found == -1) {
+				for(m = 0; m < *loop_size; m++) {
+					if (loops[m].head == 0) {
+						found = m;
+						break;
+					}
+				}
+			}
+			if (found == -1) {
+				printf("build_control_flow_loops problem\n");
+				exit(1);
+			}
+			merge_path_into_loop(paths, &loops[m], n);
+		}
+			
+	}
+	return 0;
+}
+
+int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *nodes, int *node_size, struct path_s *paths, int *paths_size, int node_start)
+{
 	struct node_mid_start_s *node_mid_start;
 	int found = 0;
 	int path = 0;
@@ -327,13 +382,9 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 	int tmp;
 	int loop = 0;
 
-	paths = calloc(10, sizeof(struct path_s));
-	for (n = 0; n < 10; n++) {
-		paths[n].path = calloc(1000, sizeof(int));
-	}
 	node_mid_start = calloc(1000, sizeof(struct node_mid_start_s));
 
-	node_mid_start[0].node = 1;
+	node_mid_start[0].node = node_start;
 	node_mid_start[0].path_prev = 0;
 	node_mid_start[0].path_prev_index = 0;
 
@@ -392,14 +443,29 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 			} while ((nodes[node].next_size > 0) && (loop == 0));
 			paths[path].path_size = step;
 			path++;
+			if (path >= *paths_size) {
+				printf("TOO MANY PATHS\n");
+				exit(1);
+			}
 		}
 	} while (found == 1);
-	for (m = 0; m < path; m++) {
-		printf("Path %d: type=%d, loop_head=%d, prev 0x%x:0x%x\n", m, paths[m].type, paths[m].loop_head, paths[m].path_prev, paths[m].path_prev_index);
-		for (n = 0; n < paths[m].path_size; n++) {
-			printf("Path %d=0x%x\n", m, paths[m].path[n]);
+	free (node_mid_start);
+	return 0;
+}
+
+int print_control_flow_paths(struct self_s *self, struct path_s *paths, int *paths_size)
+{
+	int n, m;
+
+	for (m = 0; m < *paths_size; m++) {
+		if (paths[m].path_size > 0) {
+			printf("Path %d: type=%d, loop_head=%d, prev 0x%x:0x%x\n", m, paths[m].type, paths[m].loop_head, paths[m].path_prev, paths[m].path_prev_index);
+			for (n = 0; n < paths[m].path_size; n++) {
+				printf("Path %d=0x%x\n", m, paths[m].path[n]);
+			}
 		}
 	}
+	return 0;
 }
 
 int build_control_flow_nodes(struct self_s *self, struct control_flow_node_s *nodes, int *node_size)
@@ -468,10 +534,6 @@ int build_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 			}
 		}
 	}
-
-
-
-
 	return 0;
 }
 
@@ -2408,6 +2470,10 @@ int main(int argc, char *argv[])
 	struct external_entry_point_s *external_entry_points;
 	struct control_flow_node_s *nodes;
 	int nodes_size;
+	struct path_s *paths;
+	int paths_size = 10;
+	struct loop_s *loops;
+	int loops_size = 10;
 
 	expression = malloc(1000); /* Buffer for if expressions */
 
@@ -2711,8 +2777,19 @@ int main(int argc, char *argv[])
 
 	tmp = tidy_inst_log(self);
 	tmp = build_control_flow_nodes(self, nodes, &nodes_size);
-	tmp = build_control_flow_paths(self, nodes, &nodes_size);
+	paths_size = 10;
+	paths = calloc(paths_size, sizeof(struct path_s));
+	for (n = 0; n < paths_size; n++) {
+		paths[n].path = calloc(1000, sizeof(int));
+	}
+	loops = calloc(loops_size, sizeof(struct loop_s));
+	for (n = 0; n < loops_size; n++) {
+		loops[n].loop = calloc(1000, sizeof(int));
+	}
+	tmp = build_control_flow_paths(self, nodes, &nodes_size, paths, &paths_size, 1);
 	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
+	tmp = print_control_flow_paths(self, paths, &paths_size);
+	tmp = build_control_flow_loops(self, paths, &paths_size, loops, &loops_size);
 
 	print_dis_instructions(self);
 //	exit(0);
