@@ -320,13 +320,50 @@ int path_loop_check(struct path_s *paths, int path, int step, int node)
 
 int merge_path_into_loop(struct path_s *paths, struct loop_s *loop, int path)
 {
-	int index;
-	loop->head = paths[path].loop_head;
-	index = paths[path].path_size - 1; /* convert size to index */
-	printf("loop_head=%d, path index = %d\n", loop->head, paths[path].path[index]);
-//	for (n = 0; n  < loop->size; n++) {
-		
+	int step;
+	int tmp;
+	int found;
+	int n;
 
+	loop->head = paths[path].loop_head;
+	step = paths[path].path_size - 1; /* convert size to index */
+	printf("loop_head=%d, path index = %d\n", loop->head, paths[path].path[step]);
+	if (paths[path].path[step] != loop->head) {
+		printf("merge_path failed\n");
+		exit(1);
+	}
+	while (1) {
+		step--;
+		if (step < 0) {
+			printf("step < 0: 0x%x, 0x%x\n", paths[path].path_prev, paths[path].path_prev_index);
+			if ((paths[path].path_prev != 0) ||
+				(paths[path].path_prev_index != 0)) {
+				tmp = paths[path].path_prev;
+				step = paths[path].path_prev_index;
+				path = tmp;
+			} else {
+				printf("No loop\n");
+				return 0;
+			}
+		}
+		found = 0;
+		for (n = 0; n  < loop->size; n++) {
+			if (loop->loop[n] == paths[path].path[step]) {
+				found = 1;
+				break;	
+			}
+		}
+		if (!found) {
+			printf("Merge: adding 0x%x\n",  paths[path].path[step]);
+			loop->loop[loop->size] = paths[path].path[step];
+			loop->size++;
+		}
+
+		if (paths[path].path[step] ==  loop->head) {
+			printf("Start of merge Loop found\n");
+			break;
+		}
+	}
 	return 0;
 }
 
@@ -365,6 +402,21 @@ int build_control_flow_loops(struct self_s *self, struct path_s *paths, int *pat
 			merge_path_into_loop(paths, &loops[m], n);
 		}
 			
+	}
+	return 0;
+}
+
+int print_control_flow_loops(struct self_s *self, struct loop_s *loops, int *loops_size)
+{
+	int n, m;
+
+	for (m = 0; m < *loops_size; m++) {
+		if (loops[m].size > 0) {
+			printf("Loop %d: loop_head=%d\n", m, loops[m].head);
+			for (n = 0; n < loops[m].size; n++) {
+				printf("Loop %d=0x%x\n", m, loops[m].loop[n]);
+			}
+		}
 	}
 	return 0;
 }
@@ -413,7 +465,7 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 					paths[path].path[step] = node;
 					step++;
 				} else if (nodes[node].next_size > 1) {
-					tmp = node_mid_start_add(&nodes[node], node_mid_start, path, step);
+					tmp = node_mid_start_add(&nodes[node], node_mid_start, path, step - 1);
 					printf("JCD3: path %d:0x%x -> 0x%x\n", path, node, nodes[node].next_node[0]);
 					node = nodes[node].next_node[0];
 					paths[path].path[step] = node;
@@ -2790,6 +2842,9 @@ int main(int argc, char *argv[])
 	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 	tmp = print_control_flow_paths(self, paths, &paths_size);
 	tmp = build_control_flow_loops(self, paths, &paths_size, loops, &loops_size);
+	tmp = print_control_flow_loops(self, loops, &loops_size);
+//	tmp = analyse_control_flow_loop_exits(self, nodes, &nodes_size, loops, &loops_size);
+	
 
 	print_dis_instructions(self);
 //	exit(0);
