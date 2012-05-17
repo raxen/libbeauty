@@ -2,7 +2,7 @@ include $(top_srcdir)/misc/Makefile.common
 
 
 #SUBDIRS = src misc test
-SUBDIRS = src misc include
+SUBDIRS = src misc include test
 
 EXTRA_DIST = src/test include
 

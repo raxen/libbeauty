@@ -2926,6 +2926,7 @@ int disassemble(struct rev_eng *handle, struct dis_instructions_s *dis_instructi
 			dis_instructions->instruction_number=0; /* Tag unimplemented dis_instructions. */
 			break;
 		}
+		break;
 	}
 
 	return result;

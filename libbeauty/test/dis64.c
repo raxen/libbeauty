@@ -286,6 +286,7 @@ int node_mid_start_add(struct control_flow_node_s *node, struct node_mid_start_s
 			}
 		}
 	}
+	return 0;
 }
 
 int path_loop_check(struct path_s *paths, int path, int step, int node)
@@ -1019,6 +1020,7 @@ int output_label_redirect(int offset, struct label_s *labels, struct label_redir
 	tmp = label_redirect[offset].redirect;
 	label = &labels[tmp];
 	tmp = output_label(label, fd);
+	return 0;
 }
 
 int output_label(struct label_s *label, FILE *fd) {
@@ -2209,11 +2211,13 @@ int register_label(struct external_entry_point_s *entry_point, uint64_t value_id
 		(entry_point->locals_size)++;
 		entry_point->locals = realloc(entry_point->locals, entry_point->locals_size * sizeof(int));
 		entry_point->locals[entry_point->locals_size - 1] = label_offset;
+		break;
 	case 3:
 		printf("HEX VALUE\n");
 		break;
 	default:
 		printf("VALUE unhandled 0x%"PRIx64"\n", label->scope);
+		break;
 	}
 	printf("params_size = 0x%x, locals_size = 0x%x\n",
 		entry_point->params_size,
@@ -3617,6 +3621,7 @@ int main(int argc, char *argv[])
 			}
 			printf("JCD4: value_id = 0x%"PRIx64", lab_pointer = 0x%"PRIx64", value_id3 = 0x%"PRIx64", lab_pointer = 0x%"PRIx64"\n",
 				value_id, labels[value_id].lab_pointer, value_id3, labels[value_id3].lab_pointer);
+			break;
 
 		default:
 			break;
@@ -3663,6 +3668,7 @@ int main(int argc, char *argv[])
 			}
 			printf("JCD4: value_id = 0x%"PRIx64", lab_pointer = 0x%"PRIx64", value_id3 = 0x%"PRIx64", lab_pointer = 0x%"PRIx64"\n",
 				value_id, labels[value_id].lab_pointer, value_id3, labels[value_id3].lab_pointer);
+			break;
 
 		default:
 			break;
