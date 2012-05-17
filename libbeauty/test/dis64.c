@@ -337,8 +337,8 @@ int merge_path_into_loop(struct path_s *paths, struct loop_s *loop, int path)
 		step--;
 		if (step < 0) {
 			printf("step < 0: 0x%x, 0x%x\n", paths[path].path_prev, paths[path].path_prev_index);
-			if ((paths[path].path_prev != 0) ||
-				(paths[path].path_prev_index != 0)) {
+			/* If path_prev == path, we have reached the beginning of the path list */
+			if ((paths[path].path_prev != path) {
 				tmp = paths[path].path_prev;
 				step = paths[path].path_prev_index;
 				path = tmp;
@@ -2880,7 +2880,6 @@ int main(int argc, char *argv[])
 		loops[n].loop = calloc(1000, sizeof(int));
 	}
 	tmp = build_control_flow_paths(self, nodes, &nodes_size, paths, &paths_size, 1);
-	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 	tmp = print_control_flow_paths(self, paths, &paths_size);
 	tmp = build_control_flow_loops(self, paths, &paths_size, loops, &loops_size);
 	tmp = print_control_flow_loops(self, loops, &loops_size);
