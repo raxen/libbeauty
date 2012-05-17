@@ -623,6 +623,43 @@ int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 	return 0;
 }
 
+/* For each node in each loop list, check each node->next[] to see whether it is exiting the loop or not. */
+int analyse_control_flow_loop_exits(struct self_s *self, struct control_flow_node_s *nodes, int *node_size, struct loop_s *loops, int *loop_size)
+{
+	int l, m, n, n2;
+	struct control_flow_node_s *node;
+	int head;
+	int next;
+	int type;
+	int found;
+
+	for (l = 0; l < *loop_size; l++) {
+		for (m = 0; m < loops[l].size; m++) {
+			node = &nodes[loops[l].loop[m]];
+			head = loops[l].head;
+			for (n = 0; n < node->next_size; n++) {
+				next = node->next_node[n];
+				type = node->next_type[n];
+				if (type == 0) {
+					/* Only modify when the type is normal == 0 */
+					found = 0;
+					for (n2 = 0; n2 < loops[l].size; n2++) {
+						if (next == loops[l].loop[n2]) {
+							found = 1;
+							break;
+						}
+					}
+					if (!found) {
+						node->next_type[n] = 3;  /* exit type */
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+
 int get_value_from_index(struct operand_s *operand, uint64_t *index)
 {
 	if (operand->indirect) {
@@ -2843,12 +2880,11 @@ int main(int argc, char *argv[])
 	tmp = print_control_flow_paths(self, paths, &paths_size);
 	tmp = build_control_flow_loops(self, paths, &paths_size, loops, &loops_size);
 	tmp = print_control_flow_loops(self, loops, &loops_size);
-//	tmp = analyse_control_flow_loop_exits(self, nodes, &nodes_size, loops, &loops_size);
-	
+	tmp = analyse_control_flow_loop_exits(self, nodes, &nodes_size, loops, &loops_size);
+	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
+
 
 	print_dis_instructions(self);
-//	exit(0);
-
 
 	if (entry_point_list_length > 0) {
 		for (n = 0; n < entry_point_list_length; n++ ) {
