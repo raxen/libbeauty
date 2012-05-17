@@ -251,7 +251,7 @@ int find_node_from_inst(struct self_s *self, struct control_flow_node_s *nodes, 
 struct loop_s {
 	int head; /* The associated loop_head node */
 	int size;
-	int *loop;
+	int *list;
 };
 
 struct path_s {
@@ -325,10 +325,10 @@ int merge_path_into_loop(struct path_s *paths, struct loop_s *loop, int path)
 	int tmp;
 	int found;
 	int n;
+	int *list = loop->list;
 
 	loop->head = paths[path].loop_head;
 	step = paths[path].path_size - 1; /* convert size to index */
-	printf("loop_head=%d, path index = %d\n", loop->head, paths[path].path[step]);
 	if (paths[path].path[step] != loop->head) {
 		printf("merge_path failed\n");
 		exit(1);
@@ -336,9 +336,8 @@ int merge_path_into_loop(struct path_s *paths, struct loop_s *loop, int path)
 	while (1) {
 		step--;
 		if (step < 0) {
-			printf("step < 0: 0x%x, 0x%x\n", paths[path].path_prev, paths[path].path_prev_index);
 			/* If path_prev == path, we have reached the beginning of the path list */
-			if ((paths[path].path_prev != path) {
+			if (paths[path].path_prev != path) {
 				tmp = paths[path].path_prev;
 				step = paths[path].path_prev_index;
 				path = tmp;
@@ -349,18 +348,19 @@ int merge_path_into_loop(struct path_s *paths, struct loop_s *loop, int path)
 		}
 		found = 0;
 		for (n = 0; n  < loop->size; n++) {
-			if (loop->loop[n] == paths[path].path[step]) {
+			if (list[n] == paths[path].path[step]) {
 				found = 1;
 				break;	
 			}
 		}
 		if (!found) {
 			printf("Merge: adding 0x%x\n",  paths[path].path[step]);
-			loop->loop[loop->size] = paths[path].path[step];
+			tmp = paths[path].path[step];
+			list[loop->size] = tmp;
 			loop->size++;
 		}
 
-		if (paths[path].path[step] ==  loop->head) {
+		if (paths[path].path[step] == loop->head) {
 			printf("Start of merge Loop found\n");
 			break;
 		}
@@ -378,10 +378,13 @@ int build_control_flow_loops(struct self_s *self, struct path_s *paths, int *pat
 {
 	int n;
 	int m;
-	int found = -1;
+	int found;
+	struct loop_s *loop;
+
 
 	for (n = 0; n < *paths_size; n++) {
 		if (paths[n].loop_head != 0) {
+			found = -1;
 			for(m = 0; m < *loop_size; m++) {
 				if (loops[m].head == paths[n].loop_head) {
 					found = m;
@@ -400,9 +403,13 @@ int build_control_flow_loops(struct self_s *self, struct path_s *paths, int *pat
 				printf("build_control_flow_loops problem\n");
 				exit(1);
 			}
-			merge_path_into_loop(paths, &loops[m], n);
+			if (found >= *loop_size) {
+				printf("build_control_flow_loops problem2\n");
+				exit(1);
+			}
+			loop = &loops[found];
+			merge_path_into_loop(paths, loop, n);
 		}
-			
 	}
 	return 0;
 }
@@ -415,7 +422,7 @@ int print_control_flow_loops(struct self_s *self, struct loop_s *loops, int *loo
 		if (loops[m].size > 0) {
 			printf("Loop %d: loop_head=%d\n", m, loops[m].head);
 			for (n = 0; n < loops[m].size; n++) {
-				printf("Loop %d=0x%x\n", m, loops[m].loop[n]);
+				printf("Loop %d=0x%x\n", m, loops[m].list[n]);
 			}
 		}
 	}
@@ -636,7 +643,7 @@ int analyse_control_flow_loop_exits(struct self_s *self, struct control_flow_nod
 
 	for (l = 0; l < *loop_size; l++) {
 		for (m = 0; m < loops[l].size; m++) {
-			node = &nodes[loops[l].loop[m]];
+			node = &nodes[loops[l].list[m]];
 			head = loops[l].head;
 			for (n = 0; n < node->next_size; n++) {
 				next = node->next_node[n];
@@ -645,7 +652,7 @@ int analyse_control_flow_loop_exits(struct self_s *self, struct control_flow_nod
 					/* Only modify when the type is normal == 0 */
 					found = 0;
 					for (n2 = 0; n2 < loops[l].size; n2++) {
-						if (next == loops[l].loop[n2]) {
+						if (next == loops[l].list[n2]) {
 							found = 1;
 							break;
 						}
@@ -2876,8 +2883,9 @@ int main(int argc, char *argv[])
 		paths[n].path = calloc(1000, sizeof(int));
 	}
 	loops = calloc(loops_size, sizeof(struct loop_s));
+
 	for (n = 0; n < loops_size; n++) {
-		loops[n].loop = calloc(1000, sizeof(int));
+		loops[n].list = calloc(1000, sizeof(int));
 	}
 	tmp = build_control_flow_paths(self, nodes, &nodes_size, paths, &paths_size, 1);
 	tmp = print_control_flow_paths(self, paths, &paths_size);
