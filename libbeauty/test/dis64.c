@@ -2272,6 +2272,10 @@ int output_function_body(struct self_s *self, struct process_state_s *process_st
 				return 1;
 				break;
 			}
+			if (0 < inst_log1->next_size && inst_log1->next[0] != (n + 1)) {		
+				printf("\tTMP3 goto label%04"PRIx32";\n", inst_log1->next[0]);
+				tmp = fprintf(fd, "\tTMP3 goto label%04"PRIx32";\n", inst_log1->next[0]);
+			}
 		}
 	}
 	if (0 < inst_log1->next_size && inst_log1->next[0]) {		
