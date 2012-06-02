@@ -442,6 +442,74 @@ int add_path_to_node(struct control_flow_node_s *node, int path)
 	return 0;
 }
 
+/* Is "a" a subset of "b" */
+/* Are all the elements of "a" contained in "b" ? */
+/* 0 = No */
+/* 1 = Yes */
+int is_subset(int size_a, int *a, int size_b, int *b)
+{
+	int tmp;
+	int result = 0;
+	int n,m;
+	int found = 0;
+
+	/* Optimisation 1 */
+	if (size_b < size_a) {
+		goto is_subset_exit;
+	}
+	/* Optimisation 2 */
+	if (size_b == size_a) {
+		tmp = memcmp(a , b, size_a * sizeof(int));
+		if (!tmp) {
+			result = 1;
+			goto is_subset_exit;
+		}
+	}
+	/* Handle the case of size_b > size_a */
+	for (n = 0; n < size_a; n++) {
+		found = 0;
+		for (m = n; m < size_b; m++) {
+			if (a[n] == b[m]) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found) {
+			goto is_subset_exit;
+		}
+	}
+	result = 1;
+
+is_subset_exit:
+	return result;
+}
+
+int build_node_dominance(struct self_s *self, struct control_flow_node_s *nodes, int *nodes_size)
+{
+	int n;
+	int node_b = 1;
+	int tmp;
+
+	for(n = 1; n <= *nodes_size; n++) {
+		node_b = n;
+		while (node_b != 0) {
+			/* FIXME: avoid following loop edge ones */
+			tmp = nodes[node_b].prev_node[0];
+			node_b = tmp;
+			if (0 == node_b) {
+				break;
+			}
+			tmp = is_subset(nodes[n].path_size, nodes[n].path, nodes[node_b].path_size, nodes[node_b].path);
+			if (tmp) {
+				nodes[n].dominator = node_b;
+				break;
+			}
+		}
+	}
+
+	return 0;
+}
+
 int build_node_paths(struct self_s *self, struct control_flow_node_s *nodes, int *node_size, struct path_s *paths, int *paths_size)
 
 {
@@ -640,15 +708,18 @@ int build_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 	return 0;
 }
 
+
+
 int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *nodes, int *node_size)
 {
 	int n;
 	int m;
 
 	for (n = 1; n <= *node_size; n++) {
-		printf("Node:0x%x, type=%d, loop_head=%d, inst_start=0x%x, inst_end=0x%x\n",
+		printf("Node:0x%x, type=%d, dominator=0x%x, loop_head=%d, inst_start=0x%x, inst_end=0x%x\n",
 			n,
 			nodes[n].type,
+			nodes[n].dominator,
 			nodes[n].loop_head,
 			nodes[n].inst_start,
 			nodes[n].inst_end);
@@ -2926,6 +2997,7 @@ int main(int argc, char *argv[])
 	tmp = build_control_flow_loops(self, paths, &paths_size, loops, &loops_size);
 	tmp = print_control_flow_loops(self, loops, &loops_size);
 	tmp = build_node_paths(self, nodes, &nodes_size, paths, &paths_size);
+	tmp = build_node_dominance(self, nodes, &nodes_size);
 	tmp = analyse_control_flow_loop_exits(self, nodes, &nodes_size, loops, &loops_size);
 	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 
