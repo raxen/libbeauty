@@ -432,8 +432,18 @@ int print_control_flow_loops(struct self_s *self, struct loop_s *loops, int *loo
 int add_path_to_node(struct control_flow_node_s *node, int path)
 {
 	int size;
+	int n;
 
 	size = node->path_size;
+	/* Don't add path twice */
+	if (size > 0) {
+		for (n = 0; n < size; n++) {
+			if (node->path[n] == path) {
+				return 1;
+			}
+		}
+	}
+
 	size++;
 	node->path = realloc(node->path, size * sizeof(int));
 	node->path[size - 1] = path;
