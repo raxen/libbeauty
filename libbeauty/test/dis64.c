@@ -429,6 +429,49 @@ int print_control_flow_loops(struct self_s *self, struct loop_s *loops, int *loo
 	return 0;
 }
 
+int add_path_to_node(struct control_flow_node_s *node, int path)
+{
+	int size;
+
+	size = node->path_size;
+	size++;
+	node->path = realloc(node->path, size * sizeof(int));
+	node->path[size - 1] = path;
+	node->path_size = size;
+
+	return 0;
+}
+
+int build_node_paths(struct self_s *self, struct control_flow_node_s *nodes, int *node_size, struct path_s *paths, int *paths_size)
+
+{
+	int l,m,n;
+	int path;
+	int offset;
+
+	printf("paths_size = %d\n", *paths_size);
+	for (l = 0; l < *paths_size; l++) {
+		path = l;
+		offset = paths[l].path_size - 1;
+		if (offset > 0) {
+			while (1) {
+				printf("Path=0x%x, offset=%d, Node=0x%x\n", l, offset, paths[path].path[offset]);
+				add_path_to_node(&(nodes[paths[path].path[offset]]), l);
+				offset--;
+				if (offset < 0) {
+					offset = paths[path].path_prev_index;
+					if (path == paths[path].path_prev) {
+						break;
+					}
+					path = paths[path].path_prev;
+				}
+			};
+		}
+
+	}
+	return 0;
+}
+
 int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *nodes, int *node_size, struct path_s *paths, int *paths_size, int node_start)
 {
 	struct node_mid_start_s *node_mid_start;
@@ -599,8 +642,6 @@ int build_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 
 int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *nodes, int *node_size)
 {
-	struct inst_log_entry_s *inst_log1;
-	struct inst_log_entry_s *inst_log_entry = self->inst_log_entry;
 	int n;
 	int m;
 
@@ -611,21 +652,14 @@ int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 			nodes[n].loop_head,
 			nodes[n].inst_start,
 			nodes[n].inst_end);
-		inst_log1 =  &inst_log_entry[nodes[n].inst_start];
-		for (m = 0; m < inst_log1->prev_size; m++) {
-//			printf("inst_start->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
+		for (m = 0; m < nodes[n].prev_size; m++) {
 			printf("nodes[0x%x].prev_node[%d] = 0x%x, prev_type=%d\n", n, m, nodes[n].prev_node[m], nodes[n].prev_type[m]);
 		}
-//		for (m = 0; m < inst_log1->next_size; m++) {
-//			printf("inst_start->next[%d] = 0x%x\n", m, inst_log1->next[m]);
-//		}
-		inst_log1 =  &inst_log_entry[nodes[n].inst_end];
-//		for (m = 0; m < inst_log1->prev_size; m++) {
-//			printf("inst_end->prev[%d] = 0x%x\n", m, inst_log1->prev[m]);
-//		}
-		for (m = 0; m < inst_log1->next_size; m++) {
-//			printf("inst_end->next[%d] = 0x%x\n", m, inst_log1->next[m]);
+		for (m = 0; m < nodes[n].next_size; m++) {
 			printf("nodes[0x%x].next_node[%d] = 0x%x, next_type=%d\n", n, m, nodes[n].next_node[m], nodes[n].next_type[m]);
+		}
+		for (m = 0; m < nodes[n].path_size; m++) {
+			printf("nodes[0x%x].path[%d] = 0x%x\n", n, m, nodes[n].path[m]);
 		}
 	}
 	return 0;
@@ -2891,6 +2925,7 @@ int main(int argc, char *argv[])
 	tmp = print_control_flow_paths(self, paths, &paths_size);
 	tmp = build_control_flow_loops(self, paths, &paths_size, loops, &loops_size);
 	tmp = print_control_flow_loops(self, loops, &loops_size);
+	tmp = build_node_paths(self, nodes, &nodes_size, paths, &paths_size);
 	tmp = analyse_control_flow_loop_exits(self, nodes, &nodes_size, loops, &loops_size);
 	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 

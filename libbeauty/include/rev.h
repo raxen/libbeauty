@@ -109,6 +109,8 @@ struct control_flow_node_s {
 	int dominator; /* Node that dominates this node */
 	int type; /* 0 =  Normal, 1 =  Part of a loop */
 	int loop_head; /* 0 = Normal, 1 = Loop head */
+	int path_size; /* Number of path entries in the list */
+	int *path; /* The list of paths that touch this node */
 };
 
 struct external_entry_point_s {
