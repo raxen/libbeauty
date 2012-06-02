@@ -455,7 +455,8 @@ int add_path_to_node(struct control_flow_node_s *node, int path)
 /* Is "a" a subset of "b" */
 /* Are all the elements of "a" contained in "b" ? */
 /* 0 = No */
-/* 1 = Yes */
+/* 1 = Exact */
+/* 2 = subset */
 int is_subset(int size_a, int *a, int size_b, int *b)
 {
 	int tmp;
@@ -488,7 +489,7 @@ int is_subset(int size_a, int *a, int size_b, int *b)
 			goto is_subset_exit;
 		}
 	}
-	result = 1;
+	result = 2;
 
 is_subset_exit:
 	return result;
@@ -512,7 +513,14 @@ int build_node_dominance(struct self_s *self, struct control_flow_node_s *nodes,
 			tmp = is_subset(nodes[n].path_size, nodes[n].path, nodes[node_b].path_size, nodes[node_b].path);
 			if (tmp) {
 				nodes[n].dominator = node_b;
+				if (1 == tmp) {
+					/* 1 == exact match */
+					if (nodes[node_b].next_size > 1) {
+						/* dominator is a branch and we are the if_tail */
+						nodes[node_b].if_tail = n;
+					}
 				break;
+				}
 			}
 		}
 	}
@@ -726,10 +734,11 @@ int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 	int m;
 
 	for (n = 1; n <= *node_size; n++) {
-		printf("Node:0x%x, type=%d, dominator=0x%x, loop_head=%d, inst_start=0x%x, inst_end=0x%x\n",
+		printf("Node:0x%x, type=%d, dominator=0x%x, if_tail=0x%x, loop_head=%d, inst_start=0x%x, inst_end=0x%x\n",
 			n,
 			nodes[n].type,
 			nodes[n].dominator,
+			nodes[n].if_tail,
 			nodes[n].loop_head,
 			nodes[n].inst_start,
 			nodes[n].inst_end);
