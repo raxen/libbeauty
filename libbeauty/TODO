@@ -14,15 +14,32 @@ TODO:
    When an instruction does something to a pointer, store details regarding what it "touches" with it at that instruction log location.
 10) test36.c -O2: Register r0x8 not handled correction.
     The label before and after the IF are different, but they should be the same.
-11) Need to implement a dominator tree in order to fix 10).
 12) Implement/FIX process blocks.
     A process block has a starting point (at a JOIN point, or function start point) , and finished with a JMP (IF for conditional or JMP otherwise)  or RET instruction.
     We will need to implement each IF with two JMPs.
     if ... goto A; else ... goto B
     This will then properly end a process block.
     Also a process block can end at the instruction just before a JOIN point. Maybe we need to add a JMP before each JOIN point.
-13) Implement loop detection. How?
 14) 11,12,13 need to be done before any more work on type detection can be done.
+15) Need to implement a method for output that implements a list of containers, with containers of
+    different types. I.e.  A normal container, a if...the...else container, a for ( , , ) container.
+    Once the node is inside all the different container types, it will be output linearly, and not through multiple branches.
+    Normal container:
+	just a list of instructions.
+    if-then-else container:
+	the "if" expression.
+	the list of instructions if true.
+		This could be a list of containers.
+	the list of instructions if false.
+		This could be a list of containers.
+    for() container:
+	the initial state instructions
+		This could be a list of containers.
+	the conditional expression
+		This could be a list of containers.
+	the body of the for loop.
+		This could be a list of containers.
+
     
 
 WIP
@@ -34,5 +51,7 @@ DONE
 7) test36.c causes dis64 to segfault
 8) a CMP with one input being a reg PARAM causes a problem with non registration of the register PARAM.
 9) test36.c (-O2) causes   if (param_reg0040 == 0x2) IF goto label7f93;  i.e. The label is wrong.
+11) Need to implement a dominator tree in order to fix 10).
+13) Implement loop detection. How? Done with the path listing method. Any unique path that touches itself is a loop path.
 
 
