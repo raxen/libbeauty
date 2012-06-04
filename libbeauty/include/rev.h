@@ -112,6 +112,8 @@ struct control_flow_node_s {
 	int if_tail; /* 0 = no tail, > 0 points to the tail of the if...then...else */
 	int path_size; /* Number of path entries in the list */
 	int *path; /* The list of paths that touch this node */
+	int looped_path_size; /* Number of path entries in the list */
+	int *looped_path; /* The list of paths that touch this node */
 };
 
 struct external_entry_point_s {

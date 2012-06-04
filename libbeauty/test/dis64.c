@@ -452,6 +452,30 @@ int add_path_to_node(struct control_flow_node_s *node, int path)
 	return 0;
 }
 
+int add_looped_path_to_node(struct control_flow_node_s *node, int path)
+{
+	int size;
+	int n;
+
+	size = node->looped_path_size;
+	/* Don't add path twice */
+	if (size > 0) {
+		for (n = 0; n < size; n++) {
+			if (node->looped_path[n] == path) {
+				return 1;
+			}
+		}
+	}
+
+	size++;
+	node->looped_path = realloc(node->looped_path, size * sizeof(int));
+	node->looped_path[size - 1] = path;
+	node->looped_path_size = size;
+
+	return 0;
+}
+
+
 /* Is "a" a subset of "b" */
 /* Are all the elements of "a" contained in "b" ? */
 /* 0 = No */
@@ -539,10 +563,14 @@ int build_node_paths(struct self_s *self, struct control_flow_node_s *nodes, int
 	for (l = 0; l < *paths_size; l++) {
 		path = l;
 		offset = paths[l].path_size - 1;
-		if (offset > 0) {
+		if (paths[l].path_size > 0) {
 			while (1) {
 				printf("Path=0x%x, offset=%d, Node=0x%x\n", l, offset, paths[path].path[offset]);
-				add_path_to_node(&(nodes[paths[path].path[offset]]), l);
+				if (paths[l].type == 1) {
+					add_looped_path_to_node(&(nodes[paths[path].path[offset]]), l);
+				} else {
+					add_path_to_node(&(nodes[paths[path].path[offset]]), l);
+				}
 				offset--;
 				if (offset < 0) {
 					offset = paths[path].path_prev_index;
@@ -751,6 +779,10 @@ int print_control_flow_nodes(struct self_s *self, struct control_flow_node_s *no
 		for (m = 0; m < nodes[n].path_size; m++) {
 			printf("nodes[0x%x].path[%d] = 0x%x\n", n, m, nodes[n].path[m]);
 		}
+		for (m = 0; m < nodes[n].looped_path_size; m++) {
+			printf("nodes[0x%x].looped_path[%d] = 0x%x\n", n, m, nodes[n].looped_path[m]);
+		}
+
 	}
 	return 0;
 }
