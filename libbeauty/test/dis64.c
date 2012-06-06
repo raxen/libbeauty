@@ -248,27 +248,6 @@ int find_node_from_inst(struct self_s *self, struct control_flow_node_s *nodes, 
 	return found;
 }
 
-struct loop_s {
-	int head; /* The associated loop_head node */
-	int size;
-	int *list;
-};
-
-struct path_s {
-	int path_prev;
-	int path_prev_index;
-	int path_size;
-	int type; /* 0 = Unknown, 1 = Loop */
-	int loop_head; /* Index to the node that is the loop head for this path. */
-	int *path;
-};
-
-struct node_mid_start_s {
-	int path_prev;
-	int path_prev_index;
-	int node;
-};
-
 int node_mid_start_add(struct control_flow_node_s *node, struct node_mid_start_s *node_mid_start, int path, int step)
 {
 	int n;
