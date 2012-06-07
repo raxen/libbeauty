@@ -601,6 +601,7 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 		if (found == 1) {
 			step = 0;
 			node = node_mid_start[n].node;
+			paths[path].used = 1;
 			paths[path].path[step] = node;
 			paths[path].path_prev = node_mid_start[n].path_prev;
 			paths[path].path_prev_index = node_mid_start[n].path_prev_index;
@@ -609,6 +610,25 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 			step++;
 			loop = 0;
 			do {
+				if (path && node == paths[paths[path].path_prev].path[paths[path].path_prev_index]) {
+					printf("JCD1: do while loop to self on node = 0x%x, step = 0x%x, path=0x%x\n", node, step, path);
+					loop = 1;
+					paths[path].loop_head = node;
+					nodes[node].type = 1;
+					nodes[node].loop_head = 1;
+					for (n = 0; n < nodes[node].prev_size; n++) {
+						if (nodes[node].prev_node[n] == node) {
+							nodes[node].prev_type[n] = 2;
+						}
+					}
+					for (n = 0; n < nodes[node].next_size; n++) {
+						if (nodes[node].next_node[n] == node) {
+							nodes[node].next_type[n] = 2;
+						}
+					}
+					break;
+				}
+
 				if (nodes[node].next_size == 1) {
 					printf("JCD2: path %d:0x%x -> 0x%x\n", path, node, nodes[node].next_node[0]);
 					node = nodes[node].next_node[0];
@@ -645,8 +665,9 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 			} while ((nodes[node].next_size > 0) && (loop == 0));
 			paths[path].path_size = step;
 			path++;
+			printf("end path = 0x%x\n", path);
 			if (path >= *paths_size) {
-				printf("TOO MANY PATHS\n");
+				printf("TOO MANY PATHS, %d\n", path);
 				exit(1);
 			}
 		}
@@ -659,14 +680,17 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 int print_control_flow_paths(struct self_s *self, struct path_s *paths, int *paths_size)
 {
 	int n, m;
-
+	printf("print control flow paths size=0x%x\n", *paths_size);
 	for (m = 0; m < *paths_size; m++) {
-		if (paths[m].path_size > 0) {
+		if (paths[m].used) {
 			printf("Path %d: type=%d, loop_head=%d, prev 0x%x:0x%x\n", m, paths[m].type, paths[m].loop_head, paths[m].path_prev, paths[m].path_prev_index);
 			for (n = 0; n < paths[m].path_size; n++) {
 				printf("Path %d=0x%x\n", m, paths[m].path[n]);
 			}
+		} else {
+			printf("Un-used Path %d: type=%d, loop_head=%d, prev 0x%x:0x%x\n", m, paths[m].type, paths[m].loop_head, paths[m].path_prev, paths[m].path_prev_index);
 		}
+
 	}
 	return 0;
 }
@@ -3023,6 +3047,7 @@ int main(int argc, char *argv[])
 
 	tmp = tidy_inst_log(self);
 	tmp = build_control_flow_nodes(self, nodes, &nodes_size);
+	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 
 	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
 		if (external_entry_points[l].valid) {
@@ -3043,9 +3068,11 @@ int main(int argc, char *argv[])
 
 	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
 		if (external_entry_points[l].valid) {
+			printf("Starting external entry point %d:%s\n", l, external_entry_points[l].name);
 			int paths_used = 0;
 			int loops_used = 0;
 			for (n = 0; n < paths_size; n++) {
+				paths[n].used = 0;
 				paths[n].path_prev = 0;
 				paths[n].path_prev_index = 0;
 				paths[n].path_size = 0;
@@ -3068,6 +3095,7 @@ int main(int argc, char *argv[])
 			external_entry_points[l].paths_size = paths_used;
 			external_entry_points[l].paths = calloc(paths_used, sizeof(struct path_s));
 			for (n = 0; n < paths_used; n++) {
+				external_entry_points[l].paths[n].used = paths[n].used;
 				external_entry_points[l].paths[n].path_prev = paths[n].path_prev;
 				external_entry_points[l].paths[n].path_prev_index = paths[n].path_prev_index;
 				external_entry_points[l].paths[n].path_size = paths[n].path_size;

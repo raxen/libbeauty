@@ -104,6 +104,7 @@ struct loop_s {
 };
 
 struct path_s {
+	int used;
 	int path_prev;
 	int path_prev_index;
 	int path_size;
