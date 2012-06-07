@@ -306,10 +306,12 @@ int merge_path_into_loop(struct path_s *paths, struct loop_s *loop, int path)
 	int n;
 	int *list = loop->list;
 
+	printf("trying to merge path %d into loop\n", path);
+
 	loop->head = paths[path].loop_head;
 	step = paths[path].path_size - 1; /* convert size to index */
 	if (paths[path].path[step] != loop->head) {
-		printf("merge_path failed\n");
+		printf("merge_path failed path 0x%x != head 0x%x\n", paths[path].path[step], loop->head);
 		exit(1);
 	}
 	while (1) {
@@ -344,6 +346,7 @@ int merge_path_into_loop(struct path_s *paths, struct loop_s *loop, int path)
 			break;
 		}
 	}
+	printf("merged head = 0x%x, size = 0x%x\n", loop->head, loop->size);
 	return 0;
 }
 
@@ -367,6 +370,7 @@ int build_control_flow_loops(struct self_s *self, struct path_s *paths, int *pat
 			for(m = 0; m < *loop_size; m++) {
 				if (loops[m].head == paths[n].loop_head) {
 					found = m;
+					printf("flow_loops found = %d\n", found);
 					break;
 				}
 			}
@@ -374,6 +378,7 @@ int build_control_flow_loops(struct self_s *self, struct path_s *paths, int *pat
 				for(m = 0; m < *loop_size; m++) {
 					if (loops[m].head == 0) {
 						found = m;
+						printf("flow_loops2 found = %d\n", found);
 						break;
 					}
 				}
@@ -397,6 +402,7 @@ int print_control_flow_loops(struct self_s *self, struct loop_s *loops, int *loo
 {
 	int n, m;
 
+	printf("Printing loops size = %d\n", *loops_size);
 	for (m = 0; m < *loops_size; m++) {
 		if (loops[m].size > 0) {
 			printf("Loop %d: loop_head=%d\n", m, loops[m].head);
@@ -565,7 +571,7 @@ int build_node_paths(struct self_s *self, struct control_flow_node_s *nodes, int
 	return 0;
 }
 
-int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *nodes, int *node_size, struct path_s *paths, int *paths_size, int node_start)
+int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *nodes, int *node_size, struct path_s *paths, int *paths_size, int *paths_used, int node_start)
 {
 	struct node_mid_start_s *node_mid_start;
 	int found = 0;
@@ -646,6 +652,7 @@ int build_control_flow_paths(struct self_s *self, struct control_flow_node_s *no
 		}
 	} while (found == 1);
 	free (node_mid_start);
+	*paths_used = path;
 	return 0;
 }
 
@@ -2710,9 +2717,9 @@ int main(int argc, char *argv[])
 	struct control_flow_node_s *nodes;
 	int nodes_size;
 	struct path_s *paths;
-	int paths_size = 10;
+	int paths_size = 1000;
 	struct loop_s *loops;
-	int loops_size = 10;
+	int loops_size = 1000;
 
 	expression = malloc(1000); /* Buffer for if expressions */
 
@@ -3016,7 +3023,14 @@ int main(int argc, char *argv[])
 
 	tmp = tidy_inst_log(self);
 	tmp = build_control_flow_nodes(self, nodes, &nodes_size);
-	paths_size = 10;
+
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
+		if (external_entry_points[l].valid) {
+			tmp = find_node_from_inst(self, nodes, &nodes_size, external_entry_points[l].inst_log);
+			external_entry_points[l].start_node = tmp;
+		}
+	}
+
 	paths = calloc(paths_size, sizeof(struct path_s));
 	for (n = 0; n < paths_size; n++) {
 		paths[n].path = calloc(1000, sizeof(int));
@@ -3026,15 +3040,73 @@ int main(int argc, char *argv[])
 	for (n = 0; n < loops_size; n++) {
 		loops[n].list = calloc(1000, sizeof(int));
 	}
-	tmp = build_control_flow_paths(self, nodes, &nodes_size, paths, &paths_size, 1);
-	tmp = print_control_flow_paths(self, paths, &paths_size);
-	tmp = build_control_flow_loops(self, paths, &paths_size, loops, &loops_size);
-	tmp = print_control_flow_loops(self, loops, &loops_size);
-	tmp = build_node_paths(self, nodes, &nodes_size, paths, &paths_size);
-	tmp = build_node_dominance(self, nodes, &nodes_size);
-	tmp = analyse_control_flow_loop_exits(self, nodes, &nodes_size, loops, &loops_size);
-	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
+		if (external_entry_points[l].valid) {
+			int paths_used = 0;
+			int loops_used = 0;
+			for (n = 0; n < paths_size; n++) {
+				paths[n].path_prev = 0;
+				paths[n].path_prev_index = 0;
+				paths[n].path_size = 0;
+				paths[n].type = 0;
+				paths[n].loop_head = 0;
+			}
+			for (n = 0; n < loops_size; n++) {
+				loops[n].size = 0;
+				loops[n].head = 0;
+			}
+
+			tmp = build_control_flow_paths(self, nodes, &nodes_size,
+				paths, &paths_size, &paths_used, external_entry_points[l].start_node);
+			printf("PATHS used = %d\n", paths_used);
+			tmp = build_control_flow_loops(self, paths, &paths_size, loops, &loops_size);
+			tmp = build_node_paths(self, nodes, &nodes_size, paths, &paths_size);
+			tmp = build_node_dominance(self, nodes, &nodes_size);
+			tmp = analyse_control_flow_loop_exits(self, nodes, &nodes_size, loops, &loops_size);
+
+			external_entry_points[l].paths_size = paths_used;
+			external_entry_points[l].paths = calloc(paths_used, sizeof(struct path_s));
+			for (n = 0; n < paths_used; n++) {
+				external_entry_points[l].paths[n].path_prev = paths[n].path_prev;
+				external_entry_points[l].paths[n].path_prev_index = paths[n].path_prev_index;
+				external_entry_points[l].paths[n].path_size = paths[n].path_size;
+				external_entry_points[l].paths[n].type = paths[n].type;
+				external_entry_points[l].paths[n].loop_head = paths[n].loop_head;
+
+				external_entry_points[l].paths[n].path = calloc(paths[n].path_size, sizeof(int));
+				for (m = 0; m  < paths[n].path_size; m++) {
+					external_entry_points[l].paths[n].path[m] = paths[n].path[m];
+				}
+
+			}
+			for (n = 0; n < loops_size; n++) {
+				if (loops[n].size != 0) {
+					loops_used = n + 1;
+				}
+			}
+			printf("loops_used = 0x%x\n", loops_used);
+			external_entry_points[l].loops_size = loops_used;
+			external_entry_points[l].loops = calloc(loops_used, sizeof(struct loop_s));
+			for (n = 0; n < loops_used; n++) {
+				external_entry_points[l].loops[n].head = loops[n].head;
+				external_entry_points[l].loops[n].size = loops[n].size;
+				external_entry_points[l].loops[n].list = calloc(loops[n].size, sizeof(int));
+				for (m = 0; m  < loops[n].size; m++) {
+					external_entry_points[l].loops[n].list[m] = loops[n].list[m];
+				}
+			}
+		}
+	}
+	for (l = 0; l < EXTERNAL_ENTRY_POINTS_MAX; l++) {
+		if (external_entry_points[l].valid) {
+			tmp = external_entry_points[l].start_node;
+			printf("External entry point %d: type=%d, name=%s inst_log=0x%lx, start_node=0x%x\n", l, external_entry_points[l].type, external_entry_points[l].name, external_entry_points[l].inst_log, tmp);
+			tmp = print_control_flow_paths(self, external_entry_points[l].paths, &(external_entry_points[l].paths_size));
+			tmp = print_control_flow_loops(self, external_entry_points[l].loops, &(external_entry_points[l].loops_size));
+		}
+	}
+	tmp = print_control_flow_nodes(self, nodes, &nodes_size);
 
 	print_dis_instructions(self);
 

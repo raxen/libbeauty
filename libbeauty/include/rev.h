@@ -155,6 +155,11 @@ struct external_entry_point_s {
 	int locals_size;
 	int *locals;
 	int *locals_order;
+	int start_node;
+	int paths_size;
+	struct path_s *paths;
+	int loops_size;
+	struct loop_s *loops;
 	/* FIXME: add function return type and param types */
 };
 
