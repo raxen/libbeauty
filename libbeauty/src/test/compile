@@ -1,30 +1,36 @@
-gcc -c -g -o test1.o test1.c
-gcc -c -g -o test2.o test2.c
-gcc -c -g -o test3.o test3.c
-gcc -c -g -o test4.o test4.c
-gcc -c -g -o test5.o test5.c
-gcc -c -g -o test6.o test6.c
-gcc -c -g -o test7.o test7.c
-gcc -c -g -o test8.o test8.c
-gcc -c -g -o test9.o test9.c
-gcc -c -g -o test10.o test10.c
-gcc -c -g -o test11.o test11.c
-gcc -c -g -o test12.o test12.c
-gcc -c -g -o test13.o test13.c
-gcc -c -g -o test14.o test14.c
-gcc -c -g -o test15.o test15.c
-gcc -c -g -o test16.o test16.c
-gcc -c -g -o test17.o test17.c
-gcc -c -g -o test18.o test18.c
-gcc -c -g -o test19.o test19.c
-gcc -c -g -o test21.o test21.c
-gcc -c -g -o test22.o test22.c
-gcc -c -g -o test23.o test23.c
-gcc -c -g -o test24.o test24.c
-gcc -c -g -o test30.o test30.c
-gcc -c -g -o test33.o test33.c
-gcc -c -g -o test34.o test34.c
-gcc -c -g -o test35.o test35.c
-gcc -c -g -o test36.o test36.c
-gcc -c -g -o test37.o test37.c
-gcc -c -g -o test38.o test38.c
+gcc -c -g -O0 -o test1.o test1.c
+gcc -c -g -O0 -o test2.o test2.c
+gcc -c -g -O0 -o test3.o test3.c
+gcc -c -g -O0 -o test4.o test4.c
+gcc -c -g -O0 -o test5.o test5.c
+gcc -c -g -O0 -o test6.o test6.c
+gcc -c -g -O0 -o test7.o test7.c
+gcc -c -g -O0 -o test8.o test8.c
+gcc -c -g -O0 -o test9.o test9.c
+gcc -c -g -O0 -o test10.o test10.c
+gcc -c -g -O0 -o test11.o test11.c
+gcc -c -g -O0 -o test12.o test12.c
+gcc -c -g -O0 -o test13.o test13.c
+gcc -c -g -O0 -o test14.o test14.c
+gcc -c -g -O0 -o test15.o test15.c
+gcc -c -g -O0 -o test16.o test16.c
+gcc -c -g -O0 -o test17.o test17.c
+gcc -c -g -O0 -o test18.o test18.c
+gcc -c -g -O0 -o test19.o test19.c
+gcc -c -g -O0 -o test21.o test21.c
+gcc -c -g -O0 -o test22.o test22.c
+gcc -c -g -O0 -o test23.o test23.c
+gcc -c -g -O0 -o test24.o test24.c
+gcc -c -g -O0 -o test30.o test30.c
+gcc -c -g -O0 -o test33.o test33.c
+gcc -c -g -O0 -o test34.o test34.c
+gcc -c -g -O0 -o test35.o test35.c
+gcc -c -g -O0 -o test36.o test36.c
+gcc -c -g -O0 -o test37.o test37.c
+gcc -c -g -O0 -o test38.o test38.c
+gcc -c -g -O0 -o test39.o test39.c
+gcc -c -g -O0 -o test40.o test40.c
+gcc -c -g -O0 -o test41.o test41.c
+gcc -c -g -O0 -o test42.o test42.c
+gcc -c -g -O0 -o test43.o test43.c
+gcc -c -g -O0 -o test44.o test44.c
