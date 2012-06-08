@@ -3,7 +3,7 @@ include $(top_srcdir)/misc/Makefile.common
 AM_CFLAGS = -I$(top_srcdir)/test
 
 #bin_PROGRAMS = dis32 dis64 bf
-bin_PROGRAMS = dis64
+noinst_PROGRAMS = dis64
 
 #noinst_HEADERS = \
 #	dis.h \
